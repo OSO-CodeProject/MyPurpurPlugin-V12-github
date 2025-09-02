@@ -20,7 +20,11 @@ public class Team {
     private NamedTextColor color;
 
     public Team(String name, String leader, String prefix, String color) {
-        this.id = UUID.randomUUID(); // Генерируем новый UUID при создании
+        this(UUID.randomUUID(), name, leader, prefix, color);
+    }
+
+    public Team(UUID id, String name, String leader, String prefix, String color) {
+        this.id = id;
         this.name = name;
         this.leader = leader;
         this.members = new ArrayList<>(List.of(leader));
