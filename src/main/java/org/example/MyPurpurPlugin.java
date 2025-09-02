@@ -1,6 +1,7 @@
 package org.example;
 
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.command.TabCompleter;
 import org.example.command.AdminCommands;
 import org.example.command.CfgDefaultCommand;
 import org.example.command.DebugToggleCommand;
@@ -62,6 +63,9 @@ public class MyPurpurPlugin extends JavaPlugin {
             return;
         }
         command.setExecutor(executor);
+        if (executor instanceof TabCompleter) {
+            command.setTabCompleter((TabCompleter) executor);
+        }
     }
 
     /**
