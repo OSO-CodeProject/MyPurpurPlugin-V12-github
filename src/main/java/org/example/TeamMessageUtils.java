@@ -74,4 +74,34 @@ public class TeamMessageUtils {
                 .append(Component.text(teamName, NamedTextColor.WHITE))
                 .append(Component.text(" !", NamedTextColor.RED));
     }
+
+    /**
+     * Формирует предупреждение о необходимости сократить команду.
+     *
+     * @param max    новый лимит участников
+     * @param minutes время на сокращение
+     * @param excess количество лишних участников
+     * @return сообщение-предупреждение
+     */
+    public static Component deadlineWarningMessage(int max, int minutes, int excess) {
+        return Component.text("Максимум игроков уменьшен до ", NamedTextColor.YELLOW)
+                .append(Component.text(max, NamedTextColor.WHITE))
+                .append(Component.text(". У вас ", NamedTextColor.YELLOW))
+                .append(Component.text(minutes + " мин", NamedTextColor.WHITE))
+                .append(Component.text(", чтобы исключить ", NamedTextColor.YELLOW))
+                .append(Component.text(excess + " участника(ов)", NamedTextColor.WHITE))
+                .append(Component.text(".", NamedTextColor.YELLOW));
+    }
+
+    /**
+     * Сообщение после принудительного удаления участников.
+     *
+     * @param removed количество удалённых участников
+     * @return сообщение для лидера
+     */
+    public static Component forcedRemovalMessage(int removed) {
+        return Component.text("Из вашей команды удалено ", NamedTextColor.RED)
+                .append(Component.text(removed + " участника(ов)", NamedTextColor.WHITE))
+                .append(Component.text(" из-за превышения лимита.", NamedTextColor.RED));
+    }
 }

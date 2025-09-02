@@ -56,6 +56,9 @@ public class PluginConfig {
         config.addDefault("max-prefix-length", 5);
         config.addDefault("min-team-name-length", 3);
         config.addDefault("max-team-name-length", 16);
+        config.addDefault("team.enforce-max-members-on-reload", true);
+        config.addDefault("team.grace-period-enabled", true);
+        config.addDefault("team.grace-period-minutes", 10);
 
         // Настройки меню
         config.addDefault("menu.sound", "BLOCK_NOTE_BLOCK_PLING");
@@ -110,6 +113,33 @@ public class PluginConfig {
      */
     public int getMaxMembers() {
         return config.getInt("max-members", 5);
+    }
+
+    /**
+     * Проверяет, следует ли применять ограничение по количеству участников при перезагрузке.
+     *
+     * @return true, если ограничение должно применяться
+     */
+    public boolean isEnforceMaxMembersOnReload() {
+        return config.getBoolean("team.enforce-max-members-on-reload", true);
+    }
+
+    /**
+     * Проверяет, включён ли льготный период для удаления лишних участников.
+     *
+     * @return true, если льготный период включён
+     */
+    public boolean isGracePeriodEnabled() {
+        return config.getBoolean("team.grace-period-enabled", true);
+    }
+
+    /**
+     * Получает длительность льготного периода в минутах.
+     *
+     * @return длительность периода в минутах
+     */
+    public int getGracePeriodMinutes() {
+        return config.getInt("team.grace-period-minutes", 10);
     }
 
     /**

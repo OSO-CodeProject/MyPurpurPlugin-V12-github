@@ -80,6 +80,11 @@ public class Team {
         members.remove(member);
     }
 
+    public void setMembers(List<String> newMembers) {
+        members.clear();
+        members.addAll(newMembers);
+    }
+
     // Утилитный метод для префикса
     public Component getPrefixComponent() {
         return TeamUtils.createPrefixComponent(prefix, color);
