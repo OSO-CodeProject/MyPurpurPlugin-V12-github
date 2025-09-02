@@ -926,6 +926,5 @@ public class TeamManager implements TeamService {
             }
             plugin.getLogger().info("Из команды " + team.getName() + " удалено " + removed.size() + " участника(ов): " + removed);
         }
-        deadlines.remove(teamId);
     }
 }
