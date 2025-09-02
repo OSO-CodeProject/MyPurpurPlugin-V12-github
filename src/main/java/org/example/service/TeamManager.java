@@ -88,13 +88,13 @@ public class TeamManager implements TeamService {
                     String leader = teamsConfig.getString("teams." + teamIdStr + ".leader", "");
                     String prefix = teamsConfig.getString("teams." + teamIdStr + ".prefix", "");
                     String color = teamsConfig.getString("teams." + teamIdStr + ".color", "WHITE");
-                    Team team = new Team(name, leader, prefix, color);
+                    Team team = new Team(teamId, name, leader, prefix, color);
                     team.setMembers(teamsConfig.getStringList("teams." + teamIdStr + ".members"));
                     long deadline = teamsConfig.getLong("teams." + teamIdStr + ".deadline", 0L);
                     if (deadline > 0L) {
-                        deadlines.put(teamId, deadline);
+                        deadlines.put(team.getId(), deadline);
                     }
-                    teams.put(teamId, team);
+                    teams.put(team.getId(), team);
                 }
             }
             ((MyPurpurPlugin) plugin).debug("📂 Файл teams.yml загружен, загружено команд: " + teams.size());
