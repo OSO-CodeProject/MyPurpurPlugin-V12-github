@@ -6,6 +6,10 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scoreboard.DisplaySlot;
+import org.bukkit.scoreboard.Objective;
+import org.bukkit.scoreboard.Scoreboard;
+import org.bukkit.scoreboard.ScoreboardManager;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
@@ -808,7 +812,8 @@ public class TeamManager implements TeamService {
     }
 
     private void startDeadlineTask() {
-        long period = 20L * 60 * 5; // каждые 5 минут
+        long seconds = pluginConfig.getDeadlineNotifyPeriodSeconds();
+        long period = 20L * Math.max(1, seconds);
         plugin.getServer().getScheduler().runTaskTimer(plugin, this::checkDeadlines, period, period);
     }
 
@@ -877,17 +882,60 @@ public class TeamManager implements TeamService {
             if (size <= max) {
                 it.remove();
                 changed = true;
+                Player leader = plugin.getServer().getPlayer(team.getLeader());
+                if (leader != null && pluginConfig.getDeadlineDisplayMode().equalsIgnoreCase("SCOREBOARD")) {
+                    ScoreboardManager manager = plugin.getServer().getScoreboardManager();
+                    if (manager != null) {
+                        leader.setScoreboard(manager.getMainScoreboard());
+                    }
+                }
                 continue;
             }
             if (deadline <= now) {
                 removeExtraPlayers(teamId, max);
                 it.remove();
                 changed = true;
+                Player leader = plugin.getServer().getPlayer(team.getLeader());
+                if (leader != null && pluginConfig.getDeadlineDisplayMode().equalsIgnoreCase("SCOREBOARD")) {
+                    ScoreboardManager manager = plugin.getServer().getScoreboardManager();
+                    if (manager != null) {
+                        leader.setScoreboard(manager.getMainScoreboard());
+                    }
+                }
+            } else {
+                Player leader = plugin.getServer().getPlayer(team.getLeader());
+                if (leader != null) {
+                    long remainingMillis = deadline - now;
+                    long remainingSeconds = remainingMillis / 1000;
+                    long minutes = remainingSeconds / 60;
+                    long seconds = remainingSeconds % 60;
+                    int excess = size - max;
+                    Component message = TeamMessageUtils.deadlineRemainingMessage(minutes, seconds, excess);
+                    String mode = pluginConfig.getDeadlineDisplayMode();
+                    if ("ACTION_BAR".equalsIgnoreCase(mode)) {
+                        leader.sendActionBar(message);
+                    } else if ("SCOREBOARD".equalsIgnoreCase(mode)) {
+                        showDeadlineScoreboard(leader, minutes, seconds, excess);
+                    } else {
+                        TeamMessageUtils.sendTeamMessage(leader, message);
+                    }
+                }
             }
         }
         if (changed) {
             saveTeams();
         }
+    }
+
+    private void showDeadlineScoreboard(Player player, long minutes, long seconds, int excess) {
+        ScoreboardManager manager = plugin.getServer().getScoreboardManager();
+        if (manager == null) return;
+        Scoreboard board = manager.getNewScoreboard();
+        Objective obj = board.registerNewObjective("deadline", "dummy", Component.text("Deadline"));
+        obj.setDisplaySlot(DisplaySlot.SIDEBAR);
+        obj.getScore("Осталось: " + minutes + "m " + seconds + "s").setScore(2);
+        obj.getScore("Удалить: " + excess).setScore(1);
+        player.setScoreboard(board);
     }
 
     private void removeExtraPlayers(UUID teamId, int max) {

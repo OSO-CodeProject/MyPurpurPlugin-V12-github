@@ -59,6 +59,8 @@ public class PluginConfig {
         config.addDefault("team.enforce-max-members-on-reload", true);
         config.addDefault("team.grace-period-enabled", true);
         config.addDefault("team.grace-period-minutes", 10);
+        config.addDefault("team.deadline-notify-period-seconds", 300L);
+        config.addDefault("team.deadline-display-mode", "CHAT");
 
         // Настройки меню
         config.addDefault("menu.sound", "BLOCK_NOTE_BLOCK_PLING");
@@ -140,6 +142,24 @@ public class PluginConfig {
      */
     public int getGracePeriodMinutes() {
         return config.getInt("team.grace-period-minutes", 10);
+    }
+
+    /**
+     * Получает период проверки дедлайнов в секундах.
+     *
+     * @return период проверки в секундах
+     */
+    public long getDeadlineNotifyPeriodSeconds() {
+        return config.getLong("team.deadline-notify-period-seconds", 300L);
+    }
+
+    /**
+     * Получает способ отображения уведомлений о дедлайне.
+     *
+     * @return режим отображения
+     */
+    public String getDeadlineDisplayMode() {
+        return config.getString("team.deadline-display-mode", "CHAT");
     }
 
     /**

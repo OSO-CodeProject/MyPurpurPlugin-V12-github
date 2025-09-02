@@ -17,6 +17,8 @@ team:
   enforce-max-members-on-reload: true # Применять ограничение при перезагрузке
   grace-period-enabled: true # Давать время на удаление лишних участников
   grace-period-minutes: 10 # Длительность периода (в минутах)
+  deadline-notify-period-seconds: 300 # Период проверки дедлайнов и оповещения (в секундах)
+  deadline-display-mode: CHAT # CHAT, ACTION_BAR или SCOREBOARD
 
 # Настройки меню
 menu:

@@ -104,4 +104,20 @@ public class TeamMessageUtils {
                 .append(Component.text(removed + " участника(ов)", NamedTextColor.WHITE))
                 .append(Component.text(" из-за превышения лимита.", NamedTextColor.RED));
     }
+
+    /**
+     * Сообщение с оставшимся временем для удаления лишних участников.
+     *
+     * @param minutes оставшиеся минуты
+     * @param seconds оставшиеся секунды
+     * @param excess  количество лишних участников
+     * @return сообщение для лидера
+     */
+    public static Component deadlineRemainingMessage(long minutes, long seconds, int excess) {
+        return Component.text("Осталось ", NamedTextColor.YELLOW)
+                .append(Component.text(String.format("%d:%02d", minutes, seconds), NamedTextColor.WHITE))
+                .append(Component.text(" чтобы исключить ", NamedTextColor.YELLOW))
+                .append(Component.text(excess + " участника(ов)", NamedTextColor.WHITE))
+                .append(Component.text(".", NamedTextColor.YELLOW));
+    }
 }
