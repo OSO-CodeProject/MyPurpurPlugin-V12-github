@@ -1,7 +1,8 @@
-package org.example;
+package org.example.model;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import org.example.util.TeamUtils;
 
 import java.util.ArrayList;
 import java.util.List;

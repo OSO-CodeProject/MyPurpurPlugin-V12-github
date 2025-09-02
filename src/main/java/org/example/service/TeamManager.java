@@ -1,4 +1,4 @@
-package org.example;
+package org.example.service;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -10,6 +10,13 @@ import org.bukkit.scoreboard.DisplaySlot;
 import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.ScoreboardManager;
+import org.example.MyPurpurPlugin;
+import org.example.config.PluginConfig;
+import org.example.listener.TeamChatListener;
+import org.example.model.Team;
+import org.example.util.TeamMessageUtils;
+import org.example.util.TeamUtils;
+import org.example.util.TeamValidator;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;

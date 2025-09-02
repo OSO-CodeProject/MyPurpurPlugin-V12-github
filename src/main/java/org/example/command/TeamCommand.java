@@ -1,4 +1,4 @@
-package org.example;
+package org.example.command;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -6,6 +6,10 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
+import org.example.MyPurpurPlugin;
+import org.example.config.PluginConfig;
+import org.example.service.TeamService;
+import org.example.util.TeamUtils;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
