@@ -9,77 +9,28 @@ commands:
   team:
     description: Управление командами (создание, вступление, выход, и т.д.)
     usage: /team <create | join | leave | list | members | help> [аргументы]
-    tab-completer: org.example.command.TeamCommand
     aliases: [t]
     permission: mypurpurplugin.team
     permission-message: "❌ У вас нет прав для использования этой команды!"
-    subcommands:
-      create:
-        description: |
-          Создать новую команду с названием, префиксом и цветом
-          Допустимые цвета: RED, BLUE, GREEN и т.д.
-        usage: /team create <название> <префикс> <цвет>
-      join:
-        description: Вступить в существующую команду
-        usage: /team join <название>
-      leave:
-        description: Покинуть текущую команду
-        usage: /team leave
-      list:
-        description: Показать список всех команд и их участников
-        usage: /team list
-      members:
-        description: Показать список участников вашей команды
-        usage: /team members
-      help:
-        description: Показать помощь по командам
-        usage: /team help
 
   teamadmin:
     description: Управление командами для лидеров (передача лидерства, исключение, роспуск, и т.д.)
     usage: /teamadmin <transfer | kick | disband | rename | setprefix | setcolor | help> [аргументы]
-    tab-completer: org.example.command.TeamAdminCommand
     aliases: [ta]
     permission: mypurpurplugin.teamadmin
     permission-message: "❌ У вас нет прав для использования этой команды!"
-    subcommands:
-      transfer:
-        description: Передать лидерство другому игроку в команде
-        usage: /teamadmin transfer <ник>
-      kick:
-        description: Выгнать участника из команды (только лидер)
-        usage: /teamadmin kick <ник>
-      disband:
-        description: Распустить команду (только лидер)
-        usage: /teamadmin disband
-      rename:
-        description: Переименовать команду (только лидер)
-        usage: /teamadmin rename <новое_название>
-      setprefix:
-        description: Изменить префикс команды (только лидер)
-        usage: /teamadmin setprefix <новый_префикс>
-      setcolor:
-        description: |
-          Изменить цвет команды (только лидер)
-          Допустимые цвета: RED, BLUE, GREEN и т.д.
-        usage: /teamadmin setcolor <новый_цвет>
-      help:
-        description: Показать помощь по командам
-        usage: /teamadmin help
 
   getteamsuuidlist:
     description: Показывает список команд и их UUID (только для OP)
     usage: /<command>
     permission: mypurpurplugin.getteamsuuidlist
     permission-message: "❌ У вас нет прав для использования этой команды!"
-    tab-completer: none  # Отключаем автодополнение
 
   getteamuuid:
     description: Показывает UUID команды по названию (только для OP)
     usage: /<command> <название>
     permission: mypurpurplugin.getteamuuid
     permission-message: "❌ У вас нет прав для использования этой команды!"
-    tab-completer: org.example.command.AdminCommands  # Включаем автодополнение
 
   teamreload:
     description: Перезагрузить конфигурацию плагина (только для консоли)
@@ -96,7 +47,6 @@ commands:
   menu:
     description: Открывает меню
     usage: /menu
-    tab-completer: org.example.command.MenuCommand
 
   debugtoggle:
     description: Переключить режим отладки (только для консоли)
