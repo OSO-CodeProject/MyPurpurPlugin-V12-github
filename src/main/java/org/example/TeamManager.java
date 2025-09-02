@@ -827,15 +827,16 @@ public class TeamManager implements TeamService {
                     plugin.getLogger().warning("Команда " + team.getName() + " превышает лимит участников (" + size + "/" + max + ")");
                     continue;
                 }
-                if (pluginConfig.isGracePeriodEnabled()) {
-                    long deadline = System.currentTimeMillis() + pluginConfig.getGracePeriodMinutes() * 60L * 1000L;
+                int grace = pluginConfig.getGracePeriodMinutes();
+                if (grace > 0) {
+                    long deadline = System.currentTimeMillis() + grace * 60L * 1000L;
                     Long old = deadlines.put(entry.getKey(), deadline);
                     if (old == null) {
                         Player leader = plugin.getServer().getPlayer(team.getLeader());
                         if (leader != null) {
                             int excess = size - max;
                             TeamMessageUtils.sendTeamMessage(leader,
-                                    TeamMessageUtils.deadlineWarningMessage(max, pluginConfig.getGracePeriodMinutes(), excess));
+                                    TeamMessageUtils.deadlineWarningMessage(max, grace, excess));
                         }
                     }
                     changed = true;

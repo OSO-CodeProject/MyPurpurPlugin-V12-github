@@ -49,20 +49,19 @@ public class PluginConfig {
      */
     private void setDefaults() {
         // Основные настройки
-        config.addDefault("team-command-requires-op", false);
-        config.addDefault("notify-admins", true);
-        config.addDefault("max-members", 5);
-        config.addDefault("min-prefix-length", 2);
-        config.addDefault("max-prefix-length", 5);
-        config.addDefault("min-team-name-length", 3);
-        config.addDefault("max-team-name-length", 16);
+        config.addDefault("team.requires-op", false);
+        config.addDefault("team.notify-admins", true);
+        config.addDefault("team.max-members", 5);
+        config.addDefault("team.min-prefix-length", 2);
+        config.addDefault("team.max-prefix-length", 5);
+        config.addDefault("team.min-team-name-length", 3);
+        config.addDefault("team.max-team-name-length", 16);
         config.addDefault("team.enforce-max-members-on-reload", true);
-        config.addDefault("team.grace-period-enabled", true);
         config.addDefault("team.grace-period-minutes", 10);
 
         // Настройки меню
-        config.addDefault("menu.sound", "BLOCK_NOTE_BLOCK_PLING");
-        config.addDefault("menu.particle", "FIREWORK");
+        config.addDefault("menu.open-sound", "BLOCK_NOTE_BLOCK_PLING");
+        config.addDefault("menu.particle-effect", "FIREWORK");
         config.addDefault("menu.sound-volume", 1.0);
         config.addDefault("menu.sound-pitch", 1.0);
 
@@ -94,7 +93,7 @@ public class PluginConfig {
      * @return true, если требуется OP, иначе false
      */
     public boolean isTeamCommandRequiresOp() {
-        return config.getBoolean("team-command-requires-op", false);
+        return config.getBoolean("team.requires-op", false);
     }
 
     /**
@@ -103,7 +102,7 @@ public class PluginConfig {
      * @return true, если уведомления включены, иначе false
      */
     public boolean shouldNotifyAdmins() {
-        return config.getBoolean("notify-admins", true);
+        return config.getBoolean("team.notify-admins", true);
     }
 
     /**
@@ -112,7 +111,7 @@ public class PluginConfig {
      * @return Максимальное количество участников (0 — без ограничений)
      */
     public int getMaxMembers() {
-        return config.getInt("max-members", 5);
+        return config.getInt("team.max-members", 5);
     }
 
     /**
@@ -122,15 +121,6 @@ public class PluginConfig {
      */
     public boolean isEnforceMaxMembersOnReload() {
         return config.getBoolean("team.enforce-max-members-on-reload", true);
-    }
-
-    /**
-     * Проверяет, включён ли льготный период для удаления лишних участников.
-     *
-     * @return true, если льготный период включён
-     */
-    public boolean isGracePeriodEnabled() {
-        return config.getBoolean("team.grace-period-enabled", true);
     }
 
     /**
@@ -148,7 +138,7 @@ public class PluginConfig {
      * @return Минимальная длина префикса
      */
     public int getMinPrefixLength() {
-        return config.getInt("min-prefix-length", 2);
+        return config.getInt("team.min-prefix-length", 2);
     }
 
     /**
@@ -157,7 +147,7 @@ public class PluginConfig {
      * @return Максимальная длина префикса
      */
     public int getMaxPrefixLength() {
-        return config.getInt("max-prefix-length", 5);
+        return config.getInt("team.max-prefix-length", 5);
     }
 
     /**
@@ -166,7 +156,7 @@ public class PluginConfig {
      * @return Минимальная длина названия команды
      */
     public int getMinTeamNameLength() {
-        return config.getInt("min-team-name-length", 3);
+        return config.getInt("team.min-team-name-length", 3);
     }
 
     /**
@@ -175,7 +165,7 @@ public class PluginConfig {
      * @return Максимальная длина названия команды
      */
     public int getMaxTeamNameLength() {
-        return config.getInt("max-team-name-length", 16);
+        return config.getInt("team.max-team-name-length", 16);
     }
 
     /**
@@ -184,7 +174,7 @@ public class PluginConfig {
      * @return Название звука
      */
     public String getMenuOpenSound() {
-        return config.getString("menu.sound", "BLOCK_NOTE_BLOCK_PLING");
+        return config.getString("menu.open-sound", "BLOCK_NOTE_BLOCK_PLING");
     }
 
     /**
@@ -193,7 +183,7 @@ public class PluginConfig {
      * @return Название эффекта частиц
      */
     public String getMenuParticleEffect() {
-        return config.getString("menu.particle", "FIREWORK");
+        return config.getString("menu.particle-effect", "FIREWORK");
     }
 
     /**
