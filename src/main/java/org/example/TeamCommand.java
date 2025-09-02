@@ -111,8 +111,10 @@ public class TeamCommand implements org.bukkit.command.CommandExecutor, TabCompl
         }
         player.sendMessage(Component.text("")); // Пустая строка перед списком
         player.sendMessage(Component.text("📋 Список команд:", NamedTextColor.AQUA));
-        player.sendMessage(Component.text("")); // Пустая строка перед списком команд
         int maxMembers = pluginConfig.getMaxMembers();
+        String limitText = maxMembers > 0 ? String.valueOf(maxMembers) : "без лимита";
+        player.sendMessage(Component.text("Текущий лимит участников: " + limitText, NamedTextColor.AQUA));
+        player.sendMessage(Component.text("")); // Пустая строка перед списком команд
         for (String team : allTeams) {
             int memberCount = teamManager.getTeamMembers(team).size();
             String prefix = teamManager.getTeamPrefix(team);
@@ -168,7 +170,9 @@ public class TeamCommand implements org.bukkit.command.CommandExecutor, TabCompl
      */
     private Component getTeamInfoComponent(String team, int memberCount, int maxMembers) {
         if (maxMembers > 0) {
-            if (memberCount >= maxMembers) {
+            if (memberCount > maxMembers) {
+                return Component.text(team + " [Переполнена]", NamedTextColor.WHITE);
+            } else if (memberCount == maxMembers) {
                 return Component.text(team + " [Полная]", NamedTextColor.WHITE);
             } else {
                 return Component.text(team + " [", NamedTextColor.WHITE)
