@@ -153,6 +153,13 @@ public interface TeamService {
     @NotNull JavaPlugin getPlugin();
 
     /**
+     * Возвращает конфигурацию плагина.
+     *
+     * @return конфигурация плагина
+     */
+    @NotNull PluginConfig getPluginConfig();
+
+    /**
      * Перезагружает конфигурацию плагина и применяет изменения.
      */
     void reloadConfig();
@@ -164,5 +171,13 @@ public interface TeamService {
      * @return UUID команды или null, если команда не существует
      */
     UUID getTeamIdByName(String teamName);
+
+    /**
+     * Возвращает дедлайн команды в миллисекундах или null, если он не установлен.
+     *
+     * @param teamName название команды
+     * @return значение дедлайна или null
+     */
+    Long getTeamDeadline(String teamName);
 
 }

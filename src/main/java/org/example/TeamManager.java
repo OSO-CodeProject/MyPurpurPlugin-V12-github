@@ -21,6 +21,7 @@ public class TeamManager implements TeamService {
     private final JavaPlugin plugin;
     private final PluginConfig pluginConfig;
     private final Map<UUID, Team> teams; // Храним команды по UUID
+    private final Map<UUID, Long> deadlines; // дедлайны для команд
     private FileConfiguration teamsConfig;
     private File teamsFile;
 
@@ -28,7 +29,10 @@ public class TeamManager implements TeamService {
         this.plugin = plugin;
         this.pluginConfig = new PluginConfig(plugin);
         this.teams = new HashMap<>();
+        this.deadlines = new HashMap<>();
         loadTeams();
+        enforceTeamSizes();
+        startDeadlineTask();
     }
 
     /**
@@ -63,6 +67,7 @@ public class TeamManager implements TeamService {
         try {
             teamsConfig = YamlConfiguration.loadConfiguration(teamsFile);
             teams.clear();
+            deadlines.clear();
 
             var teamsSection = teamsConfig.getConfigurationSection("teams");
             if (teamsSection != null) {
@@ -73,8 +78,11 @@ public class TeamManager implements TeamService {
                     String prefix = teamsConfig.getString("teams." + teamIdStr + ".prefix", "");
                     String color = teamsConfig.getString("teams." + teamIdStr + ".color", "WHITE");
                     Team team = new Team(name, leader, prefix, color);
-                    team.getMembers().clear();
-                    team.getMembers().addAll(teamsConfig.getStringList("teams." + teamIdStr + ".members"));
+                    team.setMembers(teamsConfig.getStringList("teams." + teamIdStr + ".members"));
+                    long deadline = teamsConfig.getLong("teams." + teamIdStr + ".deadline", 0L);
+                    if (deadline > 0L) {
+                        deadlines.put(teamId, deadline);
+                    }
                     teams.put(teamId, team);
                 }
             }
@@ -99,6 +107,10 @@ public class TeamManager implements TeamService {
             teamsConfig.set(path + ".members", team.getMembers());
             teamsConfig.set(path + ".prefix", team.getPrefix());
             teamsConfig.set(path + ".color", team.getColor().toString().toUpperCase());
+            Long deadline = deadlines.get(teamId);
+            if (deadline != null) {
+                teamsConfig.set(path + ".deadline", deadline);
+            }
         }
         try {
             teamsConfig.save(teamsFile);
@@ -129,7 +141,7 @@ public class TeamManager implements TeamService {
      * Уведомляет администраторов о действиях с командами.
      * Добавлена проверка на null для prefixComponent.
      */
-    private void notifyAdmins(Player leader, List<Component> messageParts, String teamName, Component prefixComponent, boolean addInTeam) {
+    private void notifyAdmins(Player leader, List<Component> messageParts, String teamName, Component prefixComponent) {
         if (pluginConfig.shouldNotifyAdmins()) {
             Component adminMessage = Component.text("ℹ Игрок ", NamedTextColor.YELLOW)
                     .append(Component.text(leader.getName(), NamedTextColor.WHITE));
@@ -138,7 +150,7 @@ public class TeamManager implements TeamService {
                 adminMessage = adminMessage.append(part != null ? part : Component.empty());
             }
 
-            if (!teamName.isEmpty() && prefixComponent != null && !prefixComponent.equals(Component.empty()) && !addInTeam) {
+            if (!teamName.isEmpty() && prefixComponent != null && !prefixComponent.equals(Component.empty())) {
                 adminMessage = adminMessage.append(Component.text(" ", NamedTextColor.YELLOW))
                         .append(prefixComponent)
                         .append(Component.text(teamName, NamedTextColor.WHITE));
@@ -225,7 +237,7 @@ public class TeamManager implements TeamService {
         TeamMessageUtils.sendTeamMessage(leader, message);
         updatePlayerPrefixes(teamName);
 
-        notifyAdmins(leader, List.of(Component.text(" создал команду ", NamedTextColor.YELLOW)), teamName, prefixComponent, false);
+        notifyAdmins(leader, List.of(Component.text(" создал команду ", NamedTextColor.YELLOW)), teamName, prefixComponent);
 
         plugin.getLogger().info("Команда " + teamName + " успешно создана лидером " + leader.getName());
     }
@@ -324,7 +336,7 @@ public class TeamManager implements TeamService {
             }
         }
 
-        notifyAdmins(leader, List.of(Component.text(" распустил команду ", NamedTextColor.YELLOW)), teamName, prefixComponent, false);
+        notifyAdmins(leader, List.of(Component.text(" распустил команду ", NamedTextColor.YELLOW)), teamName, prefixComponent);
 
         plugin.getLogger().info("Команда " + teamName + " распущена лидером " + leader.getName());
     }
@@ -369,7 +381,7 @@ public class TeamManager implements TeamService {
                         prefixComponent,
                         Component.text(teamName, NamedTextColor.WHITE),
                         Component.text(", так как был последним участником ", NamedTextColor.YELLOW)
-                ), "", Component.empty(), false);
+                ), "", Component.empty());
             } else {
                 String newLeader = team.getMembers().getFirst();
                 team.setLeader(newLeader);
@@ -499,7 +511,7 @@ public class TeamManager implements TeamService {
                 Component.text(" в команде ", NamedTextColor.YELLOW),
                 prefixComponent,
                 Component.text(teamName, NamedTextColor.WHITE)
-        ), "", Component.empty(), false);
+        ), "", Component.empty());
 
         updatePlayerPrefixes(teamName);
         plugin.getLogger().info("Игрок " + targetName + " исключён из команды " + teamName + " лидером " + leader.getName());
@@ -560,7 +572,7 @@ public class TeamManager implements TeamService {
         notifyAdmins(leader, List.of(
                 Component.text(" передал лидерство игроку ", NamedTextColor.YELLOW),
                 Component.text(newLeader.getName(), NamedTextColor.WHITE)
-        ), teamName, prefixComponent, true);
+        ), teamName, prefixComponent);
 
         updatePlayerPrefixes(teamName);
         plugin.getLogger().info("Лидерство в команде " + teamName + " передано от " + leader.getName() + " к " + newLeader.getName());
@@ -601,7 +613,7 @@ public class TeamManager implements TeamService {
                 Component.text(" в ", NamedTextColor.YELLOW),
                 prefixComponent,
                 Component.text(newTeamName, NamedTextColor.WHITE)
-        ), "", Component.empty(), false);
+        ), "", Component.empty());
 
         updatePlayerPrefixes(newTeamName);
         plugin.getLogger().info("Команда " + oldTeamName + " переименована в " + newTeamName + " лидером " + leader.getName());
@@ -653,7 +665,7 @@ public class TeamManager implements TeamService {
                 Component.text(oldPrefix, NamedTextColor.WHITE),
                 Component.text(" на ", NamedTextColor.YELLOW),
                 Component.text(newPrefix, NamedTextColor.WHITE)
-        ), teamName, prefixComponent, true);
+        ), teamName, prefixComponent);
 
         updatePlayerPrefixes(teamName);
         plugin.getLogger().info("Префикс команды " + teamName + " изменён на " + newPrefix + " лидером " + leader.getName());
@@ -707,7 +719,7 @@ public class TeamManager implements TeamService {
                 oldPrefixComponent,
                 Component.text(" на ", NamedTextColor.YELLOW),
                 prefixComponent
-        ), teamName, prefixComponent, true);
+        ), teamName, prefixComponent);
 
         updatePlayerPrefixes(teamName);
         plugin.getLogger().info("Цвет команды " + teamName + " изменён на " + newColor + " лидером " + leader.getName());
@@ -778,8 +790,142 @@ public class TeamManager implements TeamService {
     }
 
     @Override
+    public @NotNull PluginConfig getPluginConfig() {
+        return pluginConfig;
+    }
+
+    @Override
+    public Long getTeamDeadline(String teamName) {
+        UUID id = getTeamIdByName(teamName);
+        return id != null ? deadlines.get(id) : null;
+    }
+
+    @Override
     public void reloadConfig() {
         pluginConfig.reloadConfig();
         loadTeams();
+        enforceTeamSizes();
+    }
+
+    private void startDeadlineTask() {
+        long period = 20L * 60 * 5; // каждые 5 минут
+        plugin.getServer().getScheduler().runTaskTimer(plugin, this::checkDeadlines, period, period);
+    }
+
+    private void enforceTeamSizes() {
+        int max = pluginConfig.getMaxMembers();
+        if (max <= 0) {
+            deadlines.clear();
+            return;
+        }
+        boolean changed = false;
+        for (Map.Entry<UUID, Team> entry : teams.entrySet()) {
+            Team team = entry.getValue();
+            int size = team.getMembers().size();
+            if (size > max) {
+                if (!pluginConfig.isEnforceMaxMembersOnReload()) {
+                    plugin.getLogger().warning("Команда " + team.getName() + " превышает лимит участников (" + size + "/" + max + ")");
+                    continue;
+                }
+                if (pluginConfig.isGracePeriodEnabled()) {
+                    long deadline = System.currentTimeMillis() + pluginConfig.getGracePeriodMinutes() * 60L * 1000L;
+                    Long old = deadlines.put(entry.getKey(), deadline);
+                    if (old == null) {
+                        Player leader = plugin.getServer().getPlayer(team.getLeader());
+                        if (leader != null) {
+                            int excess = size - max;
+                            TeamMessageUtils.sendTeamMessage(leader,
+                                    TeamMessageUtils.deadlineWarningMessage(max, pluginConfig.getGracePeriodMinutes(), excess));
+                        }
+                    }
+                    changed = true;
+                } else {
+                    removeExtraPlayers(entry.getKey(), max);
+                    changed = true;
+                }
+            } else {
+                if (deadlines.remove(entry.getKey()) != null) {
+                    changed = true;
+                }
+            }
+        }
+        if (changed) {
+            saveTeams();
+        }
+    }
+
+    private void checkDeadlines() {
+        long now = System.currentTimeMillis();
+        int max = pluginConfig.getMaxMembers();
+        if (max <= 0) {
+            deadlines.clear();
+            return;
+        }
+        boolean changed = false;
+        Iterator<Map.Entry<UUID, Long>> it = deadlines.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<UUID, Long> entry = it.next();
+            UUID teamId = entry.getKey();
+            long deadline = entry.getValue();
+            Team team = teams.get(teamId);
+            if (team == null) {
+                it.remove();
+                changed = true;
+                continue;
+            }
+            int size = team.getMembers().size();
+            if (size <= max) {
+                it.remove();
+                changed = true;
+                continue;
+            }
+            if (deadline <= now) {
+                removeExtraPlayers(teamId, max);
+                it.remove();
+                changed = true;
+            }
+        }
+        if (changed) {
+            saveTeams();
+        }
+    }
+
+    private void removeExtraPlayers(UUID teamId, int max) {
+        Team team = teams.get(teamId);
+        if (team == null) return;
+        int toRemove = team.getMembers().size() - max;
+        if (toRemove <= 0) return;
+        List<String> removed = new ArrayList<>();
+        for (String member : new ArrayList<>(team.getMembers())) {
+            if (member.equals(team.getLeader())) continue;
+            if (!plugin.getServer().getOfflinePlayer(member).isOnline()) {
+                team.removeMember(member);
+                removed.add(member);
+                toRemove--;
+            }
+            if (toRemove <= 0) break;
+        }
+        if (toRemove > 0) {
+            List<String> members = new ArrayList<>(team.getMembers());
+            Collections.reverse(members);
+            for (String member : members) {
+                if (member.equals(team.getLeader())) continue;
+                if (!removed.contains(member)) {
+                    team.removeMember(member);
+                    removed.add(member);
+                    toRemove--;
+                }
+                if (toRemove <= 0) break;
+            }
+        }
+        if (!removed.isEmpty()) {
+            Player leader = plugin.getServer().getPlayer(team.getLeader());
+            if (leader != null) {
+                TeamMessageUtils.sendTeamMessage(leader,
+                        TeamMessageUtils.forcedRemovalMessage(removed.size()));
+            }
+            plugin.getLogger().info("Из команды " + team.getName() + " удалено " + removed.size() + " участника(ов): " + removed);
+        }
+        deadlines.remove(teamId);
     }
 }
