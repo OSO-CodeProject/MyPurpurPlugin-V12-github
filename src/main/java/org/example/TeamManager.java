@@ -895,12 +895,13 @@ public class TeamManager implements TeamService {
         if (team == null) return;
         int toRemove = team.getMembers().size() - max;
         if (toRemove <= 0) return;
-        List<String> removed = new ArrayList<>();
+        List<String> removedMembers = new ArrayList<>();
         for (String member : new ArrayList<>(team.getMembers())) {
             if (member.equals(team.getLeader())) continue;
             if (!plugin.getServer().getOfflinePlayer(member).isOnline()) {
                 team.removeMember(member);
-                removed.add(member);
+                removedMembers.add(member);
+                plugin.getLogger().info("Игрок " + member + " удалён из команды " + team.getName());
                 toRemove--;
             }
             if (toRemove <= 0) break;
@@ -910,21 +911,30 @@ public class TeamManager implements TeamService {
             Collections.reverse(members);
             for (String member : members) {
                 if (member.equals(team.getLeader())) continue;
-                if (!removed.contains(member)) {
+                if (!removedMembers.contains(member)) {
                     team.removeMember(member);
-                    removed.add(member);
+                    removedMembers.add(member);
+                    Player player = plugin.getServer().getPlayer(member);
+                    if (player != null) {
+                        plugin.getServer().getPluginManager().callEvent(
+                                new TeamChatListener.PlayerPrefixUpdateEvent(player, null));
+                        player.playerListName(Component.text(player.getName(), NamedTextColor.WHITE));
+                        plugin.getLogger().info("Сброшен префикс для игрока " + player.getName() +
+                                " после исключения из команды " + team.getName());
+                    }
+                    plugin.getLogger().info("Игрок " + member + " удалён из команды " + team.getName());
                     toRemove--;
                 }
                 if (toRemove <= 0) break;
             }
         }
-        if (!removed.isEmpty()) {
+        if (!removedMembers.isEmpty()) {
             Player leader = plugin.getServer().getPlayer(team.getLeader());
             if (leader != null) {
                 TeamMessageUtils.sendTeamMessage(leader,
-                        TeamMessageUtils.forcedRemovalMessage(removed.size()));
+                        TeamMessageUtils.forcedRemovalMessage(removedMembers.size()));
             }
-            plugin.getLogger().info("Из команды " + team.getName() + " удалено " + removed.size() + " участника(ов): " + removed);
+            plugin.getLogger().info("Из команды " + team.getName() + " удалено " + removedMembers.size() + " участника(ов): " + removedMembers);
         }
         deadlines.remove(teamId);
     }
