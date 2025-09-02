@@ -1,4 +1,4 @@
-package org.example;
+package org.example.command;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -6,22 +6,21 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
-import org.bukkit.plugin.java.JavaPlugin;
+import org.example.config.PluginConfig;
+import org.example.service.TeamService;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Обработчик команды /cfgDefault для сброса конфигурации плагина до дефолтных настроек.
+ * Обработчик команды /teamreload для перезагрузки конфигурации плагина.
  */
-public class CfgDefaultCommand implements CommandExecutor {
+public class TeamReloadCommand implements CommandExecutor {
 
-    private final JavaPlugin plugin;
-    private final PluginConfig pluginConfig;
     private final TeamService teamManager;
+    private final PluginConfig pluginConfig;
 
-    public CfgDefaultCommand(@NotNull JavaPlugin plugin, @NotNull PluginConfig pluginConfig, @NotNull TeamService teamManager) {
-        this.plugin = plugin;
-        this.pluginConfig = pluginConfig;
+    public TeamReloadCommand(@NotNull TeamService teamManager, @NotNull PluginConfig pluginConfig) {
         this.teamManager = teamManager;
+        this.pluginConfig = pluginConfig;
     }
 
     @Override
@@ -31,12 +30,11 @@ public class CfgDefaultCommand implements CommandExecutor {
             return true;
         }
 
-        // Сбрасываем config.yml до дефолтного
-        plugin.saveResource("config.yml", true);
         // Перезагружаем конфигурацию
         pluginConfig.reloadConfig();
+        // Перезагружаем состояние TeamManager
         teamManager.reloadConfig();
-        sender.sendMessage(Component.text("✅ Конфигурация плагина успешно сброшена до дефолтных настроек!", NamedTextColor.GREEN));
+        sender.sendMessage(Component.text("✅ Конфигурация плагина успешно перезагружена!", NamedTextColor.GREEN));
         return true;
     }
 }

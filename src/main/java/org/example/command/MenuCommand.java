@@ -1,4 +1,4 @@
-package org.example;
+package org.example.command;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -14,6 +14,7 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.example.config.PluginConfig;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collections;

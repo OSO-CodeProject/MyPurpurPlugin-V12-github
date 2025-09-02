@@ -9,7 +9,7 @@ commands:
   team:
     description: Управление командами (создание, вступление, выход, и т.д.)
     usage: /team <create | join | leave | list | members | help> [аргументы]
-    tab-completer: org.example.TeamCommand
+    tab-completer: org.example.command.TeamCommand
     aliases: [t]
     permission: mypurpurplugin.team
     permission-message: "❌ У вас нет прав для использования этой команды!"
@@ -38,7 +38,7 @@ commands:
   teamadmin:
     description: Управление командами для лидеров (передача лидерства, исключение, роспуск, и т.д.)
     usage: /teamadmin <transfer | kick | disband | rename | setprefix | setcolor | help> [аргументы]
-    tab-completer: org.example.TeamAdminCommand
+    tab-completer: org.example.command.TeamAdminCommand
     aliases: [ta]
     permission: mypurpurplugin.teamadmin
     permission-message: "❌ У вас нет прав для использования этой команды!"
@@ -79,7 +79,7 @@ commands:
     usage: /<command> <название>
     permission: mypurpurplugin.getteamuuid
     permission-message: "❌ У вас нет прав для использования этой команды!"
-    tab-completer: org.example.AdminCommands  # Включаем автодополнение
+    tab-completer: org.example.command.AdminCommands  # Включаем автодополнение
 
   teamreload:
     description: Перезагрузить конфигурацию плагина (только для консоли)
@@ -96,7 +96,7 @@ commands:
   menu:
     description: Открывает меню
     usage: /menu
-    tab-completer: org.example.MenuCommand
+    tab-completer: org.example.command.MenuCommand
 
   debugtoggle:
     description: Переключить режим отладки (только для консоли)

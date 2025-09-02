@@ -1,6 +1,17 @@
 package org.example;
 
 import org.bukkit.plugin.java.JavaPlugin;
+import org.example.command.AdminCommands;
+import org.example.command.CfgDefaultCommand;
+import org.example.command.DebugToggleCommand;
+import org.example.command.MenuCommand;
+import org.example.command.TeamAdminCommand;
+import org.example.command.TeamCommand;
+import org.example.command.TeamReloadCommand;
+import org.example.config.PluginConfig;
+import org.example.listener.TeamChatListener;
+import org.example.service.TeamManager;
+import org.example.service.TeamService;
 
 /**
  * Главный класс плагина MyPurpurPlugin.

@@ -1,8 +1,10 @@
-package org.example;
+package org.example.util;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.entity.Player;
+import org.example.config.PluginConfig;
+import org.example.service.TeamService;
 
 import java.util.Set;
 

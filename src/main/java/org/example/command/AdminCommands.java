@@ -1,4 +1,4 @@
-package org.example;
+package org.example.command;
 
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -10,6 +10,8 @@ import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
+import org.example.MyPurpurPlugin;
+import org.example.service.TeamService;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;

@@ -1,4 +1,4 @@
-package org.example;
+package org.example.listener;
 
 import io.papermc.paper.event.player.AsyncChatEvent;
 import net.kyori.adventure.text.Component;
@@ -8,6 +8,9 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.example.MyPurpurPlugin;
+import org.example.service.TeamService;
+import org.example.util.TeamMessageUtils;
 import org.jetbrains.annotations.NotNull;
 
 /**

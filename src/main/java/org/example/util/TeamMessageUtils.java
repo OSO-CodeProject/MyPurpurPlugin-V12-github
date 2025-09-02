@@ -1,4 +1,4 @@
-package org.example;
+package org.example.util;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
