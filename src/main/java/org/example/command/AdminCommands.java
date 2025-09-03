@@ -33,16 +33,19 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        if (!player.isOp()) {
-            player.sendMessage(Component.text("❌ У вас нет прав для выполнения этой команды!", NamedTextColor.RED));
-            return true;
-        }
-
         String commandName = command.getName().toLowerCase();
 
         if (commandName.equals("getteamsuuidlist")) {
+            if (!player.hasPermission("mypurpurplugin.getteamsuuidlist")) {
+                player.sendMessage(Component.text("❌ У вас нет прав для выполнения этой команды!", NamedTextColor.RED));
+                return true;
+            }
             return handleGetTeamsUUIDListCommand(player);
         } else if (commandName.equals("getteamuuid")) {
+            if (!player.hasPermission("mypurpurplugin.getteamuuid")) {
+                player.sendMessage(Component.text("❌ У вас нет прав для выполнения этой команды!", NamedTextColor.RED));
+                return true;
+            }
             return handleGetTeamUUIDCommand(player, args);
         }
 
