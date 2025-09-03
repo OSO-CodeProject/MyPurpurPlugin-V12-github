@@ -492,7 +492,7 @@ public class TeamManager implements TeamService {
             "",
             Component.empty());
       } else {
-        String newLeader = team.getMembers().getFirst();
+        String newLeader = team.getFirstMember();
         team.setLeader(newLeader);
         saveTeams();
         Component leaderMessage =

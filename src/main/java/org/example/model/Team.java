@@ -46,6 +46,10 @@ public class Team {
     return new ArrayList<>(members);
   }
 
+  public String getFirstMember() {
+    return members.isEmpty() ? null : members.get(0);
+  }
+
   public String getPrefix() {
     return prefix;
   }
