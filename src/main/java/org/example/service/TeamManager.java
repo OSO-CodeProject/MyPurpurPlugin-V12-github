@@ -2,6 +2,7 @@ package org.example.service;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -22,6 +23,7 @@ import org.jetbrains.annotations.NotNull;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
@@ -39,11 +41,17 @@ public class TeamManager implements TeamService {
     public TeamManager(@NotNull JavaPlugin plugin) {
         this.plugin = plugin;
         this.pluginConfig = new PluginConfig(plugin);
-        this.teams = new HashMap<>();
-        this.deadlines = new HashMap<>();
+        this.teams = new ConcurrentHashMap<>();
+        this.deadlines = new ConcurrentHashMap<>();
         loadTeams();
         enforceTeamSizes();
         startDeadlineTask();
+    }
+
+    private void ensureMainThread() {
+        if (!Bukkit.isPrimaryThread()) {
+            throw new IllegalStateException("TeamManager accessed from async thread");
+        }
     }
 
     /**
@@ -52,6 +60,7 @@ public class TeamManager implements TeamService {
      * Добавлена обработка исключений для повышения надёжности.
      */
     private void loadTeams() {
+        ensureMainThread();
         teamsFile = new File(plugin.getDataFolder(), "teams.yml");
 
         // Проверяем и создаём папку плагина, если её нет
@@ -108,6 +117,7 @@ public class TeamManager implements TeamService {
      * Полностью перезаписывает секцию "teams" для обеспечения актуальности.
      */
     private void saveTeams() {
+        ensureMainThread();
         teamsConfig.set("teams", null); // Очищаем старую секцию перед сохранением
         for (Map.Entry<UUID, Team> entry : teams.entrySet()) {
             UUID teamId = entry.getKey();
@@ -133,6 +143,7 @@ public class TeamManager implements TeamService {
 
     // Вспомогательные методы
     private Team getTeamByName(String teamName) {
+        ensureMainThread();
         return teams.values().stream()
                 .filter(team -> team.getName().equals(teamName))
                 .findFirst()
@@ -141,6 +152,7 @@ public class TeamManager implements TeamService {
 
     @Override
     public UUID getTeamIdByName(String teamName) {
+        ensureMainThread();
         return teams.entrySet().stream()
                 .filter(entry -> entry.getValue().getName().equals(teamName))
                 .map(Map.Entry::getKey)
@@ -179,6 +191,7 @@ public class TeamManager implements TeamService {
 
     @Override
     public void createTeam(String teamName, String prefix, String color, @NotNull Player leader) {
+        ensureMainThread();
         ((MyPurpurPlugin) plugin).debugTeamAction("Попытка создания команды", leader.getName(), teamName);
         String existingTeam = getPlayerTeam(leader);
         if (existingTeam != null) {
@@ -255,6 +268,7 @@ public class TeamManager implements TeamService {
 
     @Override
     public void addPlayerToTeam(String teamName, @NotNull Player player) {
+        ensureMainThread();
         ((MyPurpurPlugin) plugin).debugTeamAction("Попытка добавления игрока в команду", player.getName(), teamName);
         Team team = getTeamByName(teamName);
         if (team == null) {
@@ -311,6 +325,7 @@ public class TeamManager implements TeamService {
 
     @Override
     public void disbandTeam(String teamName, @NotNull Player leader) {
+        ensureMainThread();
         ((MyPurpurPlugin) plugin).debugTeamAction("Попытка распустить команду", leader.getName(), teamName);
         Team team = getTeamByName(teamName);
         if (TeamValidator.isTeamAndLeadershipInvalid(this, teamName, leader, "распустить команду")) {
@@ -357,6 +372,7 @@ public class TeamManager implements TeamService {
 
     @Override
     public void removePlayerFromTeam(String teamName, @NotNull Player player) {
+        ensureMainThread();
         ((MyPurpurPlugin) plugin).debugTeamAction("Попытка удаления игрока из команды", player.getName(), teamName);
         Team team = getTeamByName(teamName);
         if (team == null) {
@@ -458,6 +474,7 @@ public class TeamManager implements TeamService {
 
     @Override
     public void kickPlayerFromTeam(String teamName, @NotNull Player leader, @NotNull String targetName) {
+        ensureMainThread();
         ((MyPurpurPlugin) plugin).debugTeamAction("Попытка исключения игрока из команды", targetName, teamName);
         Team team = getTeamByName(teamName);
         if (TeamValidator.isTeamAndLeadershipInvalid(this, teamName, leader, "выгнать участника из команды")) {
@@ -530,6 +547,7 @@ public class TeamManager implements TeamService {
 
     @Override
     public void transferLeadership(String teamName, @NotNull Player leader, @NotNull Player newLeader) {
+        ensureMainThread();
         ((MyPurpurPlugin) plugin).debugTeamAction("Попытка передачи лидерства в команде", leader.getName(), teamName);
         Team team = getTeamByName(teamName);
         if (TeamValidator.isTeamAndLeadershipInvalid(this, teamName, leader, "передавать лидерство в команде")) {
@@ -591,6 +609,7 @@ public class TeamManager implements TeamService {
 
     @Override
     public void renameTeam(String oldTeamName, String newTeamName, @NotNull Player leader) {
+        ensureMainThread();
         ((MyPurpurPlugin) plugin).debugTeamAction("Попытка переименования команды", leader.getName(), oldTeamName);
         Team team = getTeamByName(oldTeamName);
         if (TeamValidator.isTeamAndLeadershipInvalid(this, oldTeamName, leader, "переименовать команду")) {
@@ -632,6 +651,7 @@ public class TeamManager implements TeamService {
 
     @Override
     public void setTeamPrefix(String teamName, String newPrefix, @NotNull Player leader) {
+        ensureMainThread();
         ((MyPurpurPlugin) plugin).debugTeamAction("Попытка изменения префикса команды", leader.getName(), teamName);
         Team team = getTeamByName(teamName);
         if (TeamValidator.isTeamAndLeadershipInvalid(this, teamName, leader, "изменить префикс команды")) {
@@ -684,6 +704,7 @@ public class TeamManager implements TeamService {
 
     @Override
     public void setTeamColor(String teamName, String newColor, @NotNull Player leader) {
+        ensureMainThread();
         ((MyPurpurPlugin) plugin).debugTeamAction("Попытка изменения цвета команды", leader.getName(), teamName);
         Team team = getTeamByName(teamName);
         if (TeamValidator.isTeamAndLeadershipInvalid(this, teamName, leader, "изменить цвет команды")) {
@@ -738,6 +759,7 @@ public class TeamManager implements TeamService {
 
     @Override
     public void updatePlayerPrefixes(String teamName) {
+        ensureMainThread();
         ((MyPurpurPlugin) plugin).debugTeamAction("Обновление префиксов для команды", null, teamName);
         Team team = getTeamByName(teamName);
         if (team == null) {
@@ -757,6 +779,7 @@ public class TeamManager implements TeamService {
 
     @Override
     public String getPlayerTeam(@NotNull Player player) {
+        ensureMainThread();
         return teams.values().stream()
                 .filter(team -> team.hasMember(player.getName()))
                 .map(Team::getName)
@@ -766,12 +789,14 @@ public class TeamManager implements TeamService {
 
     @Override
     public @NotNull List<String> getTeamMembers(String teamName) {
+        ensureMainThread();
         Team team = getTeamByName(teamName);
         return team != null ? team.getMembers() : new ArrayList<>();
     }
 
     @Override
     public @NotNull List<String> getTeamNames() {
+        ensureMainThread();
         return teams.values().stream()
                 .map(Team::getName)
                 .collect(Collectors.toList());
@@ -779,18 +804,21 @@ public class TeamManager implements TeamService {
 
     @Override
     public String getTeamPrefix(String teamName) {
+        ensureMainThread();
         Team team = getTeamByName(teamName);
         return team != null ? team.getPrefix() : "";
     }
 
     @Override
     public @NotNull NamedTextColor getTeamColor(String teamName) {
+        ensureMainThread();
         Team team = getTeamByName(teamName);
         return team != null ? team.getColor() : NamedTextColor.WHITE;
     }
 
     @Override
     public String getTeamLeader(String teamName) {
+        ensureMainThread();
         Team team = getTeamByName(teamName);
         return team != null ? team.getLeader() : null;
     }
@@ -807,12 +835,14 @@ public class TeamManager implements TeamService {
 
     @Override
     public Long getTeamDeadline(String teamName) {
+        ensureMainThread();
         UUID id = getTeamIdByName(teamName);
         return id != null ? deadlines.get(id) : null;
     }
 
     @Override
     public void reloadConfig() {
+        ensureMainThread();
         pluginConfig.reloadConfig();
         loadTeams();
         enforceTeamSizes();
@@ -825,6 +855,7 @@ public class TeamManager implements TeamService {
     }
 
     private void enforceTeamSizes() {
+        ensureMainThread();
         int max = pluginConfig.getMaxMembers();
         if (max <= 0) {
             deadlines.clear();
@@ -868,6 +899,7 @@ public class TeamManager implements TeamService {
     }
 
     private void checkDeadlines() {
+        ensureMainThread();
         long now = System.currentTimeMillis();
         int max = pluginConfig.getMaxMembers();
         if (max <= 0) {
@@ -947,6 +979,7 @@ public class TeamManager implements TeamService {
     }
 
     private void removeExtraPlayers(UUID teamId, int max) {
+        ensureMainThread();
         Team team = teams.get(teamId);
         if (team == null) return;
         int toRemove = team.getMembers().size() - max;
