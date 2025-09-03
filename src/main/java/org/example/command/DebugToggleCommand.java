@@ -9,26 +9,29 @@ import org.bukkit.command.ConsoleCommandSender;
 import org.example.MyPurpurPlugin;
 import org.jetbrains.annotations.NotNull;
 
-/**
- * Обработчик команды /debugtoggle для переключения режима отладки.
- */
+/** Обработчик команды /debugtoggle для переключения режима отладки. */
 public class DebugToggleCommand implements CommandExecutor {
 
-    private final MyPurpurPlugin plugin;
+  private final MyPurpurPlugin plugin;
 
-    public DebugToggleCommand(@NotNull MyPurpurPlugin plugin) {
-        this.plugin = plugin;
+  public DebugToggleCommand(@NotNull MyPurpurPlugin plugin) {
+    this.plugin = plugin;
+  }
+
+  @Override
+  public boolean onCommand(
+      @NotNull CommandSender sender,
+      @NotNull Command command,
+      @NotNull String label,
+      @NotNull String[] args) {
+    if (!(sender instanceof ConsoleCommandSender)) {
+      sender.sendMessage(
+          Component.text("❌ Эта команда доступна только из консоли!", NamedTextColor.RED));
+      return true;
     }
 
-    @Override
-    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
-        if (!(sender instanceof ConsoleCommandSender)) {
-            sender.sendMessage(Component.text("❌ Эта команда доступна только из консоли!", NamedTextColor.RED));
-            return true;
-        }
-
-        // Переключаем режим отладки
-        plugin.toggleDebugMode();
-        return true;
-    }
+    // Переключаем режим отладки
+    plugin.toggleDebugMode();
+    return true;
+  }
 }
