@@ -1,5 +1,6 @@
 plugins {
     id("java")
+    id("com.diffplug.spotless") version "6.25.0"
 }
 
 group = "org.example"
@@ -21,4 +22,11 @@ dependencies {
 
 tasks.jar {
     archiveFileName.set("MyPurpurPlugin.jar")
+}
+
+spotless {
+    java {
+        googleJavaFormat()
+        target("src/**/*.java")
+    }
 }
