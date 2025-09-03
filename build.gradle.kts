@@ -3,6 +3,12 @@ plugins {
     id("com.diffplug.spotless") version "6.25.0"
 }
 
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(17))
+    }
+}
+
 group = "org.example"
 version = "1.0"
 
