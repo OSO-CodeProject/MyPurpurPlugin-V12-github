@@ -150,7 +150,6 @@ public class TeamManager implements TeamService {
 
   // Вспомогательные методы
   private Team getTeamByName(String teamName) {
-    ensureMainThread();
     return teams.values().stream()
         .filter(team -> team.getName().equals(teamName))
         .findFirst()
@@ -159,7 +158,6 @@ public class TeamManager implements TeamService {
 
   @Override
   public UUID getTeamIdByName(String teamName) {
-    ensureMainThread();
     return teams.entrySet().stream()
         .filter(entry -> entry.getValue().getName().equals(teamName))
         .map(Map.Entry::getKey)
@@ -977,7 +975,6 @@ public class TeamManager implements TeamService {
 
   @Override
   public String getPlayerTeam(@NotNull Player player) {
-    ensureMainThread();
     UUID teamId = playerTeams.get(player.getName());
     if (teamId == null) {
       return null;
@@ -988,34 +985,29 @@ public class TeamManager implements TeamService {
 
   @Override
   public @NotNull List<String> getTeamMembers(String teamName) {
-    ensureMainThread();
     Team team = getTeamByName(teamName);
     return team != null ? team.getMembers() : new ArrayList<>();
   }
 
   @Override
   public @NotNull List<String> getTeamNames() {
-    ensureMainThread();
     return teams.values().stream().map(Team::getName).collect(Collectors.toList());
   }
 
   @Override
   public String getTeamPrefix(String teamName) {
-    ensureMainThread();
     Team team = getTeamByName(teamName);
     return team != null ? team.getPrefix() : "";
   }
 
   @Override
   public @NotNull NamedTextColor getTeamColor(String teamName) {
-    ensureMainThread();
     Team team = getTeamByName(teamName);
     return team != null ? team.getColor() : NamedTextColor.WHITE;
   }
 
   @Override
   public String getTeamLeader(String teamName) {
-    ensureMainThread();
     Team team = getTeamByName(teamName);
     return team != null ? team.getLeader() : null;
   }
@@ -1032,7 +1024,6 @@ public class TeamManager implements TeamService {
 
   @Override
   public Long getTeamDeadline(String teamName) {
-    ensureMainThread();
     UUID id = getTeamIdByName(teamName);
     return id != null ? deadlines.get(id) : null;
   }
