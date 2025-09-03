@@ -31,7 +31,7 @@ public class MyPurpurPlugin extends JavaPlugin {
     // Инициализация конфигурации
     pluginConfig = new PluginConfig(this);
     // Инициализация менеджера команд
-    teamManager = new TeamManager(this);
+    teamManager = new TeamManager(this, pluginConfig);
 
     // Регистрация команд
     registerCommand("team", new TeamCommand(teamManager, pluginConfig));
