@@ -35,6 +35,7 @@ public class TeamManager implements TeamService {
     private final PluginConfig pluginConfig;
     private final Map<UUID, Team> teams; // Храним команды по UUID
     private final Map<UUID, Long> deadlines; // дедлайны для команд
+    private final Map<String, UUID> playerTeams; // ник -> id команды
     private FileConfiguration teamsConfig;
     private File teamsFile;
 
@@ -43,6 +44,7 @@ public class TeamManager implements TeamService {
         this.pluginConfig = new PluginConfig(plugin);
         this.teams = new ConcurrentHashMap<>();
         this.deadlines = new ConcurrentHashMap<>();
+        this.playerTeams = new ConcurrentHashMap<>();
         loadTeams();
         enforceTeamSizes();
         startDeadlineTask();
@@ -88,6 +90,7 @@ public class TeamManager implements TeamService {
             teamsConfig = YamlConfiguration.loadConfiguration(teamsFile);
             teams.clear();
             deadlines.clear();
+            playerTeams.clear();
 
             var teamsSection = teamsConfig.getConfigurationSection("teams");
             if (teamsSection != null) {
@@ -104,6 +107,9 @@ public class TeamManager implements TeamService {
                         deadlines.put(team.getId(), deadline);
                     }
                     teams.put(team.getId(), team);
+                    for (String member : team.getMembers()) {
+                        playerTeams.put(member, team.getId());
+                    }
                 }
             }
             ((MyPurpurPlugin) plugin).debug("📂 Файл teams.yml загружен, загружено команд: " + teams.size());
@@ -246,6 +252,7 @@ public class TeamManager implements TeamService {
 
         Team team = new Team(teamName, leader.getName(), prefix, color);
         teams.put(team.getId(), team);
+        playerTeams.put(leader.getName(), team.getId());
         saveTeams();
 
         Component prefixComponent = team.getPrefixComponent();
@@ -304,6 +311,7 @@ public class TeamManager implements TeamService {
         }
 
         team.addMember(player.getName());
+        playerTeams.put(player.getName(), team.getId());
         saveTeams();
 
         Component prefixComponent = team.getPrefixComponent();
@@ -354,8 +362,9 @@ public class TeamManager implements TeamService {
                 .append(Component.text(" !", NamedTextColor.WHITE));
         TeamUtils.notifyTeamMembers(teamName, this, memberMessage, Set.of(leader.getName()));
 
-        // Сбрасываем префиксы для всех участников команды
+        // Сбрасываем префиксы и удаляем участников из карты
         for (String memberName : team.getMembers()) {
+            playerTeams.remove(memberName);
             Player member = plugin.getServer().getPlayer(memberName);
             if (member != null) {
                 plugin.getServer().getPluginManager().callEvent(new TeamChatListener.PlayerPrefixUpdateEvent(member, null));
@@ -387,6 +396,7 @@ public class TeamManager implements TeamService {
         }
 
         team.removeMember(player.getName());
+        playerTeams.remove(player.getName());
         Component prefixComponent = team.getPrefixComponent();
 
         boolean teamDisbanded = false;
@@ -502,6 +512,7 @@ public class TeamManager implements TeamService {
         }
 
         team.removeMember(targetName);
+        playerTeams.remove(targetName);
         saveTeams();
 
         Component prefixComponent = team.getPrefixComponent();
@@ -780,11 +791,12 @@ public class TeamManager implements TeamService {
     @Override
     public String getPlayerTeam(@NotNull Player player) {
         ensureMainThread();
-        return teams.values().stream()
-                .filter(team -> team.hasMember(player.getName()))
-                .map(Team::getName)
-                .findFirst()
-                .orElse(null);
+        UUID teamId = playerTeams.get(player.getName());
+        if (teamId == null) {
+            return null;
+        }
+        Team team = teams.get(teamId);
+        return team != null ? team.getName() : null;
     }
 
     @Override
@@ -989,6 +1001,7 @@ public class TeamManager implements TeamService {
             if (member.equals(team.getLeader())) continue;
             if (!plugin.getServer().getOfflinePlayer(member).isOnline()) {
                 team.removeMember(member);
+                playerTeams.remove(member);
                 removedMembers.add(member);
                 plugin.getLogger().info("Игрок " + member + " удалён из команды " + team.getName());
                 toRemove--;
@@ -1002,6 +1015,7 @@ public class TeamManager implements TeamService {
                 if (member.equals(team.getLeader())) continue;
                 if (!removedMembers.contains(member)) {
                     team.removeMember(member);
+                    playerTeams.remove(member);
                     removedMembers.add(member);
                     Player player = plugin.getServer().getPlayer(member);
                     if (player != null) {
