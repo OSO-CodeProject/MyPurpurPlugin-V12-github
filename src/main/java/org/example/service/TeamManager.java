@@ -36,9 +36,9 @@ public class TeamManager implements TeamService {
   private FileConfiguration teamsConfig;
   private File teamsFile;
 
-  public TeamManager(@NotNull JavaPlugin plugin) {
+  public TeamManager(@NotNull JavaPlugin plugin, @NotNull PluginConfig pluginConfig) {
     this.plugin = plugin;
-    this.pluginConfig = new PluginConfig(plugin);
+    this.pluginConfig = pluginConfig;
     this.teams = new ConcurrentHashMap<>();
     this.deadlines = new ConcurrentHashMap<>();
     this.playerTeams = new ConcurrentHashMap<>();
