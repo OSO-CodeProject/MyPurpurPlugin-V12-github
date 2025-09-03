@@ -28,3 +28,4 @@ menu:
   sound-volume: 1.0 # Громкость звука (0.0–1.0)
   sound-pitch: 1.0 # Высота тона звука (0.5–2.0)
   particle-effect: FIREWORK # Эффект частиц при открытии меню (примеры: SMOKE, HEART, FIREWORK, EXPLOSION)
+

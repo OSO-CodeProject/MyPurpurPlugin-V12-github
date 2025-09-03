@@ -79,3 +79,4 @@ permissions:
   mypurpurplugin.getteamuuid:
     description: Доступ к команде /getteamuuid (только для OP)
     default: op
+
