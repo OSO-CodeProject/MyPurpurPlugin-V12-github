@@ -22,10 +22,17 @@ dependencies {
     compileOnly("org.purpurmc.purpur:purpur-api:1.21.3-R0.1-SNAPSHOT")
     compileOnly("net.kyori:adventure-platform-bukkit:4.3.4") // Последняя версия платформы Bukkit
     compileOnly("org.jetbrains:annotations:24.0.1")
+
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.1")
+    testImplementation("com.github.seeseemelk:MockBukkit-v1.21:3.133.2")
 }
 
 tasks.jar {
     archiveFileName.set("MyPurpurPlugin.jar")
+}
+
+tasks.test {
+    useJUnitPlatform()
 }
 
 spotless {
