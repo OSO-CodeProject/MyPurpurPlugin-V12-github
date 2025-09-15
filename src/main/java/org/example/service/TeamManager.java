@@ -16,6 +16,7 @@ public class TeamManager implements TeamService {
   private final TeamStorage storage;
   private final DeadlineScheduler scheduler;
   private final MembershipService membership;
+  private static final long EXECUTION_THRESHOLD_MS = 50;
 
   public TeamManager(@NotNull JavaPlugin plugin, @NotNull PluginConfig pluginConfig) {
     this.plugin = plugin;
@@ -28,56 +29,67 @@ public class TeamManager implements TeamService {
     this.membership = new MembershipService(plugin, pluginConfig, storage, scheduler);
   }
 
+  private void runWithTiming(String methodName, Runnable action) {
+    long start = System.nanoTime();
+    action.run();
+    long durationMs = (System.nanoTime() - start) / 1_000_000;
+    if (durationMs > EXECUTION_THRESHOLD_MS) {
+      plugin.getLogger().warning(methodName + " took " + durationMs + " ms");
+    }
+  }
+
   @Override
   public void createTeam(String teamName, String prefix, String color, @NotNull Player leader) {
-    membership.createTeam(teamName, prefix, color, leader);
+    runWithTiming("createTeam", () -> membership.createTeam(teamName, prefix, color, leader));
   }
 
   @Override
   public void addPlayerToTeam(String teamName, @NotNull Player player) {
-    membership.addPlayerToTeam(teamName, player);
+    runWithTiming("addPlayerToTeam", () -> membership.addPlayerToTeam(teamName, player));
   }
 
   @Override
   public void removePlayerFromTeam(String teamName, @NotNull Player player) {
-    membership.removePlayerFromTeam(teamName, player);
+    runWithTiming("removePlayerFromTeam", () -> membership.removePlayerFromTeam(teamName, player));
   }
 
   @Override
   public void kickPlayerFromTeam(
       String teamName, @NotNull Player leader, @NotNull String targetName) {
-    membership.kickPlayerFromTeam(teamName, leader, targetName);
+    runWithTiming(
+        "kickPlayerFromTeam", () -> membership.kickPlayerFromTeam(teamName, leader, targetName));
   }
 
   @Override
   public void transferLeadership(
       String teamName, @NotNull Player leader, @NotNull Player newLeader) {
-    membership.transferLeadership(teamName, leader, newLeader);
+    runWithTiming(
+        "transferLeadership", () -> membership.transferLeadership(teamName, leader, newLeader));
   }
 
   @Override
   public void disbandTeam(String teamName, @NotNull Player leader) {
-    membership.disbandTeam(teamName, leader);
+    runWithTiming("disbandTeam", () -> membership.disbandTeam(teamName, leader));
   }
 
   @Override
   public void renameTeam(String oldTeamName, String newTeamName, @NotNull Player leader) {
-    membership.renameTeam(oldTeamName, newTeamName, leader);
+    runWithTiming("renameTeam", () -> membership.renameTeam(oldTeamName, newTeamName, leader));
   }
 
   @Override
   public void setTeamPrefix(String teamName, String newPrefix, @NotNull Player leader) {
-    membership.setTeamPrefix(teamName, newPrefix, leader);
+    runWithTiming("setTeamPrefix", () -> membership.setTeamPrefix(teamName, newPrefix, leader));
   }
 
   @Override
   public void setTeamColor(String teamName, String newColor, @NotNull Player leader) {
-    membership.setTeamColor(teamName, newColor, leader);
+    runWithTiming("setTeamColor", () -> membership.setTeamColor(teamName, newColor, leader));
   }
 
   @Override
   public void updatePlayerPrefixes(String teamName) {
-    membership.updatePlayerPrefixes(teamName);
+    runWithTiming("updatePlayerPrefixes", () -> membership.updatePlayerPrefixes(teamName));
   }
 
   @Override
