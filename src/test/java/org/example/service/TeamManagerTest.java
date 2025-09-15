@@ -6,11 +6,15 @@ import be.seeseemelk.mockbukkit.MockBukkit;
 import be.seeseemelk.mockbukkit.ServerMock;
 import be.seeseemelk.mockbukkit.entity.PlayerMock;
 import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.List;
 import org.example.MyPurpurPlugin;
 import org.example.config.PluginConfig;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /** Unit tests for {@link TeamManager}. */
 class TeamManagerTest {
@@ -46,6 +50,19 @@ class TeamManagerTest {
     MockBukkit.unmock();
   }
 
+  @ParameterizedTest
+  @ValueSource(strings = {"Alice", "Bob", "Charlie"})
+  void playersJoinAndLeaveTeam(String playerName) {
+    PlayerMock leader = server.addPlayer("Leader" + playerName);
+    String teamName = "Team" + playerName;
+    teamManager.createTeam(teamName, "PX", "white", leader);
+    PlayerMock player = server.addPlayer(playerName);
+    teamManager.addPlayerToTeam(teamName, player);
+    assertEquals(teamName, teamManager.getPlayerTeam(player));
+    teamManager.removePlayerFromTeam(teamName, player);
+    assertNull(teamManager.getPlayerTeam(player));
+  }
+
   @Test
   void createsAndManagesTeamMembership() {
     PlayerMock leader = server.addPlayer("Leader1");
@@ -60,6 +77,35 @@ class TeamManagerTest {
 
     teamManager.removePlayerFromTeam("Alpha", member);
     assertNull(teamManager.getPlayerTeam(member));
+  }
+
+  @Test
+  void stressTestAddRemovePlayers() {
+    PlayerMock leader = server.addPlayer("StressLeader");
+    teamManager.createTeam("Stress", "ST", "white", leader);
+    List<PlayerMock> players = new ArrayList<>();
+    for (int i = 0; i < 10; i++) {
+      players.add(server.addPlayer("Stress" + i));
+    }
+    Runtime runtime = Runtime.getRuntime();
+    long before = runtime.totalMemory() - runtime.freeMemory();
+    assertDoesNotThrow(
+        () -> {
+          for (int i = 0; i < 100; i++) {
+            for (PlayerMock p : players) {
+              teamManager.addPlayerToTeam("Stress", p);
+            }
+            for (PlayerMock p : players) {
+              teamManager.removePlayerFromTeam("Stress", p);
+            }
+          }
+        });
+    System.gc();
+    long after = runtime.totalMemory() - runtime.freeMemory();
+    if (after - before > 10_000_000) {
+      teamManager.getPlugin().getLogger().warning("Potential memory leak: " + (after - before));
+    }
+    assertEquals(1, teamManager.getTeamMembers("Stress").size());
   }
 
   @Test
