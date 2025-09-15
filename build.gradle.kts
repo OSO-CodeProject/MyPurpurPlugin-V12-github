@@ -33,6 +33,7 @@ tasks.jar {
 
 tasks.test {
     useJUnitPlatform()
+    dependsOn(tasks.jar)
 }
 
 spotless {
