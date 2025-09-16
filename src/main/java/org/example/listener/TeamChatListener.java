@@ -27,16 +27,19 @@ public class TeamChatListener implements Listener {
     Player player = event.getPlayer();
     updatePlayerPrefix(player);
     String teamName = teamManager.getPlayerTeam(player);
-    if (teamName != null && player.getName().equals(teamManager.getTeamLeader(teamName))) {
-      Long deadline = teamManager.getTeamDeadline(teamName);
-      if (deadline != null) {
-        long remaining = deadline - System.currentTimeMillis();
-        if (remaining > 0) {
-          int minutes = (int) Math.ceil(remaining / 60000.0);
-          int max = teamManager.getPluginConfig().getMaxMembers();
-          int excess = teamManager.getTeamMembers(teamName).size() - max;
-          TeamMessageUtils.sendTeamMessage(
-              player, TeamMessageUtils.deadlineWarningMessage(max, minutes, excess));
+    if (teamName != null && teamManager.getTeamIdByName(teamName) != null) {
+      String leaderName = teamManager.getTeamLeader(teamName);
+      if (player.getName().equals(leaderName)) {
+        Long deadline = teamManager.getTeamDeadline(teamName);
+        if (deadline != null) {
+          long remaining = deadline - System.currentTimeMillis();
+          if (remaining > 0) {
+            int minutes = (int) Math.ceil(remaining / 60000.0);
+            int max = teamManager.getPluginConfig().getMaxMembers();
+            int excess = teamManager.getTeamMembers(teamName).size() - max;
+            TeamMessageUtils.sendTeamMessage(
+                player, TeamMessageUtils.deadlineWarningMessage(max, minutes, excess));
+          }
         }
       }
     }

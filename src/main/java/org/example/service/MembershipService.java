@@ -147,7 +147,11 @@ public class MembershipService {
     Team team = storage.getTeamByName(teamName);
     if (team == null || !team.isLeader(leader.getName())) return;
     NamedTextColor teamColor = NamedTextColor.NAMES.value(newColor.toLowerCase());
-    if (teamColor == null) return;
+    if (teamColor == null) {
+      TeamMessageUtils.sendTeamMessage(
+          leader, Component.text("❌ Неверный цвет команды", NamedTextColor.RED));
+      return;
+    }
     team.setColor(newColor);
     storage.markTeamDirty(team);
   }

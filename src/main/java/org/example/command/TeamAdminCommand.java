@@ -250,7 +250,7 @@ public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, Tab
       if (sender instanceof Player player) {
         if (args[0].equalsIgnoreCase("transfer") || args[0].equalsIgnoreCase("kick")) {
           String teamName = teamManager.getPlayerTeam(player);
-          if (teamName != null) {
+          if (teamName != null && teamManager.getTeamIdByName(teamName) != null) {
             String leaderName = teamManager.getTeamLeader(teamName);
             if (player.getName().equals(leaderName)) {
               List<String> members = teamManager.getTeamMembers(teamName);
