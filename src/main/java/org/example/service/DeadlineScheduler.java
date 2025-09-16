@@ -10,7 +10,10 @@ import org.example.listener.TeamChatListener;
 import org.example.model.Team;
 import org.jetbrains.annotations.NotNull;
 
-/** Handles deadline checking and enforcement of team sizes. */
+/**
+ * Планировщик, который следит за размерами команд и временем, отведённым на их
+ * уменьшение до допустимого количества участников.
+ */
 public class DeadlineScheduler {
 
   private final JavaPlugin plugin;
@@ -19,6 +22,14 @@ public class DeadlineScheduler {
   private final Map<UUID, Long> deadlines = new ConcurrentHashMap<>();
   private BukkitTask task;
 
+  /**
+   * Создаёт планировщик, работающий поверх Bukkit, и связывает его с источниками
+   * конфигурации и хранилищем команд.
+   *
+   * @param plugin плагин, в котором выполняется расписание
+   * @param pluginConfig настройки, задающие ограничения и периоды проверок
+   * @param storage хранилище, содержащее данные по командам
+   */
   public DeadlineScheduler(
       @NotNull JavaPlugin plugin,
       @NotNull PluginConfig pluginConfig,
@@ -28,10 +39,20 @@ public class DeadlineScheduler {
     this.storage = storage;
   }
 
+  /**
+   * Возвращает отображение команд в момент времени, когда истекает их льготный
+   * период.
+   *
+   * @return изменяемая карта дедлайнов по идентификатору команды
+   */
   public Map<UUID, Long> getDeadlines() {
     return deadlines;
   }
 
+  /**
+   * Запускает периодическую проверку дедлайнов и автоматически перезапускает
+   * задачу, если она уже была активна.
+   */
   public synchronized void start() {
     long seconds = pluginConfig.getDeadlineNotifyPeriodSeconds();
     long period = 20L * Math.max(1, seconds);
@@ -45,6 +66,7 @@ public class DeadlineScheduler {
             .runTaskTimer(plugin, this::checkDeadlines, period, period);
   }
 
+  /** Останавливает проверку дедлайнов, отменяя запланированную задачу. */
   public synchronized void stop() {
     if (task != null) {
       task.cancel();
@@ -52,6 +74,10 @@ public class DeadlineScheduler {
     }
   }
 
+  /**
+   * Фиксирует команды, превышающие лимит участников, и назначает им дедлайны на
+   * сокращение, очищая записи для команд с допустимым размером.
+   */
   public void enforceTeamSizes() {
     int max = pluginConfig.getMaxMembers();
     boolean changed = false;
@@ -87,6 +113,10 @@ public class DeadlineScheduler {
     }
   }
 
+  /**
+   * Проверяет, истекли ли дедлайны команд, и при необходимости удаляет
+   * лишних игроков, синхронизируя изменения с хранилищем.
+   */
   public void checkDeadlines() {
     int max = pluginConfig.getMaxMembers();
     boolean changed = false;
@@ -138,6 +168,14 @@ public class DeadlineScheduler {
     }
   }
 
+  /**
+   * Возвращает зарегистрированный дедлайн конкретной команды по имени, если он
+   * существует.
+   *
+   * @param teamName имя команды, для которой нужен дедлайн
+   * @return отметка времени истечения льготного периода или {@code null}, если
+   *     команда в норме
+   */
   public Long getTeamDeadline(String teamName) {
     UUID id = storage.getTeamIdByName(teamName);
     return id != null ? deadlines.get(id) : null;
