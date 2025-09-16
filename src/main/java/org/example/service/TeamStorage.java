@@ -21,6 +21,7 @@ public class TeamStorage {
   private final PluginConfig pluginConfig;
 
   private final Map<UUID, Team> teams = new ConcurrentHashMap<>();
+  private final Map<String, UUID> teamIdsByName = new ConcurrentHashMap<>();
   private final Map<String, UUID> playerTeams = new ConcurrentHashMap<>();
 
   private FileConfiguration teamsConfig;
@@ -44,6 +45,7 @@ public class TeamStorage {
     }
     teamsConfig = YamlConfiguration.loadConfiguration(teamsFile);
     teams.clear();
+    teamIdsByName.clear();
     playerTeams.clear();
     deadlines.clear();
     var section = teamsConfig.getConfigurationSection("teams");
@@ -60,7 +62,7 @@ public class TeamStorage {
         if (deadline > 0L) {
           deadlines.put(team.getId(), deadline);
         }
-        teams.put(team.getId(), team);
+        addTeam(team);
         for (String member : team.getMembers()) {
           playerTeams.put(member, team.getId());
         }
@@ -97,23 +99,37 @@ public class TeamStorage {
     return teams;
   }
 
+  public void addTeam(@NotNull Team team) {
+    teams.put(team.getId(), team);
+    teamIdsByName.put(team.getName(), team.getId());
+  }
+
+  public void removeTeam(@NotNull Team team) {
+    teams.remove(team.getId());
+    teamIdsByName.remove(team.getName());
+  }
+
+  public void updateTeamName(@NotNull Team team, @NotNull String newName) {
+    String currentName = team.getName();
+    if (Objects.equals(currentName, newName)) {
+      return;
+    }
+    teamIdsByName.remove(currentName);
+    team.setName(newName);
+    teamIdsByName.put(newName, team.getId());
+  }
+
   public Map<String, UUID> getPlayerTeams() {
     return playerTeams;
   }
 
   public Team getTeamByName(String teamName) {
-    return teams.values().stream()
-        .filter(t -> t.getName().equals(teamName))
-        .findFirst()
-        .orElse(null);
+    UUID teamId = teamIdsByName.get(teamName);
+    return teamId != null ? teams.get(teamId) : null;
   }
 
   public UUID getTeamIdByName(String teamName) {
-    return teams.entrySet().stream()
-        .filter(e -> e.getValue().getName().equals(teamName))
-        .map(Map.Entry::getKey)
-        .findFirst()
-        .orElse(null);
+    return teamIdsByName.get(teamName);
   }
 
   public String getPlayerTeam(@NotNull Player player) {

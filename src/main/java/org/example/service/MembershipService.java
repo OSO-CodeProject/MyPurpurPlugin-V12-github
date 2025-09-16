@@ -46,7 +46,7 @@ public class MembershipService {
       return;
     }
     Team team = new Team(teamName, leader.getName(), prefix, color);
-    storage.getTeams().put(team.getId(), team);
+    storage.addTeam(team);
     storage.getPlayerTeams().put(leader.getName(), team.getId());
     storage.saveTeams(scheduler.getDeadlines());
     TeamMessageUtils.sendTeamMessage(
@@ -87,7 +87,7 @@ public class MembershipService {
     storage.getPlayerTeams().remove(player.getName());
     if (team.isLeader(player.getName())) {
       if (team.getMembers().isEmpty()) {
-        storage.getTeams().remove(team.getId());
+        storage.removeTeam(team);
       } else {
         team.setLeader(team.getMembers().get(0));
       }
@@ -119,7 +119,7 @@ public class MembershipService {
   public void disbandTeam(String teamName, @NotNull Player leader) {
     Team team = storage.getTeamByName(teamName);
     if (team == null || !team.isLeader(leader.getName())) return;
-    storage.getTeams().remove(team.getId());
+    storage.removeTeam(team);
     for (String member : team.getMembers()) {
       storage.getPlayerTeams().remove(member);
     }
@@ -130,7 +130,7 @@ public class MembershipService {
     Team team = storage.getTeamByName(oldTeamName);
     if (team == null || !team.isLeader(leader.getName())) return;
     if (storage.getTeamByName(newTeamName) != null) return;
-    team.setName(newTeamName);
+    storage.updateTeamName(team, newTeamName);
     storage.saveTeams(scheduler.getDeadlines());
   }
 
