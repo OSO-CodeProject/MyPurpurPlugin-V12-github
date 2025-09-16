@@ -10,6 +10,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitTask;
 import org.example.config.PluginConfig;
 import org.example.model.Team;
 import org.jetbrains.annotations.NotNull;
@@ -27,6 +28,13 @@ public class TeamStorage {
   private FileConfiguration teamsConfig;
   private File teamsFile;
 
+  private final Set<UUID> dirtyTeams = ConcurrentHashMap.newKeySet();
+  private volatile boolean deadlinesDirty;
+  private BukkitTask autoSaveTask;
+  private final Object saveLock = new Object();
+  private Map<UUID, Long> deadlinesReference = Collections.emptyMap();
+  private boolean autoSaveEnabled;
+
   public TeamStorage(@NotNull JavaPlugin plugin, @NotNull PluginConfig pluginConfig) {
     this.plugin = plugin;
     this.pluginConfig = pluginConfig;
@@ -34,6 +42,7 @@ public class TeamStorage {
 
   /** Loads team information from teams.yml and fills provided deadlines map. */
   public void loadTeams(Map<UUID, Long> deadlines) {
+    deadlinesReference = deadlines;
     teamsFile = new File(plugin.getDataFolder(), "teams.yml");
     if (!teamsFile.exists()) {
       try {
@@ -62,12 +71,14 @@ public class TeamStorage {
         if (deadline > 0L) {
           deadlines.put(team.getId(), deadline);
         }
-        addTeam(team);
+        addTeamInternal(team, false);
         for (String member : team.getMembers()) {
           playerTeams.put(member, team.getId());
         }
       }
     }
+    dirtyTeams.clear();
+    deadlinesDirty = false;
   }
 
   /** Saves teams and deadlines back to teams.yml. */
@@ -100,13 +111,21 @@ public class TeamStorage {
   }
 
   public void addTeam(@NotNull Team team) {
+    addTeamInternal(team, true);
+  }
+
+  private void addTeamInternal(@NotNull Team team, boolean markDirty) {
     teams.put(team.getId(), team);
     teamIdsByName.put(team.getName(), team.getId());
+    if (markDirty) {
+      markTeamDirty(team);
+    }
   }
 
   public void removeTeam(@NotNull Team team) {
     teams.remove(team.getId());
     teamIdsByName.remove(team.getName());
+    markTeamDirty(team);
   }
 
   public void updateTeamName(@NotNull Team team, @NotNull String newName) {
@@ -117,6 +136,7 @@ public class TeamStorage {
     teamIdsByName.remove(currentName);
     team.setName(newName);
     teamIdsByName.put(newName, team.getId());
+    markTeamDirty(team);
   }
 
   public Map<String, UUID> getPlayerTeams() {
@@ -163,5 +183,70 @@ public class TeamStorage {
   public String getTeamLeader(String teamName) {
     Team team = getTeamByName(teamName);
     return team != null ? team.getLeader() : null;
+  }
+
+  public void markTeamDirty(@NotNull Team team) {
+    markTeamDirty(team.getId());
+  }
+
+  public void markTeamDirty(@NotNull UUID teamId) {
+    dirtyTeams.add(teamId);
+    scheduleImmediateSaveIfDisabled();
+  }
+
+  public void markDeadlinesDirty() {
+    deadlinesDirty = true;
+    scheduleImmediateSaveIfDisabled();
+  }
+
+  private void scheduleImmediateSaveIfDisabled() {
+    if (!autoSaveEnabled) {
+      flushIfDirty(deadlinesReference);
+    }
+  }
+
+  public synchronized void startAutoSave(long intervalSeconds, @NotNull Map<UUID, Long> deadlines) {
+    deadlinesReference = deadlines;
+    if (autoSaveTask != null) {
+      autoSaveTask.cancel();
+      autoSaveTask = null;
+    }
+    autoSaveEnabled = intervalSeconds > 0;
+    if (!autoSaveEnabled) {
+      flushIfDirty(deadlinesReference);
+      return;
+    }
+    long ticks = Math.max(1L, intervalSeconds) * 20L;
+    autoSaveTask =
+        plugin
+            .getServer()
+            .getScheduler()
+            .runTaskTimer(plugin, this::flushNow, ticks, ticks);
+  }
+
+  public synchronized void stopAutoSave() {
+    if (autoSaveTask != null) {
+      autoSaveTask.cancel();
+      autoSaveTask = null;
+    }
+    autoSaveEnabled = false;
+  }
+
+  public void flushNow() {
+    flushIfDirty(deadlinesReference);
+  }
+
+  public void flushIfDirty(Map<UUID, Long> deadlines) {
+    if (!deadlinesDirty && dirtyTeams.isEmpty()) {
+      return;
+    }
+    synchronized (saveLock) {
+      if (!deadlinesDirty && dirtyTeams.isEmpty()) {
+        return;
+      }
+      saveTeams(deadlines != null ? deadlines : deadlinesReference);
+      dirtyTeams.clear();
+      deadlinesDirty = false;
+    }
   }
 }

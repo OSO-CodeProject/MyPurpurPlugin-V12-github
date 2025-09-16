@@ -25,6 +25,7 @@ public class TeamManager implements TeamService {
     this.scheduler = new DeadlineScheduler(plugin, pluginConfig, storage);
     this.storage.loadTeams(scheduler.getDeadlines());
     this.scheduler.enforceTeamSizes();
+    this.storage.startAutoSave(pluginConfig.getSaveIntervalSeconds(), scheduler.getDeadlines());
     this.scheduler.start();
     this.membership = new MembershipService(plugin, pluginConfig, storage, scheduler);
   }
@@ -134,9 +135,14 @@ public class TeamManager implements TeamService {
 
   @Override
   public void reloadConfig() {
+    storage.flushNow();
+    storage.stopAutoSave();
+    scheduler.stop();
     pluginConfig.reloadConfig();
     storage.loadTeams(scheduler.getDeadlines());
     scheduler.enforceTeamSizes();
+    scheduler.start();
+    storage.startAutoSave(pluginConfig.getSaveIntervalSeconds(), scheduler.getDeadlines());
   }
 
   @Override
@@ -151,6 +157,8 @@ public class TeamManager implements TeamService {
 
   @Override
   public void shutdown() {
+    storage.stopAutoSave();
     scheduler.stop();
+    storage.flushNow();
   }
 }

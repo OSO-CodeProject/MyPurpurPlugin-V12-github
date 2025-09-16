@@ -48,7 +48,6 @@ public class MembershipService {
     Team team = new Team(teamName, leader.getName(), prefix, color);
     storage.addTeam(team);
     storage.getPlayerTeams().put(leader.getName(), team.getId());
-    storage.saveTeams(scheduler.getDeadlines());
     TeamMessageUtils.sendTeamMessage(
         leader, Component.text("✅ Команда создана", NamedTextColor.GREEN));
     scheduler.enforceTeamSizes();
@@ -73,7 +72,7 @@ public class MembershipService {
     }
     team.addMember(player.getName());
     storage.getPlayerTeams().put(player.getName(), team.getId());
-    storage.saveTeams(scheduler.getDeadlines());
+    storage.markTeamDirty(team);
     TeamMessageUtils.sendTeamMessage(
         player, Component.text("✅ Вы вступили в команду", NamedTextColor.GREEN));
     scheduler.enforceTeamSizes();
@@ -85,14 +84,18 @@ public class MembershipService {
     if (!team.hasMember(player.getName()) && !team.isLeader(player.getName())) return;
     team.removeMember(player.getName());
     storage.getPlayerTeams().remove(player.getName());
+    boolean removedTeam = false;
     if (team.isLeader(player.getName())) {
       if (team.getMembers().isEmpty()) {
         storage.removeTeam(team);
+        removedTeam = true;
       } else {
         team.setLeader(team.getMembers().get(0));
       }
     }
-    storage.saveTeams(scheduler.getDeadlines());
+    if (!removedTeam) {
+      storage.markTeamDirty(team);
+    }
     scheduler.enforceTeamSizes();
   }
 
@@ -103,7 +106,7 @@ public class MembershipService {
     if (!team.hasMember(targetName)) return;
     team.removeMember(targetName);
     storage.getPlayerTeams().remove(targetName);
-    storage.saveTeams(scheduler.getDeadlines());
+    storage.markTeamDirty(team);
     scheduler.enforceTeamSizes();
   }
 
@@ -113,7 +116,7 @@ public class MembershipService {
     if (team == null || !team.isLeader(leader.getName())) return;
     if (!team.hasMember(newLeader.getName())) return;
     team.setLeader(newLeader.getName());
-    storage.saveTeams(scheduler.getDeadlines());
+    storage.markTeamDirty(team);
   }
 
   public void disbandTeam(String teamName, @NotNull Player leader) {
@@ -123,7 +126,6 @@ public class MembershipService {
     for (String member : team.getMembers()) {
       storage.getPlayerTeams().remove(member);
     }
-    storage.saveTeams(scheduler.getDeadlines());
   }
 
   public void renameTeam(String oldTeamName, String newTeamName, @NotNull Player leader) {
@@ -131,7 +133,6 @@ public class MembershipService {
     if (team == null || !team.isLeader(leader.getName())) return;
     if (storage.getTeamByName(newTeamName) != null) return;
     storage.updateTeamName(team, newTeamName);
-    storage.saveTeams(scheduler.getDeadlines());
   }
 
   public void setTeamPrefix(String teamName, String newPrefix, @NotNull Player leader) {
@@ -139,7 +140,7 @@ public class MembershipService {
     if (team == null || !team.isLeader(leader.getName())) return;
     if (TeamUtils.isPrefixLengthInvalid(newPrefix, pluginConfig, leader)) return;
     team.setPrefix(newPrefix);
-    storage.saveTeams(scheduler.getDeadlines());
+    storage.markTeamDirty(team);
   }
 
   public void setTeamColor(String teamName, String newColor, @NotNull Player leader) {
@@ -148,7 +149,7 @@ public class MembershipService {
     NamedTextColor teamColor = NamedTextColor.NAMES.value(newColor.toLowerCase());
     if (teamColor == null) return;
     team.setColor(newColor);
-    storage.saveTeams(scheduler.getDeadlines());
+    storage.markTeamDirty(team);
   }
 
   public void updatePlayerPrefixes(String teamName) {
