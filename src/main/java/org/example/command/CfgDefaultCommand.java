@@ -6,7 +6,7 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
-import org.bukkit.plugin.java.JavaPlugin;
+import org.example.MyPurpurPlugin;
 import org.example.config.PluginConfig;
 import org.example.service.TeamService;
 import org.jetbrains.annotations.NotNull;
@@ -14,12 +14,12 @@ import org.jetbrains.annotations.NotNull;
 /** Обработчик команды /cfgDefault для сброса конфигурации плагина до дефолтных настроек. */
 public class CfgDefaultCommand implements CommandExecutor {
 
-  private final JavaPlugin plugin;
+  private final MyPurpurPlugin plugin;
   private final PluginConfig pluginConfig;
   private final TeamService teamManager;
 
   public CfgDefaultCommand(
-      @NotNull JavaPlugin plugin,
+      @NotNull MyPurpurPlugin plugin,
       @NotNull PluginConfig pluginConfig,
       @NotNull TeamService teamManager) {
     this.plugin = plugin;
@@ -44,6 +44,7 @@ public class CfgDefaultCommand implements CommandExecutor {
     // Перезагружаем конфигурацию
     pluginConfig.reloadConfig();
     teamManager.reloadConfig();
+    plugin.applyDebugModeFromConfig();
     sender.sendMessage(
         Component.text(
             "✅ Конфигурация плагина успешно сброшена до дефолтных настроек!",

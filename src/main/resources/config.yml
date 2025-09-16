@@ -5,6 +5,9 @@
 # Список всех звуков можно найти здесь: https://jd.papermc.io/paper/1.21/org/bukkit/Sound.html
 # Список всех частиц: https://jd.papermc.io/paper/1.21/org/bukkit/Particle.html
 
+# Общие настройки
+debug-mode: true # Включает подробное логирование действий плагина
+
 # Настройки команды /team
 team:
   requires-op: false # Если true, команды /team доступны только OP; если false — всем игрокам
@@ -18,9 +21,10 @@ team:
 
   grace-period-enabled: true # Давать время на удаление лишних участников
   deadline-notify-period-seconds: 300 # Период проверки дедлайнов и оповещения (в секундах)
-  save-interval-seconds: 60 # Интервал автосохранения команд (0 — мгновенное сохранение)
+  save-interval-seconds: 60 # Интервал автосохранения команд (в секундах, 0 — мгновенное сохранение)
   deadline-display-mode: CHAT # CHAT, ACTION_BAR или SCOREBOARD
   grace-period-minutes: 10 # Длительность периода (в минутах, 0 — отключено)
+  deadline-removal-policy: last-joined # Способ удаления лишних игроков: offline-first или last-joined
 
 
 # Настройки меню
