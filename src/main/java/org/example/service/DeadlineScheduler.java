@@ -54,28 +54,50 @@ public class DeadlineScheduler {
 
   public void enforceTeamSizes() {
     int max = pluginConfig.getMaxMembers();
+    boolean changed = false;
     if (max <= 0) {
-      deadlines.clear();
+      if (!deadlines.isEmpty()) {
+        deadlines.clear();
+        changed = true;
+      }
+      if (changed) {
+        storage.markDeadlinesDirty();
+      }
       return;
     }
     for (Map.Entry<UUID, Team> entry : storage.getTeams().entrySet()) {
       Team team = entry.getValue();
       int size = team.getMembers().size();
       if (size > max) {
-        deadlines.putIfAbsent(
-            entry.getKey(),
-            System.currentTimeMillis() + pluginConfig.getGracePeriodMinutes() * 60L * 1000L);
+        Long previous =
+            deadlines.putIfAbsent(
+                entry.getKey(),
+                System.currentTimeMillis() + pluginConfig.getGracePeriodMinutes() * 60L * 1000L);
+        if (previous == null) {
+          changed = true;
+        }
       } else {
-        deadlines.remove(entry.getKey());
+        if (deadlines.remove(entry.getKey()) != null) {
+          changed = true;
+        }
       }
     }
-    storage.saveTeams(deadlines);
+    if (changed) {
+      storage.markDeadlinesDirty();
+    }
   }
 
   public void checkDeadlines() {
     int max = pluginConfig.getMaxMembers();
+    boolean changed = false;
     if (max <= 0) {
-      deadlines.clear();
+      if (!deadlines.isEmpty()) {
+        deadlines.clear();
+        changed = true;
+      }
+      if (changed) {
+        storage.markDeadlinesDirty();
+      }
       return;
     }
     long now = System.currentTimeMillis();
@@ -85,19 +107,24 @@ public class DeadlineScheduler {
       if (entry.getValue() <= now) {
         removeExtraPlayers(entry.getKey(), max);
         it.remove();
+        changed = true;
       }
     }
-    storage.saveTeams(deadlines);
+    if (changed) {
+      storage.markDeadlinesDirty();
+    }
   }
 
   private void removeExtraPlayers(UUID teamId, int max) {
     Team team = storage.getTeams().get(teamId);
     if (team == null) return;
     List<String> members = new ArrayList<>(team.getMembers());
+    boolean changed = false;
     while (members.size() > max) {
       String removed = members.remove(members.size() - 1);
       team.removeMember(removed);
       storage.getPlayerTeams().remove(removed);
+      changed = true;
       Player player = plugin.getServer().getPlayer(removed);
       if (player != null) {
         plugin
@@ -105,6 +132,9 @@ public class DeadlineScheduler {
             .getPluginManager()
             .callEvent(new TeamChatListener.PlayerPrefixUpdateEvent(player, null));
       }
+    }
+    if (changed) {
+      storage.markTeamDirty(team);
     }
   }
 

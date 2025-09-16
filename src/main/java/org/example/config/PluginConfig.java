@@ -55,6 +55,7 @@ public class PluginConfig {
     config.addDefault("team.enforce-max-members-on-reload", true);
     config.addDefault("team.grace-period-minutes", 10);
     config.addDefault("team.deadline-notify-period-seconds", 300L);
+    config.addDefault("team.save-interval-seconds", 60L);
     config.addDefault("team.deadline-display-mode", "CHAT");
 
     // Настройки меню
@@ -133,6 +134,15 @@ public class PluginConfig {
    */
   public long getDeadlineNotifyPeriodSeconds() {
     return config.getLong("team.deadline-notify-period-seconds", 300L);
+  }
+
+  /**
+   * Получает интервал автосохранения команд в секундах.
+   *
+   * @return интервал автосохранения
+   */
+  public long getSaveIntervalSeconds() {
+    return config.getLong("team.save-interval-seconds", 60L);
   }
 
   /**

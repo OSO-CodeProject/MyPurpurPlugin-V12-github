@@ -18,6 +18,7 @@ team:
 
   grace-period-enabled: true # Давать время на удаление лишних участников
   deadline-notify-period-seconds: 300 # Период проверки дедлайнов и оповещения (в секундах)
+  save-interval-seconds: 60 # Интервал автосохранения команд (0 — мгновенное сохранение)
   deadline-display-mode: CHAT # CHAT, ACTION_BAR или SCOREBOARD
   grace-period-minutes: 10 # Длительность периода (в минутах, 0 — отключено)
 
