@@ -47,6 +47,9 @@ class TeamManagerTest {
 
   @AfterAll
   static void tearDown() {
+    if (teamManager != null) {
+      teamManager.shutdown();
+    }
     MockBukkit.unmock();
   }
 
@@ -106,6 +109,22 @@ class TeamManagerTest {
       teamManager.getPlugin().getLogger().warning("Potential memory leak: " + (after - before));
     }
     assertEquals(1, teamManager.getTeamMembers("Stress").size());
+  }
+
+  @Test
+  void createsTeamAndAllowsJoin() {
+    PlayerMock leader = server.addPlayer("Captain");
+    PlayerMock member = server.addPlayer("Recruit");
+
+    String teamName = "Voyagers";
+    teamManager.createTeam(teamName, "VG", "white", leader);
+
+    assertEquals(teamName, teamManager.getPlayerTeam(leader));
+    assertTrue(teamManager.getTeamMembers(teamName).contains(leader.getName()));
+
+    teamManager.addPlayerToTeam(teamName, member);
+    assertEquals(teamName, teamManager.getPlayerTeam(member));
+    assertTrue(teamManager.getTeamMembers(teamName).contains(member.getName()));
   }
 
   @Test

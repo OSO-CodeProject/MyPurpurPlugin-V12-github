@@ -5,10 +5,18 @@ import static org.junit.jupiter.api.Assertions.*;
 import be.seeseemelk.mockbukkit.MockBukkit;
 import be.seeseemelk.mockbukkit.ServerMock;
 import be.seeseemelk.mockbukkit.entity.PlayerMock;
+import be.seeseemelk.mockbukkit.plugin.PluginManagerMock;
 import io.papermc.paper.chat.ChatRenderer;
 import io.papermc.paper.event.player.AsyncChatEvent;
+import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Field;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Set;
+import java.util.stream.Stream;
 import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.chat.SignedMessage;
 import net.kyori.adventure.text.Component;
@@ -20,23 +28,29 @@ import org.example.MyPurpurPlugin;
 import org.example.config.PluginConfig;
 import org.example.service.DeadlineScheduler;
 import org.example.service.TeamManager;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /** Integration tests for team commands and related events. */
 class TeamCommandTest {
 
-  private ServerMock server;
+  private static ServerMock server;
   private MyPurpurPlugin plugin;
   private TeamManager teamManager;
   private PluginConfig pluginConfig;
   private FileConfiguration config;
   private DeadlineScheduler scheduler;
 
+  @BeforeAll
+  static void initServer() {
+    server = MockBukkit.mock();
+  }
+
   @BeforeEach
   void setUp() throws Exception {
-    server = MockBukkit.mock();
     plugin = MockBukkit.load(MyPurpurPlugin.class);
 
     Field tmField = MyPurpurPlugin.class.getDeclaredField("teamManager");
@@ -58,6 +72,45 @@ class TeamCommandTest {
 
   @AfterEach
   void tearDown() {
+    if (scheduler != null) {
+      scheduler.stop();
+      scheduler = null;
+    }
+    File dataFolder = plugin != null ? plugin.getDataFolder() : null;
+    if (plugin != null) {
+      ServerMock current = MockBukkit.getMock();
+      if (current != null) {
+        PluginManagerMock pluginManager = current.getPluginManager();
+        if (pluginManager.isPluginEnabled(plugin)) {
+          pluginManager.disablePlugin(plugin);
+        }
+        pluginManager.clearPlugins();
+      }
+      plugin = null;
+    }
+    if (dataFolder != null && dataFolder.exists()) {
+      try (Stream<Path> walk = Files.walk(dataFolder.toPath())) {
+        walk.sorted(Comparator.reverseOrder()).forEach(path -> path.toFile().delete());
+      } catch (IOException ignored) {
+      }
+    }
+    if (server != null) {
+      new ArrayList<>(server.getOnlinePlayers())
+          .forEach(
+              player -> {
+                if (player instanceof PlayerMock mockPlayer) {
+                  mockPlayer.disconnect();
+                }
+              });
+      server.getCommandMap().clearCommands();
+    }
+    teamManager = null;
+    pluginConfig = null;
+    config = null;
+  }
+
+  @AfterAll
+  static void shutdownServer() {
     MockBukkit.unmock();
   }
 
@@ -152,8 +205,7 @@ class TeamCommandTest {
             SignedMessage.system("hello", message));
     server.getPluginManager().callEvent(event);
 
-    Component rendered =
-        event.renderer().render(leader, Component.text("Leader"), message, leader);
+    Component rendered = event.renderer().render(leader, Component.text("Leader"), message, leader);
     String plain = PlainTextComponentSerializer.plainText().serialize(rendered);
     assertEquals("[AA] Leader: hello", plain);
   }
@@ -185,4 +237,3 @@ class TeamCommandTest {
     assertNull(teamManager.getTeamDeadline("Beta"));
   }
 }
-

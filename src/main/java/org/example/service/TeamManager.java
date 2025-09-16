@@ -148,4 +148,9 @@ public class TeamManager implements TeamService {
   public Long getTeamDeadline(String teamName) {
     return scheduler.getTeamDeadline(teamName);
   }
+
+  @Override
+  public void shutdown() {
+    scheduler.stop();
+  }
 }

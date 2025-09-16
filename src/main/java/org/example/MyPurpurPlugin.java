@@ -112,4 +112,11 @@ public class MyPurpurPlugin extends JavaPlugin {
     debugMode = !debugMode;
     getLogger().info("Режим отладки " + (debugMode ? "включён" : "отключён") + "!");
   }
+
+  @Override
+  public void onDisable() {
+    if (teamManager != null) {
+      teamManager.shutdown();
+    }
+  }
 }
