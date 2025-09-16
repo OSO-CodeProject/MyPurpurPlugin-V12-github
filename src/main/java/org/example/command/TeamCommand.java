@@ -52,18 +52,23 @@ public class TeamCommand implements org.bukkit.command.CommandExecutor, TabCompl
       @NotNull Command command,
       @NotNull String label,
       @NotNull String[] args) {
+    // Проверяем, что команду запускает игрок, потому что остальные отправители не
+    // могут взаимодействовать с командной системой корректно.
     if (!(sender instanceof Player player)) {
       sender.sendMessage(
           Component.text("❌ Эту команду может использовать только игрок!", NamedTextColor.RED));
       return true;
     }
 
+    // Убеждаемся, что у игрока есть базовое разрешение на работу с командами.
     if (!player.hasPermission("mypurpurplugin.team")) {
       player.sendMessage(
           Component.text("❌ У вас нет прав для использования этой команды!", NamedTextColor.RED));
       return true;
     }
 
+    // При необходимости проверяем статус оператора, чтобы выполнить требование
+    // конфигурации.
     if (pluginConfig.isTeamCommandRequiresOp() && !player.isOp()) {
       player.sendMessage(
           Component.text(
@@ -72,15 +77,18 @@ public class TeamCommand implements org.bukkit.command.CommandExecutor, TabCompl
       return true;
     }
 
+    // Без подкоманды показываем корректное использование команды.
     if (args.length < 1) {
       sendUsage(player);
       return true;
     }
 
+    // Приводим имя подкоманды к единому виду и логируем её запуск для отладки.
     String subCommandName = args[0].toLowerCase(Locale.ROOT);
     ((MyPurpurPlugin) teamManager.getPlugin())
         .debugTeamAction("Команда /team выполнена игроком", player.getName(), null);
 
+    // Находим обработчик подкоманды; если он отсутствует, уведомляем игрока.
     SubCommand subCommand = subCommands.get(subCommandName);
     if (subCommand == null) {
       sendUnknownSubCommandMessage(player);
@@ -116,6 +124,7 @@ public class TeamCommand implements org.bukkit.command.CommandExecutor, TabCompl
       @NotNull Command command,
       @NotNull String alias,
       @NotNull String[] args) {
+    // При вводе первой части команды предлагаем подходящие названия подкоманд.
     if (args.length <= 1) {
       String partial = args.length == 0 ? "" : args[0].toLowerCase(Locale.ROOT);
       List<String> suggestions = new ArrayList<>();
@@ -127,6 +136,8 @@ public class TeamCommand implements org.bukkit.command.CommandExecutor, TabCompl
       return suggestions;
     }
 
+    // Для остальных аргументов делегируем генерацию подсказок конкретной
+    // подкоманде.
     SubCommand subCommand = subCommands.get(args[0].toLowerCase(Locale.ROOT));
     if (subCommand == null) {
       return new ArrayList<>();
