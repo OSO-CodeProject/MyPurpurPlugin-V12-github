@@ -30,6 +30,7 @@ public class MyPurpurPlugin extends JavaPlugin {
   public void onEnable() {
     // Инициализация конфигурации
     pluginConfig = new PluginConfig(this);
+    applyDebugModeFromConfig();
     // Инициализация менеджера команд
     teamManager = new TeamManager(this, pluginConfig);
 
@@ -38,7 +39,7 @@ public class MyPurpurPlugin extends JavaPlugin {
     registerCommand("teamadmin", new TeamAdminCommand(teamManager));
     registerCommand("getteamsuuidlist", new AdminCommands(teamManager));
     registerCommand("getteamuuid", new AdminCommands(teamManager));
-    registerCommand("teamreload", new TeamReloadCommand(teamManager, pluginConfig));
+    registerCommand("teamreload", new TeamReloadCommand(this, teamManager, pluginConfig));
     registerCommand("cfgDefault", new CfgDefaultCommand(this, pluginConfig, teamManager));
     registerCommand("menu", new MenuCommand(this, pluginConfig));
     registerCommand("debugtoggle", new DebugToggleCommand(this));
@@ -109,7 +110,28 @@ public class MyPurpurPlugin extends JavaPlugin {
 
   /** Переключает состояние debugMode. */
   public void toggleDebugMode() {
-    debugMode = !debugMode;
+    setDebugMode(!debugMode);
+  }
+
+  /**
+   * Применяет состояние режима отладки на основе текущей конфигурации.
+   */
+  public void applyDebugModeFromConfig() {
+    if (pluginConfig != null) {
+      setDebugMode(pluginConfig.isDebugModeEnabled());
+    }
+  }
+
+  /**
+   * Устанавливает состояние режима отладки.
+   *
+   * @param enabled новое состояние режима отладки
+   */
+  public void setDebugMode(boolean enabled) {
+    if (this.debugMode == enabled) {
+      return;
+    }
+    this.debugMode = enabled;
     getLogger().info("Режим отладки " + (debugMode ? "включён" : "отключён") + "!");
   }
 

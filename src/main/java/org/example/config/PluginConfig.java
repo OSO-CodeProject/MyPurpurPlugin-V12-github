@@ -2,6 +2,7 @@ package org.example.config;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Locale;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -44,6 +45,9 @@ public class PluginConfig {
 
   /** Устанавливает значения по умолчанию для конфигурации. */
   private void setDefaults() {
+    // Глобальные настройки
+    config.addDefault("debug-mode", true);
+
     // Основные настройки
     config.addDefault("team.requires-op", false);
     config.addDefault("team.notify-admins", true);
@@ -57,6 +61,7 @@ public class PluginConfig {
     config.addDefault("team.deadline-notify-period-seconds", 300L);
     config.addDefault("team.save-interval-seconds", 60L);
     config.addDefault("team.deadline-display-mode", "CHAT");
+    config.addDefault("team.deadline-removal-policy", "last-joined");
 
     // Настройки меню
     config.addDefault("menu.open-sound", "BLOCK_NOTE_BLOCK_PLING");
@@ -80,6 +85,15 @@ public class PluginConfig {
   /** Перезагружает конфигурацию из файла. */
   public void reloadConfig() {
     config = YamlConfiguration.loadConfiguration(configFile);
+  }
+
+  /**
+   * Проверяет, включён ли режим отладки.
+   *
+   * @return true, если режим отладки активен, иначе false
+   */
+  public boolean isDebugModeEnabled() {
+    return config.getBoolean("debug-mode", true);
   }
 
   /**
@@ -152,6 +166,30 @@ public class PluginConfig {
    */
   public String getDeadlineDisplayMode() {
     return config.getString("team.deadline-display-mode", "CHAT");
+  }
+
+  /**
+   * Возвращает стратегию удаления лишних игроков в команде.
+   *
+   * @return стратегия удаления игроков
+   */
+  public @NotNull RemovalPolicy getExcessPlayerRemovalPolicy() {
+    String rawValue = config.getString("team.deadline-removal-policy", "last-joined");
+    if (rawValue == null) {
+      return RemovalPolicy.LAST_JOINED;
+    }
+    String normalized = rawValue.trim().replace('-', '_').toUpperCase(Locale.ROOT);
+    try {
+      return RemovalPolicy.valueOf(normalized);
+    } catch (IllegalArgumentException ex) {
+      plugin
+          .getLogger()
+          .warning(
+              "Некорректное значение team.deadline-removal-policy: "
+                  + rawValue
+                  + ". Используем LAST_JOINED.");
+      return RemovalPolicy.LAST_JOINED;
+    }
   }
 
   /**

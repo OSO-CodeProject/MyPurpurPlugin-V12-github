@@ -6,6 +6,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 import org.example.config.PluginConfig;
+import org.example.config.RemovalPolicy;
 import org.example.listener.TeamChatListener;
 import org.example.model.Team;
 import org.jetbrains.annotations.NotNull;
@@ -148,10 +149,13 @@ public class DeadlineScheduler {
   private void removeExtraPlayers(UUID teamId, int max) {
     Team team = storage.getTeams().get(teamId);
     if (team == null) return;
-    List<String> members = new ArrayList<>(team.getMembers());
     boolean changed = false;
-    while (members.size() > max) {
-      String removed = members.remove(members.size() - 1);
+    RemovalPolicy policy = pluginConfig.getExcessPlayerRemovalPolicy();
+    while (team.getMembers().size() > max) {
+      String removed = selectMemberToRemove(team, policy);
+      if (removed == null) {
+        break;
+      }
       team.removeMember(removed);
       storage.getPlayerTeams().remove(removed);
       changed = true;
@@ -166,6 +170,49 @@ public class DeadlineScheduler {
     if (changed) {
       storage.markTeamDirty(team);
     }
+  }
+
+  private String selectMemberToRemove(@NotNull Team team, @NotNull RemovalPolicy policy) {
+    List<String> members = team.getMembers();
+    if (members.isEmpty()) {
+      return null;
+    }
+    String leader = team.getLeader();
+    if (policy == RemovalPolicy.OFFLINE_FIRST) {
+      String offlineCandidate = findOfflineCandidate(members, leader);
+      if (offlineCandidate != null) {
+        return offlineCandidate;
+      }
+    }
+    return findLastJoinedCandidate(members, leader);
+  }
+
+  private String findOfflineCandidate(@NotNull List<String> members, String leader) {
+    for (int i = members.size() - 1; i >= 0; i--) {
+      String candidate = members.get(i);
+      if (isLeader(candidate, leader)) {
+        continue;
+      }
+      Player player = plugin.getServer().getPlayer(candidate);
+      if (player == null || !player.isOnline()) {
+        return candidate;
+      }
+    }
+    return null;
+  }
+
+  private String findLastJoinedCandidate(@NotNull List<String> members, String leader) {
+    for (int i = members.size() - 1; i >= 0; i--) {
+      String candidate = members.get(i);
+      if (!isLeader(candidate, leader)) {
+        return candidate;
+      }
+    }
+    return members.get(members.size() - 1);
+  }
+
+  private boolean isLeader(String candidate, String leader) {
+    return leader != null && leader.equalsIgnoreCase(candidate);
   }
 
   /**
