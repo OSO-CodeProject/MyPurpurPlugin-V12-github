@@ -181,4 +181,7 @@ public interface TeamService {
    * @return значение дедлайна или null
    */
   Long getTeamDeadline(String teamName);
+
+  /** Выполняет очистку ресурсов сервиса команд. */
+  default void shutdown() {}
 }

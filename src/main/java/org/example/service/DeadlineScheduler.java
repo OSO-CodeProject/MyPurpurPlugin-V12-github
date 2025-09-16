@@ -4,6 +4,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitTask;
 import org.example.config.PluginConfig;
 import org.example.listener.TeamChatListener;
 import org.example.model.Team;
@@ -16,6 +17,7 @@ public class DeadlineScheduler {
   private final PluginConfig pluginConfig;
   private final TeamStorage storage;
   private final Map<UUID, Long> deadlines = new ConcurrentHashMap<>();
+  private BukkitTask task;
 
   public DeadlineScheduler(
       @NotNull JavaPlugin plugin,
@@ -30,10 +32,24 @@ public class DeadlineScheduler {
     return deadlines;
   }
 
-  public void start() {
+  public synchronized void start() {
     long seconds = pluginConfig.getDeadlineNotifyPeriodSeconds();
     long period = 20L * Math.max(1, seconds);
-    plugin.getServer().getScheduler().runTaskTimer(plugin, this::checkDeadlines, period, period);
+    if (task != null) {
+      task.cancel();
+    }
+    task =
+        plugin
+            .getServer()
+            .getScheduler()
+            .runTaskTimer(plugin, this::checkDeadlines, period, period);
+  }
+
+  public synchronized void stop() {
+    if (task != null) {
+      task.cancel();
+      task = null;
+    }
   }
 
   public void enforceTeamSizes() {
