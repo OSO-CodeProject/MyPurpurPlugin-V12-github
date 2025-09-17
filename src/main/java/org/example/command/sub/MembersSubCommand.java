@@ -58,7 +58,11 @@ public class MembersSubCommand implements SubCommand {
   private Component getTeamHeaderComponent(
       String playerTeam, Component prefixComponent, int memberCount, int maxMembers) {
     if (maxMembers > 0) {
-      if (memberCount >= maxMembers) {
+      if (memberCount > maxMembers) {
+        return Component.text("📋 Участники команды ", NamedTextColor.AQUA)
+            .append(prefixComponent)
+            .append(Component.text(playerTeam + " [Переполнена]:", NamedTextColor.WHITE));
+      } else if (memberCount == maxMembers) {
         return Component.text("📋 Участники команды ", NamedTextColor.AQUA)
             .append(prefixComponent)
             .append(Component.text(playerTeam + " [Полная]:", NamedTextColor.WHITE));
