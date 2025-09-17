@@ -33,6 +33,7 @@ public class DeadlineScheduler {
   private final TeamStorage storage;
   private final Map<UUID, Long> deadlines = new ConcurrentHashMap<>();
   private final Map<String, Scoreboard> leaderOriginalScoreboards = new ConcurrentHashMap<>();
+  private final Map<UUID, String> teamLeaderNames = new ConcurrentHashMap<>();
   private BukkitTask task;
 
   private static final String SCOREBOARD_OBJECTIVE = "deadlineWarn";
@@ -264,6 +265,10 @@ public class DeadlineScheduler {
       long deadlineAt = entry.getValue();
       Team team = storage.getTeams().get(teamId);
       if (team == null) {
+        String leaderName = teamLeaderNames.remove(teamId);
+        if (leaderName != null) {
+          clearLeaderDisplay(leaderName);
+        }
         deadlinesToRemove.add(teamId);
         changed = true;
         continue;
@@ -316,6 +321,10 @@ public class DeadlineScheduler {
     }
     if (!deadlinesToRemove.isEmpty()) {
       deadlines.keySet().removeAll(deadlinesToRemove);
+      deadlinesToRemove.stream()
+          .map(teamLeaderNames::remove)
+          .filter(Objects::nonNull)
+          .forEach(this::clearLeaderDisplay);
     }
     if (changed) {
       storage.markDeadlinesDirty();
@@ -430,10 +439,15 @@ public class DeadlineScheduler {
   private void resetAllLeaderDisplays() {
     storage.getTeams().values().forEach(this::clearLeaderDisplay);
     leaderOriginalScoreboards.clear();
+    teamLeaderNames.clear();
   }
 
   private void clearLeaderDisplay(@NotNull Team team) {
-    String leaderName = team.getLeader();
+    teamLeaderNames.remove(team.getId());
+    clearLeaderDisplay(team.getLeader());
+  }
+
+  private void clearLeaderDisplay(String leaderName) {
     if (leaderName == null || leaderName.isBlank()) {
       return;
     }
@@ -466,6 +480,11 @@ public class DeadlineScheduler {
       return;
     }
     DeadlineDisplayMode mode = getDisplayMode();
+    if (mode == DeadlineDisplayMode.SCOREBOARD) {
+      teamLeaderNames.put(team.getId(), leaderName);
+    } else {
+      teamLeaderNames.remove(team.getId());
+    }
     switch (mode) {
       case ACTION_BAR -> leader.sendActionBar(message);
       case SCOREBOARD -> sendScoreboardMessage(leader, message);
