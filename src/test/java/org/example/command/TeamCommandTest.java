@@ -145,6 +145,26 @@ class TeamCommandTest {
   }
 
   @Test
+  void leaderReceivesConfirmationAndTabPrefixAfterCreate() {
+    CommandMap commandMap = server.getCommandMap();
+
+    PlayerMock leader = server.addPlayer("Leader");
+    leader.addAttachment(plugin, "mypurpurplugin.team", true);
+
+    assertTrue(commandMap.dispatch(leader, "team create Alpha AA WHITE"));
+
+    Component confirmation = leader.nextComponentMessage();
+    assertNotNull(confirmation, "Leader should receive confirmation message");
+    String confirmationPlain = PlainTextComponentSerializer.plainText().serialize(confirmation);
+    assertTrue(confirmationPlain.contains("Команда создана"));
+
+    Component playerListName = leader.playerListName();
+    assertNotNull(playerListName, "Tab name should not be null");
+    String playerListPlain = PlainTextComponentSerializer.plainText().serialize(playerListName);
+    assertEquals("[AA] Leader", playerListPlain);
+  }
+
+  @Test
   void deniesCommandWithoutPermission() {
     CommandMap commandMap = server.getCommandMap();
     PlayerMock player = server.addPlayer("Player");
