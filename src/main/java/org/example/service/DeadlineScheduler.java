@@ -250,6 +250,7 @@ public class DeadlineScheduler {
     }
     long now = System.currentTimeMillis();
     Iterator<Map.Entry<UUID, Long>> it = deadlines.entrySet().iterator();
+    List<UUID> expiredDeadlines = new ArrayList<>();
     while (it.hasNext()) {
       Map.Entry<UUID, Long> entry = it.next();
       if (entry.getValue() <= now) {
@@ -277,9 +278,12 @@ public class DeadlineScheduler {
                         + " игрок(ов).");
           }
         }
-        it.remove();
+        expiredDeadlines.add(entry.getKey());
         changed = true;
       }
+    }
+    if (!expiredDeadlines.isEmpty()) {
+      deadlines.keySet().removeAll(expiredDeadlines);
     }
     if (changed) {
       storage.markDeadlinesDirty();
