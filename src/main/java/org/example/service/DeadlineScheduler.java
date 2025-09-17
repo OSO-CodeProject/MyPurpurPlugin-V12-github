@@ -2,6 +2,7 @@ package org.example.service;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
@@ -31,6 +32,7 @@ public class DeadlineScheduler {
   private final PluginConfig pluginConfig;
   private final TeamStorage storage;
   private final Map<UUID, Long> deadlines = new ConcurrentHashMap<>();
+  private final Map<String, Scoreboard> leaderOriginalScoreboards = new ConcurrentHashMap<>();
   private BukkitTask task;
 
   private static final String SCOREBOARD_OBJECTIVE = "deadlineWarn";
@@ -137,6 +139,7 @@ public class DeadlineScheduler {
       if (!deadlines.isEmpty()) {
         deadlines.clear();
         changed = true;
+        resetAllLeaderDisplays();
       }
       if (changed) {
         storage.markDeadlinesDirty();
@@ -147,6 +150,7 @@ public class DeadlineScheduler {
     if (!enforceOnReload && !deadlines.isEmpty()) {
       deadlines.clear();
       changed = true;
+      resetAllLeaderDisplays();
     }
 
     for (Map.Entry<UUID, Team> entry : storage.getTeams().entrySet()) {
@@ -156,6 +160,7 @@ public class DeadlineScheduler {
       if (size <= max) {
         if (deadlines.remove(teamId) != null) {
           changed = true;
+          clearLeaderDisplay(team);
         }
         continue;
       }
@@ -180,6 +185,7 @@ public class DeadlineScheduler {
       if (!graceEnabled) {
         if (deadlines.remove(teamId) != null) {
           changed = true;
+          clearLeaderDisplay(team);
         }
         int removed = removeExtraPlayers(team, max);
         if (removed > 0) {
@@ -242,6 +248,7 @@ public class DeadlineScheduler {
       if (!deadlines.isEmpty()) {
         deadlines.clear();
         changed = true;
+        resetAllLeaderDisplays();
       }
       if (changed) {
         storage.markDeadlinesDirty();
@@ -250,40 +257,65 @@ public class DeadlineScheduler {
     }
     long now = System.currentTimeMillis();
     Iterator<Map.Entry<UUID, Long>> it = deadlines.entrySet().iterator();
-    List<UUID> expiredDeadlines = new ArrayList<>();
+    List<UUID> deadlinesToRemove = new ArrayList<>();
     while (it.hasNext()) {
       Map.Entry<UUID, Long> entry = it.next();
-      if (entry.getValue() <= now) {
-        Team team = storage.getTeams().get(entry.getKey());
-        if (team != null) {
-          int sizeBefore = team.getMembers().size();
-          int removed = removeExtraPlayers(team, max);
-          if (removed > 0) {
-            Component leaderMessage = TeamMessageUtils.forcedRemovalMessage(removed);
-            notifyLeader(team, leaderMessage);
-            notifyAdmins(
-                adminBaseMessage(team, sizeBefore, max)
-                    .append(Component.space())
-                    .append(
-                        Component.text(
-                            "Льготный период истёк, удалено " + removed + " участника(ов).",
-                            NamedTextColor.RED)));
-            plugin
-                .getLogger()
-                .info(
-                    "Льготный период команды "
-                        + team.getName()
-                        + " истёк, удалено "
-                        + removed
-                        + " игрок(ов).");
-          }
-        }
-        expiredDeadlines.add(entry.getKey());
+      UUID teamId = entry.getKey();
+      long deadlineAt = entry.getValue();
+      Team team = storage.getTeams().get(teamId);
+      if (team == null) {
+        deadlinesToRemove.add(teamId);
         changed = true;
+        continue;
       }
+
+      int sizeBefore = team.getMembers().size();
+      int excess = sizeBefore - max;
+      if (excess <= 0) {
+        deadlinesToRemove.add(teamId);
+        clearLeaderDisplay(team);
+        changed = true;
+        continue;
+      }
+
+      if (deadlineAt <= now) {
+        int removed = removeExtraPlayers(team, max);
+        if (removed > 0) {
+          Component leaderMessage = TeamMessageUtils.forcedRemovalMessage(removed);
+          notifyLeader(team, leaderMessage);
+          notifyAdmins(
+              adminBaseMessage(team, sizeBefore, max)
+                  .append(Component.space())
+                  .append(
+                      Component.text(
+                          "Льготный период истёк, удалено " + removed + " участника(ов).",
+                          NamedTextColor.RED)));
+          plugin
+              .getLogger()
+              .info(
+                  "Льготный период команды "
+                      + team.getName()
+                      + " истёк, удалено "
+                      + removed
+                      + " игрок(ов).");
+        }
+        deadlinesToRemove.add(teamId);
+        clearLeaderDisplay(team);
+        changed = true;
+        continue;
+      }
+
+      long remainingMillis = Math.max(0L, deadlineAt - now);
+      long minutesLeft = TimeUnit.MILLISECONDS.toMinutes(remainingMillis);
+      long secondsLeft =
+          TimeUnit.MILLISECONDS.toSeconds(remainingMillis)
+              - TimeUnit.MINUTES.toSeconds(minutesLeft);
+      Component leaderMessage =
+          TeamMessageUtils.deadlineRemainingMessage(minutesLeft, secondsLeft, excess);
+      notifyLeader(team, leaderMessage);
     }
-    if (!expiredDeadlines.isEmpty()) {
-      deadlines.keySet().removeAll(expiredDeadlines);
+    if (!deadlinesToRemove.isEmpty()) {
+      deadlines.keySet().removeAll(deadlinesToRemove);
     }
     if (changed) {
       storage.markDeadlinesDirty();
@@ -395,6 +427,35 @@ public class DeadlineScheduler {
     return DeadlineDisplayMode.fromConfig(pluginConfig.getDeadlineDisplayMode());
   }
 
+  private void resetAllLeaderDisplays() {
+    storage.getTeams().values().forEach(this::clearLeaderDisplay);
+    leaderOriginalScoreboards.clear();
+  }
+
+  private void clearLeaderDisplay(@NotNull Team team) {
+    String leaderName = team.getLeader();
+    if (leaderName == null || leaderName.isBlank()) {
+      return;
+    }
+    String key = leaderName.toLowerCase(Locale.ROOT);
+    Scoreboard original = leaderOriginalScoreboards.remove(key);
+    Player leader = plugin.getServer().getPlayer(leaderName);
+    DeadlineDisplayMode mode = getDisplayMode();
+    if (leader != null) {
+      if (original != null) {
+        leader.setScoreboard(original);
+      } else if (mode == DeadlineDisplayMode.SCOREBOARD) {
+        ScoreboardManager manager = plugin.getServer().getScoreboardManager();
+        if (manager != null) {
+          leader.setScoreboard(manager.getMainScoreboard());
+        }
+      }
+      if (mode == DeadlineDisplayMode.ACTION_BAR) {
+        leader.sendActionBar(Component.empty());
+      }
+    }
+  }
+
   private void notifyLeader(@NotNull Team team, @NotNull Component message) {
     String leaderName = team.getLeader();
     if (leaderName == null || leaderName.isBlank()) {
@@ -430,7 +491,8 @@ public class DeadlineScheduler {
       TeamMessageUtils.sendTeamMessage(player, message);
       return;
     }
-    Scoreboard original = player.getScoreboard();
+    String key = player.getName().toLowerCase(Locale.ROOT);
+    leaderOriginalScoreboards.computeIfAbsent(key, k -> player.getScoreboard());
     Scoreboard scoreboard = manager.getNewScoreboard();
     Objective objective =
         scoreboard.registerNewObjective(
@@ -444,17 +506,6 @@ public class DeadlineScheduler {
       objective.getScore(line).setScore(score--);
     }
     player.setScoreboard(scoreboard);
-    plugin
-        .getServer()
-        .getScheduler()
-        .runTaskLater(
-            plugin,
-            () -> {
-              if (player.isOnline()) {
-                player.setScoreboard(original);
-              }
-            },
-            200L);
   }
 
   private List<String> wrapForScoreboard(@NotNull Component message) {
