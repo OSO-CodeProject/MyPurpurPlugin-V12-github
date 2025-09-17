@@ -10,6 +10,8 @@ import java.util.ArrayList;
 import java.util.List;
 import org.example.MyPurpurPlugin;
 import org.example.config.PluginConfig;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -143,5 +145,72 @@ class TeamManagerTest {
 
     assertNull(teamManager.getPlayerTeam(extra));
     assertEquals(5, teamManager.getTeamMembers("Beta").size());
+  }
+
+  @Test
+  void playerListNameUpdatedOnJoinAndLeave() {
+    PlayerMock leader = server.addPlayer("PrefixLeader");
+    PlayerMock member = server.addPlayer("PrefixMember");
+
+    teamManager.createTeam("PrefixTeam", "PF", "gold", leader);
+    teamManager.addPlayerToTeam("PrefixTeam", member);
+
+    Component expected =
+        Component.text("[PF] ", NamedTextColor.GOLD)
+            .append(Component.text(member.getName(), NamedTextColor.WHITE));
+    assertEquals(expected, member.playerListName());
+
+    teamManager.removePlayerFromTeam("PrefixTeam", member);
+    Component reset = Component.text(member.getName(), NamedTextColor.WHITE);
+    assertEquals(reset, member.playerListName());
+  }
+
+  @Test
+  void playerListNameResetOnKick() {
+    PlayerMock leader = server.addPlayer("KickLeader");
+    PlayerMock member = server.addPlayer("KickTarget");
+
+    teamManager.createTeam("KickTeam", "KT", "green", leader);
+    teamManager.addPlayerToTeam("KickTeam", member);
+
+    Component expected =
+        Component.text("[KT] ", NamedTextColor.GREEN)
+            .append(Component.text(member.getName(), NamedTextColor.WHITE));
+    assertEquals(expected, member.playerListName());
+
+    teamManager.kickPlayerFromTeam("KickTeam", leader, member.getName());
+    Component reset = Component.text(member.getName(), NamedTextColor.WHITE);
+    assertEquals(reset, member.playerListName());
+  }
+
+  @Test
+  void playerListNameUpdatedOnPrefixAndColorChange() {
+    PlayerMock leader = server.addPlayer("StyleLeader");
+    PlayerMock member = server.addPlayer("StyleMember");
+
+    teamManager.createTeam("Stylists", "ST", "white", leader);
+    teamManager.addPlayerToTeam("Stylists", member);
+
+    teamManager.setTeamPrefix("Stylists", "NW", leader);
+    Component newPrefix =
+        Component.text("[NW] ", NamedTextColor.WHITE)
+            .append(Component.text(member.getName(), NamedTextColor.WHITE));
+    assertEquals(newPrefix, member.playerListName());
+
+    Component leaderPrefix =
+        Component.text("[NW] ", NamedTextColor.WHITE)
+            .append(Component.text(leader.getName(), NamedTextColor.WHITE));
+    assertEquals(leaderPrefix, leader.playerListName());
+
+    teamManager.setTeamColor("Stylists", "red", leader);
+    Component recolored =
+        Component.text("[NW] ", NamedTextColor.RED)
+            .append(Component.text(member.getName(), NamedTextColor.WHITE));
+    assertEquals(recolored, member.playerListName());
+
+    Component leaderRecolored =
+        Component.text("[NW] ", NamedTextColor.RED)
+            .append(Component.text(leader.getName(), NamedTextColor.WHITE));
+    assertEquals(leaderRecolored, leader.playerListName());
   }
 }
