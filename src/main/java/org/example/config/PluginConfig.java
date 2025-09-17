@@ -57,6 +57,7 @@ public class PluginConfig {
     config.addDefault("team.min-team-name-length", 3);
     config.addDefault("team.max-team-name-length", 16);
     config.addDefault("team.enforce-max-members-on-reload", true);
+    config.addDefault("team.grace-period-enabled", true);
     config.addDefault("team.grace-period-minutes", 10);
     config.addDefault("team.deadline-notify-period-seconds", 300L);
     config.addDefault("team.save-interval-seconds", 60L);
@@ -130,6 +131,15 @@ public class PluginConfig {
    */
   public boolean isEnforceMaxMembersOnReload() {
     return config.getBoolean("team.enforce-max-members-on-reload", true);
+  }
+
+  /**
+   * Проверяет, включён ли льготный период перед удалением лишних участников.
+   *
+   * @return true, если льготный период активен
+   */
+  public boolean isGracePeriodEnabled() {
+    return config.getBoolean("team.grace-period-enabled", true);
   }
 
   /**

@@ -163,6 +163,20 @@ public interface TeamService {
   @NotNull
   PluginConfig getPluginConfig();
 
+  /**
+   * Определяет, применяется ли ограничение по количеству участников при перезагрузке.
+   *
+   * @return true, если ограничение активно
+   */
+  boolean isEnforceMaxMembersOnReload();
+
+  /**
+   * Проверяет, активен ли льготный период перед удалением лишних участников.
+   *
+   * @return true, если льготный период включён
+   */
+  boolean isGracePeriodEnabled();
+
   /** Перезагружает конфигурацию плагина и применяет изменения. */
   void reloadConfig();
 

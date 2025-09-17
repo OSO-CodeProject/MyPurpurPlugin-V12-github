@@ -9,7 +9,17 @@ import org.example.config.PluginConfig;
 import org.example.config.RemovalPolicy;
 import org.example.listener.TeamChatListener;
 import org.example.model.Team;
+import org.example.util.TeamMessageUtils;
 import org.jetbrains.annotations.NotNull;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import org.bukkit.ChatColor;
+import org.bukkit.scoreboard.Criteria;
+import org.bukkit.scoreboard.DisplaySlot;
+import org.bukkit.scoreboard.Objective;
+import org.bukkit.scoreboard.Scoreboard;
+import org.bukkit.scoreboard.ScoreboardManager;
 
 /**
  * Планировщик, который следит за размерами команд и временем, отведённым на их
@@ -22,6 +32,43 @@ public class DeadlineScheduler {
   private final TeamStorage storage;
   private final Map<UUID, Long> deadlines = new ConcurrentHashMap<>();
   private BukkitTask task;
+
+  private static final String SCOREBOARD_OBJECTIVE = "deadlineWarn";
+  private static final int SCOREBOARD_LINE_LENGTH = 30;
+  private static final ChatColor[] SCOREBOARD_COLORS = {
+    ChatColor.BLUE,
+    ChatColor.GREEN,
+    ChatColor.AQUA,
+    ChatColor.GOLD,
+    ChatColor.RED,
+    ChatColor.LIGHT_PURPLE,
+    ChatColor.YELLOW,
+    ChatColor.WHITE,
+    ChatColor.DARK_BLUE,
+    ChatColor.DARK_GREEN,
+    ChatColor.DARK_AQUA,
+    ChatColor.DARK_RED,
+    ChatColor.DARK_PURPLE,
+    ChatColor.DARK_GRAY,
+    ChatColor.GRAY
+  };
+
+  private enum DeadlineDisplayMode {
+    CHAT,
+    ACTION_BAR,
+    SCOREBOARD;
+
+    static DeadlineDisplayMode fromConfig(String raw) {
+      if (raw == null) {
+        return CHAT;
+      }
+      try {
+        return DeadlineDisplayMode.valueOf(raw.trim().toUpperCase(Locale.ROOT));
+      } catch (IllegalArgumentException ex) {
+        return CHAT;
+      }
+    }
+  }
 
   /**
    * Создаёт планировщик, работающий поверх Bukkit, и связывает его с источниками
@@ -82,6 +129,10 @@ public class DeadlineScheduler {
   public void enforceTeamSizes() {
     int max = pluginConfig.getMaxMembers();
     boolean changed = false;
+    boolean enforceOnReload = pluginConfig.isEnforceMaxMembersOnReload();
+    boolean graceEnabled =
+        pluginConfig.isGracePeriodEnabled() && pluginConfig.getGracePeriodMinutes() > 0;
+
     if (max <= 0) {
       if (!deadlines.isEmpty()) {
         deadlines.clear();
@@ -92,21 +143,87 @@ public class DeadlineScheduler {
       }
       return;
     }
+
+    if (!enforceOnReload && !deadlines.isEmpty()) {
+      deadlines.clear();
+      changed = true;
+    }
+
     for (Map.Entry<UUID, Team> entry : storage.getTeams().entrySet()) {
       Team team = entry.getValue();
       int size = team.getMembers().size();
-      if (size > max) {
-        Long previous =
-            deadlines.putIfAbsent(
-                entry.getKey(),
-                System.currentTimeMillis() + pluginConfig.getGracePeriodMinutes() * 60L * 1000L);
-        if (previous == null) {
+      UUID teamId = entry.getKey();
+      if (size <= max) {
+        if (deadlines.remove(teamId) != null) {
           changed = true;
         }
-      } else {
-        if (deadlines.remove(entry.getKey()) != null) {
+        continue;
+      }
+
+      int excess = size - max;
+      plugin
+          .getLogger()
+          .warning("Команда " + team.getName() + " превышает лимит: " + size + " из " + max + ".");
+
+      if (!enforceOnReload) {
+        Component leaderMessage = buildEnforcementDisabledMessage(max, excess);
+        notifyLeader(team, leaderMessage);
+        notifyAdmins(
+            adminBaseMessage(team, size, max)
+                .append(Component.space())
+                .append(
+                    Component.text(
+                        "Автоматическое сокращение отключено.", NamedTextColor.GOLD)));
+        continue;
+      }
+
+      if (!graceEnabled) {
+        if (deadlines.remove(teamId) != null) {
           changed = true;
         }
+        int removed = removeExtraPlayers(team, max);
+        if (removed > 0) {
+          Component leaderMessage = TeamMessageUtils.forcedRemovalMessage(removed);
+          notifyLeader(team, leaderMessage);
+          notifyAdmins(
+              adminBaseMessage(team, size, max)
+                  .append(Component.space())
+                  .append(
+                      Component.text(
+                          "Удалено " + removed + " участника(ов) без льготного периода.",
+                          NamedTextColor.RED)));
+          plugin
+              .getLogger()
+              .info(
+                  "Команда "
+                      + team.getName()
+                      + ": удалено "
+                      + removed
+                      + " участника(ов) без льготного периода.");
+        }
+        continue;
+      }
+
+      long deadlineAt =
+          System.currentTimeMillis() + pluginConfig.getGracePeriodMinutes() * 60L * 1000L;
+      Long previous = deadlines.put(teamId, deadlineAt);
+      boolean deadlineUpdated = !Objects.equals(previous, deadlineAt);
+      if (deadlineUpdated) {
+        changed = true;
+      }
+      if (deadlineUpdated) {
+        Component leaderMessage =
+            TeamMessageUtils.deadlineWarningMessage(
+                max, pluginConfig.getGracePeriodMinutes(), excess);
+        notifyLeader(team, leaderMessage);
+        notifyAdmins(
+            adminBaseMessage(team, size, max)
+                .append(Component.space())
+                .append(
+                    Component.text(
+                        "Лидеру дано " + pluginConfig.getGracePeriodMinutes()
+                            + " мин. на сокращение.",
+                        NamedTextColor.GOLD)));
       }
     }
     if (changed) {
@@ -136,7 +253,30 @@ public class DeadlineScheduler {
     while (it.hasNext()) {
       Map.Entry<UUID, Long> entry = it.next();
       if (entry.getValue() <= now) {
-        removeExtraPlayers(entry.getKey(), max);
+        Team team = storage.getTeams().get(entry.getKey());
+        if (team != null) {
+          int sizeBefore = team.getMembers().size();
+          int removed = removeExtraPlayers(team, max);
+          if (removed > 0) {
+            Component leaderMessage = TeamMessageUtils.forcedRemovalMessage(removed);
+            notifyLeader(team, leaderMessage);
+            notifyAdmins(
+                adminBaseMessage(team, sizeBefore, max)
+                    .append(Component.space())
+                    .append(
+                        Component.text(
+                            "Льготный период истёк, удалено " + removed + " участника(ов).",
+                            NamedTextColor.RED)));
+            plugin
+                .getLogger()
+                .info(
+                    "Льготный период команды "
+                        + team.getName()
+                        + " истёк, удалено "
+                        + removed
+                        + " игрок(ов).");
+          }
+        }
         it.remove();
         changed = true;
       }
@@ -146,10 +286,9 @@ public class DeadlineScheduler {
     }
   }
 
-  private void removeExtraPlayers(UUID teamId, int max) {
-    Team team = storage.getTeams().get(teamId);
-    if (team == null) return;
+  private int removeExtraPlayers(@NotNull Team team, int max) {
     boolean changed = false;
+    int removedCount = 0;
     RemovalPolicy policy = pluginConfig.getExcessPlayerRemovalPolicy();
     while (team.getMembers().size() > max) {
       String removed = selectMemberToRemove(team, policy);
@@ -158,6 +297,7 @@ public class DeadlineScheduler {
       }
       team.removeMember(removed);
       storage.getPlayerTeams().remove(removed);
+      removedCount++;
       changed = true;
       Player player = plugin.getServer().getPlayer(removed);
       if (player != null) {
@@ -170,6 +310,7 @@ public class DeadlineScheduler {
     if (changed) {
       storage.markTeamDirty(team);
     }
+    return removedCount;
   }
 
   private String selectMemberToRemove(@NotNull Team team, @NotNull RemovalPolicy policy) {
@@ -226,5 +367,110 @@ public class DeadlineScheduler {
   public Long getTeamDeadline(String teamName) {
     UUID id = storage.getTeamIdByName(teamName);
     return id != null ? deadlines.get(id) : null;
+  }
+
+  private Component buildEnforcementDisabledMessage(int max, int excess) {
+    return Component.text("Максимальный размер команды установлен на ", NamedTextColor.YELLOW)
+        .append(Component.text(max, NamedTextColor.WHITE))
+        .append(Component.text(". Удалите ", NamedTextColor.YELLOW))
+        .append(Component.text(excess + " участника(ов)", NamedTextColor.WHITE))
+        .append(
+            Component.text(
+                ", но автоматическое сокращение сейчас отключено.", NamedTextColor.YELLOW));
+  }
+
+  private Component adminBaseMessage(@NotNull Team team, int size, int max) {
+    return Component.text("Команда ", NamedTextColor.GOLD)
+        .append(Component.text(team.getName(), NamedTextColor.WHITE))
+        .append(Component.text(" превышает лимит (", NamedTextColor.GOLD))
+        .append(Component.text(size + "/" + max, NamedTextColor.WHITE))
+        .append(Component.text(")", NamedTextColor.GOLD));
+  }
+
+  private DeadlineDisplayMode getDisplayMode() {
+    return DeadlineDisplayMode.fromConfig(pluginConfig.getDeadlineDisplayMode());
+  }
+
+  private void notifyLeader(@NotNull Team team, @NotNull Component message) {
+    String leaderName = team.getLeader();
+    if (leaderName == null || leaderName.isBlank()) {
+      return;
+    }
+    Player leader = plugin.getServer().getPlayer(leaderName);
+    if (leader == null) {
+      return;
+    }
+    DeadlineDisplayMode mode = getDisplayMode();
+    switch (mode) {
+      case ACTION_BAR -> leader.sendActionBar(message);
+      case SCOREBOARD -> sendScoreboardMessage(leader, message);
+      case CHAT -> TeamMessageUtils.sendTeamMessage(leader, message);
+    }
+  }
+
+  private void notifyAdmins(Component message) {
+    if (message == null || !pluginConfig.shouldNotifyAdmins()) {
+      return;
+    }
+    plugin
+        .getServer()
+        .getOnlinePlayers()
+        .stream()
+        .filter(player -> player.isOp() || player.hasPermission("mypurpurplugin.admin"))
+        .forEach(player -> TeamMessageUtils.sendTeamMessage(player, message));
+  }
+
+  private void sendScoreboardMessage(@NotNull Player player, @NotNull Component message) {
+    ScoreboardManager manager = plugin.getServer().getScoreboardManager();
+    if (manager == null) {
+      TeamMessageUtils.sendTeamMessage(player, message);
+      return;
+    }
+    Scoreboard original = player.getScoreboard();
+    Scoreboard scoreboard = manager.getNewScoreboard();
+    Objective objective =
+        scoreboard.registerNewObjective(
+            SCOREBOARD_OBJECTIVE,
+            Criteria.DUMMY,
+            Component.text("⚠ Лимит команды", NamedTextColor.GOLD));
+    objective.setDisplaySlot(DisplaySlot.SIDEBAR);
+    List<String> lines = wrapForScoreboard(message);
+    int score = lines.size();
+    for (String line : lines) {
+      objective.getScore(line).setScore(score--);
+    }
+    player.setScoreboard(scoreboard);
+    plugin
+        .getServer()
+        .getScheduler()
+        .runTaskLater(
+            plugin,
+            () -> {
+              if (player.isOnline()) {
+                player.setScoreboard(original);
+              }
+            },
+            200L);
+  }
+
+  private List<String> wrapForScoreboard(@NotNull Component message) {
+    String plain = PlainTextComponentSerializer.plainText().serialize(message);
+    if (plain.isBlank()) {
+      plain = " ";
+    }
+    List<String> lines = new ArrayList<>();
+    int index = 0;
+    int colorIndex = 0;
+    while (index < plain.length() && lines.size() < SCOREBOARD_COLORS.length) {
+      int end = Math.min(index + SCOREBOARD_LINE_LENGTH, plain.length());
+      String part = plain.substring(index, end);
+      lines.add(SCOREBOARD_COLORS[colorIndex % SCOREBOARD_COLORS.length] + part);
+      colorIndex++;
+      index = end;
+    }
+    if (lines.isEmpty()) {
+      lines.add(SCOREBOARD_COLORS[0] + plain);
+    }
+    return lines;
   }
 }
