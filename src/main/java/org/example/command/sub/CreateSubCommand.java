@@ -42,11 +42,16 @@ public class CreateSubCommand implements SubCommand {
     } else if (args.length == 4) {
       String partial = args[3].toLowerCase(Locale.ROOT);
       for (NamedTextColor color : NamedTextColor.NAMES.values()) {
-        String colorName = color.toString();
-        if (colorName != null && colorName.toLowerCase(Locale.ROOT).startsWith(partial)) {
-          suggestions.add(colorName.toUpperCase(Locale.ROOT));
+        String key = NamedTextColor.NAMES.key(color);
+        if (key == null) {
+          continue;
+        }
+        String keyLower = key.toLowerCase(Locale.ROOT);
+        if (keyLower.startsWith(partial)) {
+          suggestions.add(key.toUpperCase(Locale.ROOT));
         }
       }
+      suggestions.sort(String::compareTo);
     }
     return suggestions;
   }
