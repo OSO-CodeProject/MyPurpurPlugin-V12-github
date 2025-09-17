@@ -10,16 +10,21 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.example.MyPurpurPlugin;
+import org.example.config.PluginConfig;
 import org.example.service.TeamService;
 import org.example.util.TeamMessageUtils;
+import org.example.util.TeamUtils;
 import org.jetbrains.annotations.NotNull;
 
 public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, TabCompleter {
 
   private final TeamService teamManager;
+  private final PluginConfig pluginConfig;
 
-  public TeamAdminCommand(@NotNull TeamService teamManager) {
+  public TeamAdminCommand(
+      @NotNull TeamService teamManager, @NotNull PluginConfig pluginConfig) {
     this.teamManager = teamManager;
+    this.pluginConfig = pluginConfig;
   }
 
   @Override
@@ -151,6 +156,9 @@ public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, Tab
       return true;
     }
     String newTeamName = args[1];
+    if (TeamUtils.isTeamNameLengthInvalid(newTeamName, pluginConfig, player)) {
+      return true;
+    }
     teamManager.renameTeam(oldTeamName, newTeamName, player);
     return true;
   }
