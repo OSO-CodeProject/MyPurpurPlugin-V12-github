@@ -64,7 +64,8 @@ public class TeamStorage {
         String name = teamsConfig.getString("teams." + teamIdStr + ".name", "");
         String leader = teamsConfig.getString("teams." + teamIdStr + ".leader", "");
         String prefix = teamsConfig.getString("teams." + teamIdStr + ".prefix", "");
-        String color = teamsConfig.getString("teams." + teamIdStr + ".color", "WHITE");
+        String color =
+            normalizeColorKey(teamsConfig.getString("teams." + teamIdStr + ".color", "WHITE"));
         Team team = new Team(teamId, name, leader, prefix, color);
         team.setMembers(teamsConfig.getStringList("teams." + teamIdStr + ".members"));
         long deadline = teamsConfig.getLong("teams." + teamIdStr + ".deadline", 0L);
@@ -93,7 +94,7 @@ public class TeamStorage {
       teamsConfig.set(path + ".leader", team.getLeader());
       teamsConfig.set(path + ".members", team.getMembers());
       teamsConfig.set(path + ".prefix", team.getPrefix());
-      teamsConfig.set(path + ".color", team.getColor().toString().toUpperCase());
+      teamsConfig.set(path + ".color", colorKeyFor(team.getColor()));
       Long deadline = deadlines.get(teamId);
       if (deadline != null) {
         teamsConfig.set(path + ".deadline", deadline);
@@ -248,5 +249,47 @@ public class TeamStorage {
       dirtyTeams.clear();
       deadlinesDirty = false;
     }
+  }
+
+  private static final String DEFAULT_COLOR_KEY =
+      Objects.requireNonNull(NamedTextColor.NAMES.key(NamedTextColor.WHITE));
+
+  private static String colorKeyFor(NamedTextColor color) {
+    if (color == null) {
+      return DEFAULT_COLOR_KEY;
+    }
+    String key = NamedTextColor.NAMES.key(color);
+    return key != null ? key : DEFAULT_COLOR_KEY;
+  }
+
+  private static String normalizeColorKey(String rawColor) {
+    if (rawColor == null || rawColor.isBlank()) {
+      return DEFAULT_COLOR_KEY;
+    }
+    String trimmed = rawColor.trim();
+    NamedTextColor direct = NamedTextColor.NAMES.value(trimmed.toLowerCase(Locale.ROOT));
+    if (direct != null) {
+      String key = NamedTextColor.NAMES.key(direct);
+      return key != null ? key : DEFAULT_COLOR_KEY;
+    }
+    if (trimmed.startsWith("NamedTextColor{")) {
+      int nameIndex = trimmed.indexOf("name=");
+      if (nameIndex >= 0) {
+        int separatorIndex = trimmed.indexOf(',', nameIndex);
+        int endIndex = separatorIndex >= 0 ? separatorIndex : trimmed.indexOf('}', nameIndex);
+        if (endIndex > nameIndex + 5) {
+          String candidate = trimmed.substring(nameIndex + 5, endIndex).trim();
+          if (!candidate.isEmpty()) {
+            NamedTextColor named =
+                NamedTextColor.NAMES.value(candidate.toLowerCase(Locale.ROOT));
+            if (named != null) {
+              String key = NamedTextColor.NAMES.key(named);
+              return key != null ? key : DEFAULT_COLOR_KEY;
+            }
+          }
+        }
+      }
+    }
+    return DEFAULT_COLOR_KEY;
   }
 }
