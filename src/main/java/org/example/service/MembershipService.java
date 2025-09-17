@@ -148,11 +148,18 @@ public class MembershipService {
     Team team = storage.getTeamByName(teamName);
     // Разрешаем роспуск только лидеру существующей команды.
     if (team == null || !team.isLeader(leader.getName())) return;
-    // Удаляем команду и освобождаем всех участников.
+    // Сохраняем список участников до удаления, чтобы очистить их отображаемые префиксы.
+    List<String> members = team.getMembers();
+    // Удаляем команду и уведомляем игроков о сбросе префикса.
     storage.removeTeam(team);
-    for (String member : team.getMembers()) {
-      storage.getPlayerTeams().remove(member);
+    for (String memberName : members) {
+      notifyPrefixUpdate(memberName, null);
     }
+    // После уведомления очищаем соответствия игроков и команд.
+    for (String memberName : members) {
+      storage.getPlayerTeams().remove(memberName);
+    }
+    scheduler.enforceTeamSizes();
   }
 
   public void renameTeam(String oldTeamName, String newTeamName, @NotNull Player leader) {
