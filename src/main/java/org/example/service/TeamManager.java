@@ -134,6 +134,16 @@ public class TeamManager implements TeamService {
   }
 
   @Override
+  public boolean isEnforceMaxMembersOnReload() {
+    return pluginConfig.isEnforceMaxMembersOnReload();
+  }
+
+  @Override
+  public boolean isGracePeriodEnabled() {
+    return pluginConfig.isGracePeriodEnabled();
+  }
+
+  @Override
   public void reloadConfig() {
     storage.flushNow();
     storage.stopAutoSave();
