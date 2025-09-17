@@ -36,7 +36,7 @@ public class MyPurpurPlugin extends JavaPlugin {
 
     // Регистрация команд
     registerCommand("team", new TeamCommand(teamManager, pluginConfig));
-    registerCommand("teamadmin", new TeamAdminCommand(teamManager));
+    registerCommand("teamadmin", new TeamAdminCommand(teamManager, pluginConfig));
     registerCommand("getteamsuuidlist", new AdminCommands(teamManager));
     registerCommand("getteamuuid", new AdminCommands(teamManager));
     registerCommand("teamreload", new TeamReloadCommand(this, teamManager, pluginConfig));

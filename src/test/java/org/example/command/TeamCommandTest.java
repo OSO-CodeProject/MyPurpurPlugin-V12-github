@@ -187,6 +187,27 @@ class TeamCommandTest {
   }
 
   @Test
+  void adminRenameRejectsInvalidTeamNameLength() {
+    CommandMap commandMap = server.getCommandMap();
+
+    PlayerMock leader = server.addPlayer("AdminLeader");
+    leader.addAttachment(plugin, "mypurpurplugin.team", true);
+    leader.addAttachment(plugin, "mypurpurplugin.teamadmin", true);
+
+    assertTrue(commandMap.dispatch(leader, "team create Alpha AA WHITE"));
+    assertEquals("Alpha", teamManager.getPlayerTeam(leader));
+
+    while (leader.nextComponentMessage() != null) {}
+
+    assertTrue(commandMap.dispatch(leader, "teamadmin rename AB"));
+    Component msg = leader.nextComponentMessage();
+    assertNotNull(msg);
+    String plain = PlainTextComponentSerializer.plainText().serialize(msg);
+    assertTrue(plain.contains("Название команды слишком короткое"));
+    assertEquals("Alpha", teamManager.getPlayerTeam(leader));
+  }
+
+  @Test
   void asyncChatEventAddsTeamPrefix() {
     CommandMap commandMap = server.getCommandMap();
     PlayerMock leader = server.addPlayer("Leader");
