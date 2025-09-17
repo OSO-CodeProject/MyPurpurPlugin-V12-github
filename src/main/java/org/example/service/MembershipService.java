@@ -6,10 +6,12 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.example.config.PluginConfig;
+import org.example.listener.TeamChatListener;
 import org.example.model.Team;
 import org.example.util.TeamMessageUtils;
 import org.example.util.TeamUtils;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /** Contains operations that modify teams and player memberships. */
 public class MembershipService {
@@ -84,6 +86,7 @@ public class MembershipService {
     TeamMessageUtils.sendTeamMessage(
         player, Component.text("✅ Вы вступили в команду", NamedTextColor.GREEN));
     scheduler.enforceTeamSizes();
+    updateTeamMembersPrefixes(team);
   }
 
   public void removePlayerFromTeam(String teamName, @NotNull Player player) {
@@ -109,6 +112,10 @@ public class MembershipService {
       storage.markTeamDirty(team);
     }
     scheduler.enforceTeamSizes();
+    notifyPrefixUpdate(player, null);
+    if (!removedTeam) {
+      updateTeamMembersPrefixes(team);
+    }
   }
 
   public void kickPlayerFromTeam(
@@ -122,6 +129,8 @@ public class MembershipService {
     storage.getPlayerTeams().remove(targetName);
     storage.markTeamDirty(team);
     scheduler.enforceTeamSizes();
+    notifyPrefixUpdate(targetName, null);
+    updateTeamMembersPrefixes(team);
   }
 
   public void transferLeadership(
@@ -161,6 +170,7 @@ public class MembershipService {
     if (TeamUtils.isPrefixLengthInvalid(newPrefix, pluginConfig, leader)) return;
     team.setPrefix(newPrefix);
     storage.markTeamDirty(team);
+    updateTeamMembersPrefixes(team);
   }
 
   public void setTeamColor(String teamName, String newColor, @NotNull Player leader) {
@@ -175,23 +185,34 @@ public class MembershipService {
     }
     team.setColor(newColor);
     storage.markTeamDirty(team);
+    updateTeamMembersPrefixes(team);
   }
 
   public void updatePlayerPrefixes(String teamName) {
     Team team = storage.getTeamByName(teamName);
     // Выполняем синхронизацию префиксов только для существующей команды.
     if (team == null) return;
-    // Обновляем отображаемые префиксы у всех онлайн-участников.
+    updateTeamMembersPrefixes(team);
+  }
+
+  private void updateTeamMembersPrefixes(@NotNull Team team) {
+    Component prefixComponent = team.getPrefixComponent();
     for (String member : team.getMembers()) {
-      Player player = plugin.getServer().getPlayer(member);
-      if (player != null) {
-        plugin
-            .getServer()
-            .getPluginManager()
-            .callEvent(
-                new org.example.listener.TeamChatListener.PlayerPrefixUpdateEvent(
-                    player, team.getPrefixComponent()));
-      }
+      notifyPrefixUpdate(member, prefixComponent);
+    }
+  }
+
+  private void notifyPrefixUpdate(@NotNull Player player, @Nullable Component prefix) {
+    plugin
+        .getServer()
+        .getPluginManager()
+        .callEvent(new TeamChatListener.PlayerPrefixUpdateEvent(player, prefix));
+  }
+
+  private void notifyPrefixUpdate(@NotNull String playerName, @Nullable Component prefix) {
+    Player onlinePlayer = plugin.getServer().getPlayer(playerName);
+    if (onlinePlayer != null) {
+      notifyPrefixUpdate(onlinePlayer, prefix);
     }
   }
 }
