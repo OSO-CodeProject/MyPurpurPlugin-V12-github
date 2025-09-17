@@ -53,6 +53,7 @@ public class MembershipService {
     // Создаём запись команды и связываем лидера с новой структурой.
     Team team = new Team(teamName, leader.getName(), prefix, color);
     storage.addTeam(team);
+    updateTeamMembersPrefixes(team);
     storage.getPlayerTeams().put(leader.getName(), team.getId());
     TeamMessageUtils.sendTeamMessage(
         leader, Component.text("✅ Команда создана", NamedTextColor.GREEN));
