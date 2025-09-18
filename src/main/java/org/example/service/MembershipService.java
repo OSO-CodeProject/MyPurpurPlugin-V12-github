@@ -39,7 +39,7 @@ public class MembershipService {
       return;
     }
     // Проверяем, что игрок выбрал поддерживаемый цвет для корректного отображения.
-    NamedTextColor teamColor = NamedTextColor.NAMES.value(color.toLowerCase());
+    NamedTextColor teamColor = NamedTextColor.NAMES.value(color.toLowerCase(Locale.ROOT));
     if (teamColor == null) {
       TeamMessageUtils.sendTeamMessage(
           leader, Component.text("❌ Неверный цвет команды", NamedTextColor.RED));
@@ -185,7 +185,7 @@ public class MembershipService {
     Team team = storage.getTeamByName(teamName);
     // Проверяем права и корректность цвета перед сохранением.
     if (team == null || !team.isLeader(leader.getName())) return;
-    NamedTextColor teamColor = NamedTextColor.NAMES.value(newColor.toLowerCase());
+    NamedTextColor teamColor = NamedTextColor.NAMES.value(newColor.toLowerCase(Locale.ROOT));
     if (teamColor == null) {
       TeamMessageUtils.sendTeamMessage(
           leader, Component.text("❌ Неверный цвет команды", NamedTextColor.RED));
