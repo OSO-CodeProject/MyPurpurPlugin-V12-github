@@ -136,7 +136,6 @@ public class MyPurpurPlugin extends JavaPlugin {
   @Override
   public void onDisable() {
     if (teamManager != null) {
-      teamManager.reloadConfig();
       teamManager.shutdown();
     }
   }
