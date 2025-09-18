@@ -61,6 +61,8 @@ public class TeamChatListener implements Listener {
     ((MyPurpurPlugin) teamManager.getPlugin())
         .debugTeamAction("Обработка сообщения от игрока", player.getName(), teamName);
 
+    boolean forceWhiteChat = teamManager.getPluginConfig().isForceWhiteChat();
+
     if (teamName != null) {
       String prefix = teamManager.getTeamPrefix(teamName);
       NamedTextColor teamColor = teamManager.getTeamColor(teamName);
@@ -71,13 +73,13 @@ public class TeamChatListener implements Listener {
               prefixComponent
                   .append(sourceDisplayName)
                   .append(Component.text(": "))
-                  .append(message.color(NamedTextColor.WHITE)));
+                  .append(forceWhiteChat ? message.color(NamedTextColor.WHITE) : message));
     } else {
       event.renderer(
           (source, sourceDisplayName, message, viewer) ->
               sourceDisplayName
                   .append(Component.text(": "))
-                  .append(message.color(NamedTextColor.WHITE)));
+                  .append(forceWhiteChat ? message.color(NamedTextColor.WHITE) : message));
     }
   }
 

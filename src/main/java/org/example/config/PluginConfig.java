@@ -47,6 +47,7 @@ public class PluginConfig {
   private void setDefaults() {
     // Глобальные настройки
     config.addDefault("debug-mode", true);
+    config.addDefault("force-white-chat", false);
 
     // Основные настройки
     config.addDefault("team.requires-op", false);
@@ -95,6 +96,15 @@ public class PluginConfig {
    */
   public boolean isDebugModeEnabled() {
     return config.getBoolean("debug-mode", true);
+  }
+
+  /**
+   * Определяет, следует ли принудительно перекрашивать сообщения чата в белый цвет.
+   *
+   * @return true, если сообщения должны быть перекрашены в белый цвет
+   */
+  public boolean isForceWhiteChat() {
+    return config.getBoolean("force-white-chat", false);
   }
 
   /**
