@@ -23,8 +23,7 @@ public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, Tab
   private final TeamService teamManager;
   private final PluginConfig pluginConfig;
 
-  public TeamAdminCommand(
-      @NotNull TeamService teamManager, @NotNull PluginConfig pluginConfig) {
+  public TeamAdminCommand(@NotNull TeamService teamManager, @NotNull PluginConfig pluginConfig) {
     this.teamManager = teamManager;
     this.pluginConfig = pluginConfig;
   }

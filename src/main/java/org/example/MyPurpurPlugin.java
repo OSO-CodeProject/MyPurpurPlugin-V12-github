@@ -113,9 +113,7 @@ public class MyPurpurPlugin extends JavaPlugin {
     setDebugMode(!debugMode);
   }
 
-  /**
-   * Применяет состояние режима отладки на основе текущей конфигурации.
-   */
+  /** Применяет состояние режима отладки на основе текущей конфигурации. */
   public void applyDebugModeFromConfig() {
     if (pluginConfig != null) {
       setDebugMode(pluginConfig.isDebugModeEnabled());

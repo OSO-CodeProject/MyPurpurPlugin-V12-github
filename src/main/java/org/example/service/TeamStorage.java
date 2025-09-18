@@ -219,10 +219,7 @@ public class TeamStorage {
     }
     long ticks = Math.max(1L, intervalSeconds) * 20L;
     autoSaveTask =
-        plugin
-            .getServer()
-            .getScheduler()
-            .runTaskTimer(plugin, this::flushNow, ticks, ticks);
+        plugin.getServer().getScheduler().runTaskTimer(plugin, this::flushNow, ticks, ticks);
   }
 
   public synchronized void stopAutoSave() {
@@ -280,8 +277,7 @@ public class TeamStorage {
         if (endIndex > nameIndex + 5) {
           String candidate = trimmed.substring(nameIndex + 5, endIndex).trim();
           if (!candidate.isEmpty()) {
-            NamedTextColor named =
-                NamedTextColor.NAMES.value(candidate.toLowerCase(Locale.ROOT));
+            NamedTextColor named = NamedTextColor.NAMES.value(candidate.toLowerCase(Locale.ROOT));
             if (named != null) {
               String key = NamedTextColor.NAMES.key(named);
               return key != null ? key : DEFAULT_COLOR_KEY;
