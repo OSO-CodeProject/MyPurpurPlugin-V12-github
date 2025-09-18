@@ -20,6 +20,7 @@ import java.util.stream.Stream;
 import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.chat.SignedMessage;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.command.CommandMap;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -249,6 +250,38 @@ class TeamCommandTest {
     Component rendered = event.renderer().render(leader, Component.text("Leader"), message, leader);
     String plain = PlainTextComponentSerializer.plainText().serialize(rendered);
     assertEquals("[AA] Leader: hello", plain);
+  }
+
+  @Test
+  void asyncChatEventUsesDisplayNameWithPrefix() {
+    CommandMap commandMap = server.getCommandMap();
+    PlayerMock leader = server.addPlayer("Leader");
+    leader.addAttachment(plugin, "mypurpurplugin.team", true);
+    commandMap.dispatch(leader, "team create Alpha AA WHITE");
+
+    Component message = Component.text("hello");
+    Component displayName = Component.text("Captain", NamedTextColor.GOLD);
+    AsyncChatEvent event =
+        new AsyncChatEvent(
+            false,
+            leader,
+            Set.<Audience>of(),
+            ChatRenderer.defaultRenderer(),
+            message,
+            message,
+            SignedMessage.system("hello", message));
+    server.getPluginManager().callEvent(event);
+
+    PlainTextComponentSerializer plainSerializer = PlainTextComponentSerializer.plainText();
+    Component rendered = event.renderer().render(leader, displayName, message, leader);
+
+    assertEquals("[AA] Captain: hello", plainSerializer.serialize(rendered));
+    Component nameComponent =
+        rendered.children().stream()
+            .filter(component -> "Captain".equals(plainSerializer.serialize(component)))
+            .findFirst()
+            .orElseThrow();
+    assertEquals(NamedTextColor.GOLD, nameComponent.color());
   }
 
   @Test
