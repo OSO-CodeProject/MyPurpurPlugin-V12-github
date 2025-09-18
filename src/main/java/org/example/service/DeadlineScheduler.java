@@ -3,28 +3,28 @@ package org.example.service;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.scoreboard.Criteria;
+import org.bukkit.scoreboard.DisplaySlot;
+import org.bukkit.scoreboard.Objective;
+import org.bukkit.scoreboard.Scoreboard;
+import org.bukkit.scoreboard.ScoreboardManager;
 import org.example.config.PluginConfig;
 import org.example.config.RemovalPolicy;
 import org.example.listener.TeamChatListener;
 import org.example.model.Team;
 import org.example.util.TeamMessageUtils;
 import org.jetbrains.annotations.NotNull;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
-import org.bukkit.ChatColor;
-import org.bukkit.scoreboard.Criteria;
-import org.bukkit.scoreboard.DisplaySlot;
-import org.bukkit.scoreboard.Objective;
-import org.bukkit.scoreboard.Scoreboard;
-import org.bukkit.scoreboard.ScoreboardManager;
 
 /**
- * Планировщик, который следит за размерами команд и временем, отведённым на их
- * уменьшение до допустимого количества участников.
+ * Планировщик, который следит за размерами команд и временем, отведённым на их уменьшение до
+ * допустимого количества участников.
  */
 public class DeadlineScheduler {
 
@@ -74,8 +74,8 @@ public class DeadlineScheduler {
   }
 
   /**
-   * Создаёт планировщик, работающий поверх Bukkit, и связывает его с источниками
-   * конфигурации и хранилищем команд.
+   * Создаёт планировщик, работающий поверх Bukkit, и связывает его с источниками конфигурации и
+   * хранилищем команд.
    *
    * @param plugin плагин, в котором выполняется расписание
    * @param pluginConfig настройки, задающие ограничения и периоды проверок
@@ -91,8 +91,7 @@ public class DeadlineScheduler {
   }
 
   /**
-   * Возвращает отображение команд в момент времени, когда истекает их льготный
-   * период.
+   * Возвращает отображение команд в момент времени, когда истекает их льготный период.
    *
    * @return изменяемая карта дедлайнов по идентификатору команды
    */
@@ -101,8 +100,8 @@ public class DeadlineScheduler {
   }
 
   /**
-   * Запускает периодическую проверку дедлайнов и автоматически перезапускает
-   * задачу, если она уже была активна.
+   * Запускает периодическую проверку дедлайнов и автоматически перезапускает задачу, если она уже
+   * была активна.
    */
   public synchronized void start() {
     long seconds = pluginConfig.getDeadlineNotifyPeriodSeconds();
@@ -126,8 +125,8 @@ public class DeadlineScheduler {
   }
 
   /**
-   * Фиксирует команды, превышающие лимит участников, и назначает им дедлайны на
-   * сокращение, очищая записи для команд с допустимым размером.
+   * Фиксирует команды, превышающие лимит участников, и назначает им дедлайны на сокращение, очищая
+   * записи для команд с допустимым размером.
    */
   public void enforceTeamSizes() {
     int max = pluginConfig.getMaxMembers();
@@ -178,8 +177,7 @@ public class DeadlineScheduler {
             adminBaseMessage(team, size, max)
                 .append(Component.space())
                 .append(
-                    Component.text(
-                        "Автоматическое сокращение отключено.", NamedTextColor.GOLD)));
+                    Component.text("Автоматическое сокращение отключено.", NamedTextColor.GOLD)));
         continue;
       }
 
@@ -228,7 +226,8 @@ public class DeadlineScheduler {
                 .append(Component.space())
                 .append(
                     Component.text(
-                        "Лидеру дано " + pluginConfig.getGracePeriodMinutes()
+                        "Лидеру дано "
+                            + pluginConfig.getGracePeriodMinutes()
                             + " мин. на сокращение.",
                         NamedTextColor.GOLD)));
       }
@@ -239,8 +238,8 @@ public class DeadlineScheduler {
   }
 
   /**
-   * Проверяет, истекли ли дедлайны команд, и при необходимости удаляет
-   * лишних игроков, синхронизируя изменения с хранилищем.
+   * Проверяет, истекли ли дедлайны команд, и при необходимости удаляет лишних игроков,
+   * синхронизируя изменения с хранилищем.
    */
   public void checkDeadlines() {
     int max = pluginConfig.getMaxMembers();
@@ -402,12 +401,10 @@ public class DeadlineScheduler {
   }
 
   /**
-   * Возвращает зарегистрированный дедлайн конкретной команды по имени, если он
-   * существует.
+   * Возвращает зарегистрированный дедлайн конкретной команды по имени, если он существует.
    *
    * @param teamName имя команды, для которой нужен дедлайн
-   * @return отметка времени истечения льготного периода или {@code null}, если
-   *     команда в норме
+   * @return отметка времени истечения льготного периода или {@code null}, если команда в норме
    */
   public Long getTeamDeadline(String teamName) {
     UUID id = storage.getTeamIdByName(teamName);
@@ -496,10 +493,7 @@ public class DeadlineScheduler {
     if (message == null || !pluginConfig.shouldNotifyAdmins()) {
       return;
     }
-    plugin
-        .getServer()
-        .getOnlinePlayers()
-        .stream()
+    plugin.getServer().getOnlinePlayers().stream()
         .filter(player -> player.isOp() || player.hasPermission("mypurpurplugin.admin"))
         .forEach(player -> TeamMessageUtils.sendTeamMessage(player, message));
   }

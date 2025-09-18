@@ -101,15 +101,14 @@ public class TeamCommand implements org.bukkit.command.CommandExecutor, TabCompl
   private void sendUsage(Player player) {
     player.sendMessage(
         Component.text(
-            "❌ Использование: /team <" + getSubCommandList() + "> [аргументы]", NamedTextColor.RED));
+            "❌ Использование: /team <" + getSubCommandList() + "> [аргументы]",
+            NamedTextColor.RED));
   }
 
   private void sendUnknownSubCommandMessage(Player player) {
     player.sendMessage(
         Component.text(
-            "❌ Неизвестная подкоманда! Используйте: /team <"
-                + getSubCommandList()
-                + ">",
+            "❌ Неизвестная подкоманда! Используйте: /team <" + getSubCommandList() + ">",
             NamedTextColor.RED));
   }
 
