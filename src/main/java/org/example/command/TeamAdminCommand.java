@@ -2,7 +2,9 @@ package org.example.command;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.Command;
@@ -275,13 +277,18 @@ public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, Tab
         } else if (args[0].equalsIgnoreCase("setprefix")) {
           suggestions.add("<новый_префикс>");
         } else if (args[0].equalsIgnoreCase("setcolor")) {
+          String lowerInput = args[1].toLowerCase(Locale.ROOT);
           for (NamedTextColor color : NamedTextColor.NAMES.values()) {
-            if (color.toString().toLowerCase().startsWith(args[1].toLowerCase())) {
-              suggestions.add(color.toString().toUpperCase());
+            String key = NamedTextColor.NAMES.key(color);
+            if (key != null && key.toLowerCase(Locale.ROOT).startsWith(lowerInput)) {
+              suggestions.add(key.toUpperCase(Locale.ROOT));
             }
           }
         }
       }
+    }
+    if (!suggestions.isEmpty()) {
+      Collections.sort(suggestions);
     }
     return suggestions;
   }
