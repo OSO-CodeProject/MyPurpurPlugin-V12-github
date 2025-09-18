@@ -52,9 +52,9 @@ public class PluginConfig {
     // Основные настройки
     config.addDefault("team.requires-op", false);
     config.addDefault("team.notify-admins", true);
-    config.addDefault("team.max-members", 5);
-    config.addDefault("team.min-prefix-length", 2);
-    config.addDefault("team.max-prefix-length", 5);
+    config.addDefault("team.max-members", 0);
+    config.addDefault("team.min-prefix-length", 1);
+    config.addDefault("team.max-prefix-length", 16);
     config.addDefault("team.min-team-name-length", 3);
     config.addDefault("team.max-team-name-length", 16);
     config.addDefault("team.enforce-max-members-on-reload", true);
@@ -131,7 +131,7 @@ public class PluginConfig {
    * @return Максимальное количество участников (0 — без ограничений)
    */
   public int getMaxMembers() {
-    return config.getInt("team.max-members", 5);
+    return config.getInt("team.max-members", 0);
   }
 
   /**
@@ -218,7 +218,7 @@ public class PluginConfig {
    * @return Минимальная длина префикса
    */
   public int getMinPrefixLength() {
-    return config.getInt("team.min-prefix-length", 2);
+    return config.getInt("team.min-prefix-length", 1);
   }
 
   /**
@@ -227,7 +227,7 @@ public class PluginConfig {
    * @return Максимальная длина префикса
    */
   public int getMaxPrefixLength() {
-    return config.getInt("team.max-prefix-length", 5);
+    return config.getInt("team.max-prefix-length", 16);
   }
 
   /**
