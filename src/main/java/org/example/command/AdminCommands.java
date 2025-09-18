@@ -2,6 +2,7 @@ package org.example.command;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
@@ -37,7 +38,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
       return true;
     }
 
-    String commandName = command.getName().toLowerCase();
+    String commandName = command.getName().toLowerCase(Locale.ROOT);
 
     if (commandName.equals("getteamsuuidlist")) {
       if (!player.hasPermission("mypurpurplugin.getteamsuuidlist")) {
@@ -142,12 +143,13 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
       return suggestions;
     }
 
-    String commandName = command.getName().toLowerCase();
+    String commandName = command.getName().toLowerCase(Locale.ROOT);
     if (commandName.equals("getteamuuid") && args.length == 1) {
       // Предлагаем названия команд
       List<String> teamNames = teamService.getTeamNames();
+      String normalizedInput = args[0].toLowerCase(Locale.ROOT);
       for (String teamName : teamNames) {
-        if (teamName.toLowerCase().startsWith(args[0].toLowerCase())) {
+        if (teamName.toLowerCase(Locale.ROOT).startsWith(normalizedInput)) {
           suggestions.add(teamName);
         }
       }

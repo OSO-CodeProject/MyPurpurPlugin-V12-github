@@ -2,6 +2,7 @@ package org.example.model;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -26,7 +27,7 @@ public class Team {
     this.leader = leader;
     this.members = new ArrayList<>(List.of(leader));
     this.prefix = prefix;
-    this.color = NamedTextColor.NAMES.valueOr(color.toLowerCase(), NamedTextColor.WHITE);
+    this.color = NamedTextColor.NAMES.valueOr(color.toLowerCase(Locale.ROOT), NamedTextColor.WHITE);
   }
 
   // Геттеры
@@ -72,7 +73,7 @@ public class Team {
   }
 
   public void setColor(String color) {
-    this.color = NamedTextColor.NAMES.valueOr(color.toLowerCase(), NamedTextColor.WHITE);
+    this.color = NamedTextColor.NAMES.valueOr(color.toLowerCase(Locale.ROOT), NamedTextColor.WHITE);
   }
 
   // Методы управления участниками

@@ -51,7 +51,7 @@ public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, Tab
       return true;
     }
 
-    String subCommand = args[0].toLowerCase();
+    String subCommand = args[0].toLowerCase(Locale.ROOT);
     ((MyPurpurPlugin) teamManager.getPlugin())
         .debugTeamAction("Команда /teamadmin выполнена игроком", player.getName(), null);
 
@@ -265,7 +265,8 @@ public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, Tab
               List<String> members = teamManager.getTeamMembers(teamName);
               for (String memberName : members) {
                 if (!memberName.equals(player.getName())
-                    && memberName.toLowerCase().startsWith(args[1].toLowerCase())) {
+                  && memberName.toLowerCase(Locale.ROOT)
+                      .startsWith(args[1].toLowerCase(Locale.ROOT))) {
                   suggestions.add(memberName);
                 }
               }

@@ -167,6 +167,21 @@ class TeamCommandTest {
   }
 
   @Test
+  void joinCommandMatchesTeamNameIgnoringCase() {
+    CommandMap commandMap = server.getCommandMap();
+
+    PlayerMock leader = server.addPlayer("CaseLeader");
+    leader.addAttachment(plugin, "mypurpurplugin.team", true);
+    assertTrue(commandMap.dispatch(leader, "team create Alpha AA WHITE"));
+
+    PlayerMock member = server.addPlayer("CaseRecruit");
+    member.addAttachment(plugin, "mypurpurplugin.team", true);
+    assertTrue(commandMap.dispatch(member, "team join alpha"));
+
+    assertEquals("Alpha", teamManager.getPlayerTeam(member));
+  }
+
+  @Test
   void deniesCommandWithoutPermission() {
     CommandMap commandMap = server.getCommandMap();
     PlayerMock player = server.addPlayer("Player");

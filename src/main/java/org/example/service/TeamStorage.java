@@ -117,7 +117,10 @@ public class TeamStorage {
 
   private void addTeamInternal(@NotNull Team team, boolean markDirty) {
     teams.put(team.getId(), team);
-    teamIdsByName.put(team.getName(), team.getId());
+    String normalizedName = normalizeTeamKey(team.getName());
+    if (normalizedName != null) {
+      teamIdsByName.put(normalizedName, team.getId());
+    }
     if (markDirty) {
       markTeamDirty(team);
     }
@@ -125,7 +128,10 @@ public class TeamStorage {
 
   public void removeTeam(@NotNull Team team) {
     teams.remove(team.getId());
-    teamIdsByName.remove(team.getName());
+    String normalizedName = normalizeTeamKey(team.getName());
+    if (normalizedName != null) {
+      teamIdsByName.remove(normalizedName);
+    }
     markTeamDirty(team);
   }
 
@@ -134,9 +140,21 @@ public class TeamStorage {
     if (Objects.equals(currentName, newName)) {
       return;
     }
-    teamIdsByName.remove(currentName);
+    String normalizedNewName = normalizeTeamKey(newName);
+    if (normalizedNewName != null) {
+      UUID existingId = teamIdsByName.get(normalizedNewName);
+      if (existingId != null && !existingId.equals(team.getId())) {
+        return;
+      }
+    }
+    String normalizedCurrentName = normalizeTeamKey(currentName);
+    if (normalizedCurrentName != null) {
+      teamIdsByName.remove(normalizedCurrentName);
+    }
     team.setName(newName);
-    teamIdsByName.put(newName, team.getId());
+    if (normalizedNewName != null) {
+      teamIdsByName.put(normalizedNewName, team.getId());
+    }
     markTeamDirty(team);
   }
 
@@ -145,12 +163,17 @@ public class TeamStorage {
   }
 
   public Team getTeamByName(String teamName) {
-    UUID teamId = teamIdsByName.get(teamName);
+    String normalizedName = normalizeTeamKey(teamName);
+    if (normalizedName == null) {
+      return null;
+    }
+    UUID teamId = teamIdsByName.get(normalizedName);
     return teamId != null ? teams.get(teamId) : null;
   }
 
   public UUID getTeamIdByName(String teamName) {
-    return teamIdsByName.get(teamName);
+    String normalizedName = normalizeTeamKey(teamName);
+    return normalizedName != null ? teamIdsByName.get(normalizedName) : null;
   }
 
   public String getPlayerTeam(@NotNull Player player) {
@@ -287,5 +310,9 @@ public class TeamStorage {
       }
     }
     return DEFAULT_COLOR_KEY;
+  }
+
+  private static String normalizeTeamKey(String name) {
+    return name != null ? name.toLowerCase(Locale.ROOT) : null;
   }
 }
