@@ -6,7 +6,9 @@ import be.seeseemelk.mockbukkit.MockBukkit;
 import be.seeseemelk.mockbukkit.ServerMock;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -60,5 +62,27 @@ class TeamStorageTest {
     Team loadedTeam = reloaded.getTeams().get(team.getId());
     assertNotNull(loadedTeam, "Team should be present after reload");
     assertEquals(NamedTextColor.RED, loadedTeam.getColor());
+  }
+
+  @Test
+  void saveAndReloadKeepsDeadlineTimestamps() throws IOException {
+    TeamStorage storage = new TeamStorage(plugin, null);
+    Map<UUID, Long> deadlines = new HashMap<>();
+    storage.loadTeams(deadlines);
+
+    UUID teamId = UUID.randomUUID();
+    Team team = new Team(teamId, "DeadlineTeam", "Leader", "[D]", "blue");
+    team.setMembers(new ArrayList<>(List.of("Leader", "Member")));
+    storage.addTeam(team);
+
+    long deadline = System.currentTimeMillis() + 60000L;
+    deadlines.put(teamId, deadline);
+    storage.saveTeams(deadlines);
+
+    TeamStorage reloaded = new TeamStorage(plugin, null);
+    Map<UUID, Long> reloadedDeadlines = new HashMap<>();
+    reloaded.loadTeams(reloadedDeadlines);
+
+    assertEquals(deadline, reloadedDeadlines.get(teamId));
   }
 }
