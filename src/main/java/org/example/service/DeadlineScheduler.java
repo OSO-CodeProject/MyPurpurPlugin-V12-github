@@ -449,8 +449,12 @@ public class DeadlineScheduler {
   }
 
   private void clearLeaderDisplay(@NotNull Team team) {
-    teamLeaderNames.remove(team.getId());
-    clearLeaderDisplay(team.getLeader());
+    String notifiedLeader = teamLeaderNames.remove(team.getId());
+    if (notifiedLeader != null) {
+      clearLeaderDisplay(notifiedLeader);
+    } else {
+      clearLeaderDisplay(team.getLeader());
+    }
   }
 
   private void clearLeaderDisplay(String leaderName) {
@@ -487,9 +491,15 @@ public class DeadlineScheduler {
     }
     DeadlineDisplayMode mode = getDisplayMode();
     if (mode == DeadlineDisplayMode.SCOREBOARD) {
-      teamLeaderNames.put(team.getId(), leaderName);
+      String previousLeader = teamLeaderNames.put(team.getId(), leaderName);
+      if (previousLeader != null && !previousLeader.equalsIgnoreCase(leaderName)) {
+        clearLeaderDisplay(previousLeader);
+      }
     } else {
-      teamLeaderNames.remove(team.getId());
+      String previousLeader = teamLeaderNames.remove(team.getId());
+      if (previousLeader != null) {
+        clearLeaderDisplay(previousLeader);
+      }
     }
     switch (mode) {
       case ACTION_BAR -> leader.sendActionBar(message);

@@ -25,6 +25,7 @@ import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.command.CommandMap;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.scoreboard.Scoreboard;
 import org.example.MyPurpurPlugin;
 import org.example.config.PluginConfig;
 import org.example.service.DeadlineScheduler;
@@ -173,6 +174,42 @@ class TeamCommandTest {
     player.addAttachment(plugin, "mypurpurplugin.team", false);
     commandMap.dispatch(player, "team create Bravo BB WHITE");
     assertFalse(teamManager.getTeamNames().contains("Bravo"));
+  }
+
+  @Test
+  void transfersLeadershipRestoresScoreboardForPreviousLeader() {
+    config.set("team.deadline-display-mode", "SCOREBOARD");
+    config.set("team.max-members", 0);
+    config.set("team.grace-period-enabled", true);
+    config.set("team.grace-period-minutes", 5);
+
+    PlayerMock oldLeader = server.addPlayer("OldLeader");
+    PlayerMock newLeader = server.addPlayer("NewLeader");
+
+    teamManager.createTeam("Omega", "OM", "WHITE", oldLeader);
+    teamManager.addPlayerToTeam("Omega", newLeader);
+
+    Scoreboard oldLeaderOriginal = oldLeader.getScoreboard();
+    Scoreboard newLeaderOriginal = newLeader.getScoreboard();
+
+    config.set("team.max-members", 1);
+    scheduler.enforceTeamSizes();
+
+    Scoreboard warnedOldLeaderBoard = oldLeader.getScoreboard();
+    assertNotSame(oldLeaderOriginal, warnedOldLeaderBoard);
+    assertNotNull(warnedOldLeaderBoard.getObjective("deadlineWarn"));
+
+    teamManager.transferLeadership("Omega", oldLeader, newLeader);
+
+    scheduler.checkDeadlines();
+
+    Scoreboard restoredOldLeaderBoard = oldLeader.getScoreboard();
+    assertSame(oldLeaderOriginal, restoredOldLeaderBoard);
+    assertNull(restoredOldLeaderBoard.getObjective("deadlineWarn"));
+
+    Scoreboard warnedNewLeaderBoard = newLeader.getScoreboard();
+    assertNotSame(newLeaderOriginal, warnedNewLeaderBoard);
+    assertNotNull(warnedNewLeaderBoard.getObjective("deadlineWarn"));
   }
 
   @Test
