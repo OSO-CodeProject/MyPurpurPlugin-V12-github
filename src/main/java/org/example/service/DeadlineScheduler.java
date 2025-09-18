@@ -214,8 +214,12 @@ public class DeadlineScheduler {
         continue;
       }
 
-      long deadlineAt =
-          System.currentTimeMillis() + pluginConfig.getGracePeriodMinutes() * 60L * 1000L;
+      Long existingDeadline = deadlines.get(teamId);
+      long now = System.currentTimeMillis();
+      if (existingDeadline != null && existingDeadline > now) {
+        continue;
+      }
+      long deadlineAt = now + pluginConfig.getGracePeriodMinutes() * 60L * 1000L;
       Long previous = deadlines.put(teamId, deadlineAt);
       boolean deadlineUpdated = !Objects.equals(previous, deadlineAt);
       if (deadlineUpdated) {

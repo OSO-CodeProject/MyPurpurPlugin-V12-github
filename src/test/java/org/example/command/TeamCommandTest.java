@@ -277,4 +277,70 @@ class TeamCommandTest {
     teamManager.removePlayerFromTeam("Beta", member);
     assertNull(teamManager.getTeamDeadline("Beta"));
   }
+
+  @Test
+  void enforceTeamSizesReusesExistingDeadline() throws Exception {
+    CommandMap commandMap = server.getCommandMap();
+
+    PlayerMock leader = server.addPlayer("Leader");
+    leader.addAttachment(plugin, "mypurpurplugin.team", true);
+    assertTrue(commandMap.dispatch(leader, "team create Beta BB WHITE"));
+
+    PlayerMock member = server.addPlayer("Member");
+    member.addAttachment(plugin, "mypurpurplugin.team", true);
+    assertTrue(commandMap.dispatch(member, "team join Beta"));
+
+    config.set("team.max-members", 1);
+    config.set("team.grace-period-minutes", 5);
+    assertEquals(2, teamManager.getTeamMembers("Beta").size());
+    assertEquals(1, pluginConfig.getMaxMembers());
+
+    while (leader.nextComponentMessage() != null) {}
+
+    scheduler.enforceTeamSizes();
+    Long firstDeadline = teamManager.getTeamDeadline("Beta");
+    assertNotNull(firstDeadline);
+    Component firstWarning = leader.nextComponentMessage();
+    assertNotNull(firstWarning);
+    assertNull(leader.nextComponentMessage());
+
+    scheduler.enforceTeamSizes();
+    Long secondDeadline = teamManager.getTeamDeadline("Beta");
+    assertEquals(firstDeadline, secondDeadline);
+    assertNull(leader.nextComponentMessage());
+  }
+
+  @Test
+  void reloadKeepsExistingDeadlineTimestamp() throws Exception {
+    CommandMap commandMap = server.getCommandMap();
+
+    PlayerMock leader = server.addPlayer("Leader");
+    leader.addAttachment(plugin, "mypurpurplugin.team", true);
+    assertTrue(commandMap.dispatch(leader, "team create Beta BB WHITE"));
+
+    PlayerMock member = server.addPlayer("Member");
+    member.addAttachment(plugin, "mypurpurplugin.team", true);
+    assertTrue(commandMap.dispatch(member, "team join Beta"));
+
+    config.set("team.max-members", 1);
+    config.set("team.grace-period-minutes", 5);
+    assertEquals(2, teamManager.getTeamMembers("Beta").size());
+    assertEquals(1, pluginConfig.getMaxMembers());
+    config.save(new File(plugin.getDataFolder(), "config.yml"));
+
+    while (leader.nextComponentMessage() != null) {}
+
+    scheduler.enforceTeamSizes();
+    Long originalDeadline = teamManager.getTeamDeadline("Beta");
+    assertNotNull(originalDeadline);
+    Component warning = leader.nextComponentMessage();
+    assertNotNull(warning);
+    assertNull(leader.nextComponentMessage());
+
+    teamManager.reloadConfig();
+
+    Long reloadedDeadline = teamManager.getTeamDeadline("Beta");
+    assertEquals(originalDeadline, reloadedDeadline);
+    assertNull(leader.nextComponentMessage());
+  }
 }
