@@ -1,18 +1,21 @@
 package org.example.service;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
-import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.scoreboard.Criteria;
 import org.bukkit.scoreboard.DisplaySlot;
 import org.bukkit.scoreboard.Objective;
+import org.bukkit.scoreboard.RenderType;
+import org.bukkit.scoreboard.Score;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.ScoreboardManager;
 import org.example.config.PluginConfig;
@@ -38,23 +41,25 @@ public class DeadlineScheduler {
 
   private static final String SCOREBOARD_OBJECTIVE = "deadlineWarn";
   private static final int SCOREBOARD_LINE_LENGTH = 30;
-  private static final ChatColor[] SCOREBOARD_COLORS = {
-    ChatColor.BLUE,
-    ChatColor.GREEN,
-    ChatColor.AQUA,
-    ChatColor.GOLD,
-    ChatColor.RED,
-    ChatColor.LIGHT_PURPLE,
-    ChatColor.YELLOW,
-    ChatColor.WHITE,
-    ChatColor.DARK_BLUE,
-    ChatColor.DARK_GREEN,
-    ChatColor.DARK_AQUA,
-    ChatColor.DARK_RED,
-    ChatColor.DARK_PURPLE,
-    ChatColor.DARK_GRAY,
-    ChatColor.GRAY
+  private static final String SCOREBOARD_ENTRY_PREFIX = "deadline-line-";
+  private static final NamedTextColor[] SCOREBOARD_COLORS = {
+    NamedTextColor.BLUE,
+    NamedTextColor.GREEN,
+    NamedTextColor.AQUA,
+    NamedTextColor.GOLD,
+    NamedTextColor.RED,
+    NamedTextColor.LIGHT_PURPLE,
+    NamedTextColor.YELLOW,
+    NamedTextColor.WHITE,
+    NamedTextColor.DARK_BLUE,
+    NamedTextColor.DARK_GREEN,
+    NamedTextColor.DARK_AQUA,
+    NamedTextColor.DARK_RED,
+    NamedTextColor.DARK_PURPLE,
+    NamedTextColor.DARK_GRAY,
+    NamedTextColor.GRAY
   };
+  private static final Method OBJECTIVE_GET_SCORE_COMPONENT = resolveComponentScoreMethod();
 
   private enum DeadlineDisplayMode {
     CHAT,
@@ -511,34 +516,62 @@ public class DeadlineScheduler {
         scoreboard.registerNewObjective(
             SCOREBOARD_OBJECTIVE,
             Criteria.DUMMY,
-            Component.text("⚠ Лимит команды", NamedTextColor.GOLD));
+            Component.text("⚠ Лимит команды", NamedTextColor.GOLD),
+            RenderType.INTEGER);
     objective.setDisplaySlot(DisplaySlot.SIDEBAR);
-    List<String> lines = wrapForScoreboard(message);
+    List<Component> lines = wrapForScoreboard(message);
     int score = lines.size();
-    for (String line : lines) {
-      objective.getScore(line).setScore(score--);
+    for (int index = 0; index < lines.size(); index++) {
+      Component line = lines.get(index);
+      Score scoreboardLine = getScoreForLine(objective, line, index);
+      scoreboardLine.setScore(score--);
     }
     player.setScoreboard(scoreboard);
   }
 
-  private List<String> wrapForScoreboard(@NotNull Component message) {
+  private Score getScoreForLine(Objective objective, Component line, int index) {
+    if (OBJECTIVE_GET_SCORE_COMPONENT != null) {
+      try {
+        return (Score) OBJECTIVE_GET_SCORE_COMPONENT.invoke(objective, line);
+      } catch (IllegalAccessException | InvocationTargetException ex) {
+        plugin
+            .getLogger()
+            .warning(
+                "Failed to use component-based scoreboard entry, falling back to string entries: "
+                    + ex.getMessage());
+      }
+    }
+    Score score = objective.getScore(SCOREBOARD_ENTRY_PREFIX + index);
+    score.customName(line);
+    return score;
+  }
+
+  private List<Component> wrapForScoreboard(@NotNull Component message) {
     String plain = PlainTextComponentSerializer.plainText().serialize(message);
     if (plain.isBlank()) {
       plain = " ";
     }
-    List<String> lines = new ArrayList<>();
+    List<Component> lines = new ArrayList<>();
     int index = 0;
     int colorIndex = 0;
     while (index < plain.length() && lines.size() < SCOREBOARD_COLORS.length) {
       int end = Math.min(index + SCOREBOARD_LINE_LENGTH, plain.length());
       String part = plain.substring(index, end);
-      lines.add(SCOREBOARD_COLORS[colorIndex % SCOREBOARD_COLORS.length] + part);
+      lines.add(Component.text(part, SCOREBOARD_COLORS[colorIndex % SCOREBOARD_COLORS.length]));
       colorIndex++;
       index = end;
     }
     if (lines.isEmpty()) {
-      lines.add(SCOREBOARD_COLORS[0] + plain);
+      lines.add(Component.text(plain, SCOREBOARD_COLORS[0]));
     }
     return lines;
   }
+  private static Method resolveComponentScoreMethod() {
+    try {
+      return Objective.class.getMethod("getScore", Component.class);
+    } catch (NoSuchMethodException ex) {
+      return null;
+    }
+  }
+
 }
