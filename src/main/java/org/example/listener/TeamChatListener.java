@@ -69,13 +69,13 @@ public class TeamChatListener implements Listener {
       event.renderer(
           (source, sourceDisplayName, message, viewer) ->
               prefixComponent
-                  .append(Component.text(source.getName(), NamedTextColor.WHITE))
+                  .append(sourceDisplayName)
                   .append(Component.text(": "))
                   .append(message.color(NamedTextColor.WHITE)));
     } else {
       event.renderer(
           (source, sourceDisplayName, message, viewer) ->
-              Component.text(source.getName(), NamedTextColor.WHITE)
+              sourceDisplayName
                   .append(Component.text(": "))
                   .append(message.color(NamedTextColor.WHITE)));
     }
