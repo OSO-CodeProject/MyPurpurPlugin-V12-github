@@ -184,6 +184,23 @@ class TeamManagerTest {
   }
 
   @Test
+  void leaderKickSelfDelegatesToRemovalFlow() {
+    PlayerMock leader = server.addPlayer("SelfKickLeader");
+    PlayerMock successor = server.addPlayer("SelfKickMember");
+
+    String teamName = "SelfKickTeam";
+    teamManager.createTeam(teamName, "SK", "blue", leader);
+    teamManager.addPlayerToTeam(teamName, successor);
+
+    teamManager.kickPlayerFromTeam(teamName, leader, leader.getName());
+
+    assertNull(teamManager.getPlayerTeam(leader));
+    assertEquals(teamName, teamManager.getPlayerTeam(successor));
+    assertEquals(successor.getName(), teamManager.getTeamLeader(teamName));
+    assertFalse(teamManager.getTeamMembers(teamName).contains(leader.getName()));
+  }
+
+  @Test
   void playerListNameUpdatedOnPrefixAndColorChange() {
     PlayerMock leader = server.addPlayer("StyleLeader");
     PlayerMock member = server.addPlayer("StyleMember");
