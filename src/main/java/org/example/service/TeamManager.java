@@ -150,6 +150,8 @@ public class TeamManager implements TeamService {
     scheduler.stop();
     pluginConfig.reloadConfig();
     storage.loadTeams(scheduler.getDeadlines());
+    storage.getTeams().values().forEach(membership::updateTeamMembersPrefixes);
+    scheduler.resetLeaderDisplays();
     scheduler.enforceTeamSizes();
     scheduler.start();
     storage.startAutoSave(pluginConfig.getSaveIntervalSeconds(), scheduler.getDeadlines());
