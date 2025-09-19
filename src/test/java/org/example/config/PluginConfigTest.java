@@ -9,6 +9,7 @@ import be.seeseemelk.mockbukkit.plugin.PluginManagerMock;
 import java.io.File;
 import java.lang.reflect.Field;
 import org.bukkit.command.CommandMap;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.example.MyPurpurPlugin;
 import org.example.service.TeamManager;
@@ -54,6 +55,7 @@ class PluginConfigTest {
     YamlConfiguration yaml = YamlConfiguration.loadConfiguration(regenerated);
     assertEquals(1, yaml.getInt("team.min-prefix-length"));
     assertEquals(16, yaml.getInt("team.max-prefix-length"));
+    assertEquals(32, yaml.getInt("team.max-team-name-length"));
     assertEquals(0, yaml.getInt("team.max-members"));
 
     PlayerMock leader = server.addPlayer("Leader");
@@ -66,5 +68,30 @@ class PluginConfigTest {
     TeamManager teamManager = (TeamManager) teamManagerField.get(plugin);
 
     assertEquals("Zeta", teamManager.getPlayerTeam(leader));
+  }
+
+  @Test
+  void returnsDefaultMaxTeamNameLengthWhenMissing() throws Exception {
+    server = MockBukkit.mock();
+    MyPurpurPlugin plugin = MockBukkit.load(MyPurpurPlugin.class);
+
+    Field cfgField = MyPurpurPlugin.class.getDeclaredField("pluginConfig");
+    cfgField.setAccessible(true);
+    PluginConfig pluginConfig = (PluginConfig) cfgField.get(plugin);
+
+    Field configField = PluginConfig.class.getDeclaredField("config");
+    configField.setAccessible(true);
+    FileConfiguration configuration = (FileConfiguration) configField.get(pluginConfig);
+
+    Field fileField = PluginConfig.class.getDeclaredField("configFile");
+    fileField.setAccessible(true);
+    File configFile = (File) fileField.get(pluginConfig);
+
+    configuration.set("team.max-team-name-length", null);
+    configuration.save(configFile);
+
+    pluginConfig.reloadConfig();
+
+    assertEquals(32, pluginConfig.getMaxTeamNameLength());
   }
 }
