@@ -448,6 +448,8 @@ public class DeadlineScheduler {
 
   private void resetAllLeaderDisplays() {
     storage.getTeams().values().forEach(this::clearLeaderDisplay);
+    // Полностью очищаем кеш, чтобы при перезапуске/отключении не осталось привязок к
+    // временным табло лидеров и их именам.
     leaderOriginalScoreboards.clear();
     teamLeaderNames.clear();
   }
