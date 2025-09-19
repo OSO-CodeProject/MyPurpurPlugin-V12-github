@@ -170,6 +170,7 @@ public class TeamManager implements TeamService {
   @Override
   public void shutdown() {
     storage.stopAutoSave();
+    scheduler.resetLeaderDisplays();
     scheduler.stop();
     storage.flushNow();
   }
