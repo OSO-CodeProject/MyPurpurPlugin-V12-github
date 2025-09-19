@@ -24,7 +24,7 @@ public class TeamManager implements TeamService {
     this.storage = new TeamStorage(plugin, pluginConfig);
     this.scheduler = new DeadlineScheduler(plugin, pluginConfig, storage);
     this.storage.loadTeams(scheduler.getDeadlines());
-    this.scheduler.enforceTeamSizes();
+    this.scheduler.enforceTeamSizes(true);
     this.storage.startAutoSave(pluginConfig.getSaveIntervalSeconds(), scheduler.getDeadlines());
     this.scheduler.start();
     this.membership = new MembershipService(plugin, pluginConfig, storage, scheduler);
@@ -152,7 +152,7 @@ public class TeamManager implements TeamService {
     storage.loadTeams(scheduler.getDeadlines());
     storage.getTeams().values().forEach(membership::updateTeamMembersPrefixes);
     scheduler.resetLeaderDisplays();
-    scheduler.enforceTeamSizes();
+    scheduler.enforceTeamSizes(true);
     scheduler.start();
     storage.startAutoSave(pluginConfig.getSaveIntervalSeconds(), scheduler.getDeadlines());
   }

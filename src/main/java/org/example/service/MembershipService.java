@@ -57,7 +57,7 @@ public class MembershipService {
     storage.getPlayerTeams().put(leader.getName(), team.getId());
     TeamMessageUtils.sendTeamMessage(
         leader, Component.text("✅ Команда создана", NamedTextColor.GREEN));
-    scheduler.enforceTeamSizes();
+    scheduler.enforceTeamSizes(false);
   }
 
   public void addPlayerToTeam(String teamName, @NotNull Player player) {
@@ -86,7 +86,7 @@ public class MembershipService {
     storage.markTeamDirty(team);
     TeamMessageUtils.sendTeamMessage(
         player, Component.text("✅ Вы вступили в команду", NamedTextColor.GREEN));
-    scheduler.enforceTeamSizes();
+    scheduler.enforceTeamSizes(false);
     updateTeamMembersPrefixes(team);
   }
 
@@ -112,7 +112,7 @@ public class MembershipService {
     if (!removedTeam) {
       storage.markTeamDirty(team);
     }
-    scheduler.enforceTeamSizes();
+    scheduler.enforceTeamSizes(false);
     notifyPrefixUpdate(player, null);
     if (!removedTeam) {
       updateTeamMembersPrefixes(team);
@@ -133,7 +133,7 @@ public class MembershipService {
     team.removeMember(targetName);
     storage.getPlayerTeams().remove(targetName);
     storage.markTeamDirty(team);
-    scheduler.enforceTeamSizes();
+    scheduler.enforceTeamSizes(false);
     notifyPrefixUpdate(targetName, null);
     updateTeamMembersPrefixes(team);
   }
@@ -164,7 +164,7 @@ public class MembershipService {
     for (String memberName : members) {
       storage.getPlayerTeams().remove(memberName);
     }
-    scheduler.enforceTeamSizes();
+    scheduler.enforceTeamSizes(false);
   }
 
   public void renameTeam(String oldTeamName, String newTeamName, @NotNull Player leader) {
