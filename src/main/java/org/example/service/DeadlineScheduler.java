@@ -216,7 +216,33 @@ public class DeadlineScheduler {
 
       Long existingDeadline = deadlines.get(teamId);
       long now = System.currentTimeMillis();
-      if (existingDeadline != null && existingDeadline > now) {
+      if (existingDeadline != null) {
+        if (existingDeadline <= now) {
+          changed = true;
+          deadlines.remove(teamId);
+          clearLeaderDisplay(team);
+          int removed = removeExtraPlayers(team, max);
+          if (removed > 0) {
+            Component leaderMessage = TeamMessageUtils.forcedRemovalMessage(removed);
+            notifyLeader(team, leaderMessage);
+            notifyAdmins(
+                adminBaseMessage(team, size, max)
+                    .append(Component.space())
+                    .append(
+                        Component.text(
+                            "Льготный период истёк, удалено " + removed + " участника(ов).",
+                            NamedTextColor.RED)));
+            plugin
+                .getLogger()
+                .info(
+                    "Льготный период команды "
+                        + team.getName()
+                        + " истёк, удалено "
+                        + removed
+                        + " игрок(ов).");
+          }
+          continue;
+        }
         continue;
       }
       long deadlineAt = now + pluginConfig.getGracePeriodMinutes() * 60L * 1000L;
