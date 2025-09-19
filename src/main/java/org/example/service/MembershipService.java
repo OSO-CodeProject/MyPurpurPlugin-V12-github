@@ -147,6 +147,8 @@ public class MembershipService {
     if (!team.hasMember(newLeader.getName())) return;
     team.setLeader(newLeader.getName());
     storage.markTeamDirty(team);
+    scheduler.handleLeaderTransfer(team);
+    scheduler.enforceTeamSizes(false);
   }
 
   public void disbandTeam(String teamName, @NotNull Player leader) {
