@@ -203,7 +203,7 @@ public class MembershipService {
     updateTeamMembersPrefixes(team);
   }
 
-  private void updateTeamMembersPrefixes(@NotNull Team team) {
+  public void updateTeamMembersPrefixes(@NotNull Team team) {
     Component prefixComponent = team.getPrefixComponent();
     for (String member : team.getMembers()) {
       notifyPrefixUpdate(member, prefixComponent);

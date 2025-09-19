@@ -442,6 +442,10 @@ public class DeadlineScheduler {
     return DeadlineDisplayMode.fromConfig(pluginConfig.getDeadlineDisplayMode());
   }
 
+  public void resetLeaderDisplays() {
+    resetAllLeaderDisplays();
+  }
+
   private void resetAllLeaderDisplays() {
     storage.getTeams().values().forEach(this::clearLeaderDisplay);
     leaderOriginalScoreboards.clear();
