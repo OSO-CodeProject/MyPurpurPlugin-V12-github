@@ -123,6 +123,13 @@ public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, Tab
       return true;
     }
     String targetName = args[1];
+    if (targetName.equalsIgnoreCase(player.getName())) {
+      TeamMessageUtils.sendTeamMessage(
+          player,
+          Component.text(
+              "❌ Вы не можете исключить себя из команды!", NamedTextColor.RED));
+      return true;
+    }
     teamManager.kickPlayerFromTeam(teamName, player, targetName);
     return true;
   }

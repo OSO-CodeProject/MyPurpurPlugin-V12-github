@@ -125,6 +125,10 @@ public class MembershipService {
     // Проверяем право лидера на это действие и наличие цели в команде.
     if (team == null || !team.isLeader(leader.getName())) return;
     if (!team.hasMember(targetName)) return;
+    if (team.isLeader(targetName)) {
+      removePlayerFromTeam(teamName, leader);
+      return;
+    }
     // Удаляем участника и фиксируем изменения.
     team.removeMember(targetName);
     storage.getPlayerTeams().remove(targetName);
