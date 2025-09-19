@@ -16,6 +16,8 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.chat.SignedMessage;
@@ -426,6 +428,53 @@ class TeamCommandTest {
 
     Long reloadedDeadline = teamManager.getTeamDeadline("Beta");
     assertEquals(originalDeadline, reloadedDeadline);
+    assertNull(leader.nextComponentMessage());
+  }
+
+  @Test
+  void enforceTeamSizesRemovesOverdueTeamImmediately() throws Exception {
+    CommandMap commandMap = server.getCommandMap();
+
+    PlayerMock leader = server.addPlayer("Leader");
+    leader.addAttachment(plugin, "mypurpurplugin.team", true);
+    assertTrue(commandMap.dispatch(leader, "team create Beta BB WHITE"));
+
+    PlayerMock member = server.addPlayer("Member");
+    member.addAttachment(plugin, "mypurpurplugin.team", true);
+    assertTrue(commandMap.dispatch(member, "team join Beta"));
+
+    PlayerMock extra = server.addPlayer("Extra");
+    extra.addAttachment(plugin, "mypurpurplugin.team", true);
+    assertTrue(commandMap.dispatch(extra, "team join Beta"));
+
+    config.set("team.max-members", 1);
+    config.set("team.grace-period-minutes", 5);
+
+    while (leader.nextComponentMessage() != null) {}
+
+    scheduler.enforceTeamSizes();
+    Long firstDeadline = teamManager.getTeamDeadline("Beta");
+    assertNotNull(firstDeadline);
+
+    UUID teamId = teamManager.getTeamIdByName("Beta");
+    assertNotNull(teamId);
+    scheduler
+        .getDeadlines()
+        .put(teamId, System.currentTimeMillis() - TimeUnit.MINUTES.toMillis(1));
+
+    while (leader.nextComponentMessage() != null) {}
+
+    scheduler.enforceTeamSizes();
+
+    assertEquals(1, teamManager.getTeamMembers("Beta").size());
+    assertNull(teamManager.getTeamDeadline("Beta"));
+
+    Component forcedMessage = leader.nextComponentMessage();
+    assertNotNull(forcedMessage);
+    PlainTextComponentSerializer serializer = PlainTextComponentSerializer.plainText();
+    assertEquals(
+        "Из вашей команды удалено 2 участника(ов) из-за превышения лимита.",
+        serializer.serialize(forcedMessage));
     assertNull(leader.nextComponentMessage());
   }
 }
