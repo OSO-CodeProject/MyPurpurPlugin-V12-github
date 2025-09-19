@@ -134,9 +134,20 @@ public class DeadlineScheduler {
    * записи для команд с допустимым размером.
    */
   public void enforceTeamSizes() {
+    enforceTeamSizes(false);
+  }
+
+  /**
+   * Фиксирует команды, превышающие лимит участников, и назначает им дедлайны на сокращение, очищая
+   * записи для команд с допустимым размером.
+   *
+   * @param triggeredByReload {@code true}, если проверка вызвана перезагрузкой плагина или сервера
+   */
+  public void enforceTeamSizes(boolean triggeredByReload) {
     int max = pluginConfig.getMaxMembers();
     boolean changed = false;
-    boolean enforceOnReload = pluginConfig.isEnforceMaxMembersOnReload();
+    boolean enforcementEnabled =
+        !triggeredByReload || pluginConfig.isEnforceMaxMembersOnReload();
     boolean graceEnabled =
         pluginConfig.isGracePeriodEnabled() && pluginConfig.getGracePeriodMinutes() > 0;
 
@@ -152,7 +163,7 @@ public class DeadlineScheduler {
       return;
     }
 
-    if (!enforceOnReload && !deadlines.isEmpty()) {
+    if (!enforcementEnabled && !deadlines.isEmpty()) {
       deadlines.clear();
       changed = true;
       resetAllLeaderDisplays();
@@ -175,7 +186,7 @@ public class DeadlineScheduler {
           .getLogger()
           .warning("Команда " + team.getName() + " превышает лимит: " + size + " из " + max + ".");
 
-      if (!enforceOnReload) {
+      if (!enforcementEnabled) {
         Component leaderMessage = buildEnforcementDisabledMessage(max, excess);
         notifyLeader(team, leaderMessage);
         notifyAdmins(

@@ -249,6 +249,45 @@ class TeamCommandTest {
   }
 
   @Test
+  void keepsBlockingJoinsAfterReloadWhenEnforcementDisabled() {
+    config.set("team.max-members", 0);
+    config.set("team.grace-period-enabled", true);
+    config.set("team.grace-period-minutes", 5);
+    config.set("team.enforce-max-members-on-reload", false);
+
+    PlayerMock leader = server.addPlayer("ReloadLeader");
+    PlayerMock memberOne = server.addPlayer("ReloadMemberOne");
+    PlayerMock memberTwo = server.addPlayer("ReloadMemberTwo");
+
+    teamManager.createTeam("Reloaded", "RL", "WHITE", leader);
+    teamManager.addPlayerToTeam("Reloaded", memberOne);
+    teamManager.addPlayerToTeam("Reloaded", memberTwo);
+
+    assertEquals(3, teamManager.getTeamMembers("Reloaded").size());
+
+    config.set("team.max-members", 1);
+
+    scheduler.enforceTeamSizes(true);
+    assertTrue(scheduler.getDeadlines().isEmpty());
+
+    teamManager.removePlayerFromTeam("Reloaded", memberOne);
+
+    assertEquals(2, teamManager.getTeamMembers("Reloaded").size());
+    Long deadline = scheduler.getTeamDeadline("Reloaded");
+    assertNotNull(deadline);
+
+    PlayerMock lateJoiner = server.addPlayer("LateJoiner");
+    teamManager.addPlayerToTeam("Reloaded", lateJoiner);
+
+    Component msg = lateJoiner.nextComponentMessage();
+    assertNotNull(msg);
+    String plain = PlainTextComponentSerializer.plainText().serialize(msg);
+    assertTrue(plain.contains("Команда полная"));
+    assertNull(teamManager.getPlayerTeam(lateJoiner));
+    assertEquals(deadline, scheduler.getTeamDeadline("Reloaded"));
+  }
+
+  @Test
   void rejectsInvalidTeamName() {
     CommandMap commandMap = server.getCommandMap();
     PlayerMock player = server.addPlayer("Leader");
