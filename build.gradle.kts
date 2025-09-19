@@ -14,6 +14,7 @@ repositories {
     maven("https://repo.purpurmc.org/snapshots/") // Репозиторий для Purpur
     maven("https://hub.spigotmc.org/nexus/content/repositories/snapshots/") // Репозиторий для Spigot
     maven("https://papermc.io/repo/repository/maven-public/")
+    maven("https://repo.codemc.org/repository/maven-public/")
     mavenCentral() // Репозиторий для библиотек, таких как Kyori Adventure
 }
 
@@ -25,6 +26,8 @@ dependencies {
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.1")
     testImplementation("com.github.seeseemelk:MockBukkit-v1.21:3.133.2")
+    testImplementation("io.papermc.paper:paper-api:1.21.1-R0.1-SNAPSHOT")
+    testImplementation("org.spigotmc:spigot-api:1.21.1-R0.1-SNAPSHOT")
 }
 
 tasks.jar {

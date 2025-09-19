@@ -176,8 +176,8 @@ public class DeadlineScheduler {
       if (size <= max) {
         if (deadlines.remove(teamId) != null) {
           changed = true;
-          clearLeaderDisplay(team);
         }
+        clearLeaderDisplay(team);
         continue;
       }
 
@@ -188,7 +188,13 @@ public class DeadlineScheduler {
 
       if (!enforcementEnabled) {
         Component leaderMessage = buildEnforcementDisabledMessage(max, excess);
-        notifyLeader(team, leaderMessage);
+        DeadlineDisplayMode mode = getDisplayMode();
+        if (mode == DeadlineDisplayMode.SCOREBOARD) {
+          notifyLeaderWithoutScoreboard(team, leaderMessage);
+          clearLeaderDisplay(team);
+        } else {
+          notifyLeader(team, leaderMessage);
+        }
         notifyAdmins(
             adminBaseMessage(team, size, max)
                 .append(Component.space())
@@ -549,6 +555,18 @@ public class DeadlineScheduler {
       case SCOREBOARD -> sendScoreboardMessage(leader, message);
       case CHAT -> TeamMessageUtils.sendTeamMessage(leader, message);
     }
+  }
+
+  private void notifyLeaderWithoutScoreboard(@NotNull Team team, @NotNull Component message) {
+    String leaderName = team.getLeader();
+    if (leaderName == null || leaderName.isBlank()) {
+      return;
+    }
+    Player leader = plugin.getServer().getPlayer(leaderName);
+    if (leader == null) {
+      return;
+    }
+    TeamMessageUtils.sendTeamMessage(leader, message);
   }
 
   private void notifyAdmins(Component message) {
