@@ -56,7 +56,7 @@ public class PluginConfig {
     config.addDefault("team.min-prefix-length", 1);
     config.addDefault("team.max-prefix-length", 16);
     config.addDefault("team.min-team-name-length", 3);
-    config.addDefault("team.max-team-name-length", 16);
+    config.addDefault("team.max-team-name-length", 32);
     config.addDefault("team.enforce-max-members-on-reload", true);
     config.addDefault("team.grace-period-enabled", true);
     config.addDefault("team.grace-period-minutes", 10);
@@ -245,7 +245,7 @@ public class PluginConfig {
    * @return Максимальная длина названия команды
    */
   public int getMaxTeamNameLength() {
-    return config.getInt("team.max-team-name-length", 16);
+    return config.getInt("team.max-team-name-length", 32);
   }
 
   /**
