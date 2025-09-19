@@ -289,6 +289,46 @@ public class DeadlineScheduler {
     }
   }
 
+  public void handleLeaderTransfer(@NotNull Team team) {
+    if (team == null) {
+      return;
+    }
+    UUID teamId = team.getId();
+    Long deadlineAt = deadlines.get(teamId);
+    if (deadlineAt == null) {
+      String previousLeader = teamLeaderNames.get(teamId);
+      String currentLeader = team.getLeader();
+      if (previousLeader != null && currentLeader != null && !previousLeader.equalsIgnoreCase(currentLeader)) {
+        clearLeaderDisplay(previousLeader);
+      }
+      return;
+    }
+    int max = pluginConfig.getMaxMembers();
+    if (max <= 0) {
+      return;
+    }
+    int excess = Math.max(0, team.getMembers().size() - max);
+    if (excess <= 0) {
+      return;
+    }
+    long remainingMillis = Math.max(0L, deadlineAt - System.currentTimeMillis());
+    long minutesLeft = TimeUnit.MILLISECONDS.toMinutes(remainingMillis);
+    long secondsLeft =
+        TimeUnit.MILLISECONDS.toSeconds(remainingMillis)
+            - TimeUnit.MINUTES.toSeconds(minutesLeft);
+    Component message = TeamMessageUtils.deadlineRemainingMessage(minutesLeft, secondsLeft, excess);
+    notifyLeader(team, message);
+    if (getDisplayMode() == DeadlineDisplayMode.SCOREBOARD) {
+      String leaderName = team.getLeader();
+      if (leaderName != null && !leaderName.isBlank()) {
+        Player leader = plugin.getServer().getPlayer(leaderName);
+        if (leader != null) {
+          TeamMessageUtils.sendTeamMessage(leader, message);
+        }
+      }
+    }
+  }
+
   /**
    * Проверяет, истекли ли дедлайны команд, и при необходимости удаляет лишних игроков,
    * синхронизируя изменения с хранилищем.
