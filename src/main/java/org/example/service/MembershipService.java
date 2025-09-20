@@ -102,6 +102,7 @@ public class MembershipService {
     // Если ушедший игрок был лидером, либо закрываем команду, либо назначаем нового.
     if (team.isLeader(player.getName())) {
       if (team.getMembers().isEmpty()) {
+        scheduler.cancelDeadline(team);
         storage.removeTeam(team);
         removedTeam = true;
       } else {
@@ -158,6 +159,7 @@ public class MembershipService {
     if (team == null || !team.isLeader(leader.getName())) return;
     // Сохраняем список участников до удаления, чтобы очистить их отображаемые префиксы.
     List<String> members = team.getMembers();
+    scheduler.cancelDeadline(team);
     // Удаляем команду и уведомляем игроков о сбросе префикса.
     storage.removeTeam(team);
     for (String memberName : members) {
