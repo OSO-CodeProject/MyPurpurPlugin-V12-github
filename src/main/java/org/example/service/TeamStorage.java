@@ -60,9 +60,31 @@ public class TeamStorage {
     var section = teamsConfig.getConfigurationSection("teams");
     if (section != null) {
       for (String teamIdStr : section.getKeys(false)) {
-        UUID teamId = UUID.fromString(teamIdStr);
+        UUID teamId;
+        try {
+          teamId = UUID.fromString(teamIdStr);
+        } catch (IllegalArgumentException ex) {
+          plugin
+              .getLogger()
+              .warning("Skipping team entry with invalid UUID '" + teamIdStr + "'.");
+          continue;
+        }
         String name = teamsConfig.getString("teams." + teamIdStr + ".name", "");
+        if (name == null || name.isBlank()) {
+          plugin
+              .getLogger()
+              .warning(
+                  "Skipping team entry " + teamId + " because it does not define a name.");
+          continue;
+        }
         String leader = teamsConfig.getString("teams." + teamIdStr + ".leader", "");
+        if (leader == null || leader.isBlank()) {
+          plugin
+              .getLogger()
+              .warning(
+                  "Skipping team entry " + teamId + " because it does not define a leader.");
+          continue;
+        }
         String prefix = teamsConfig.getString("teams." + teamIdStr + ".prefix", "");
         String color =
             normalizeColorKey(teamsConfig.getString("teams." + teamIdStr + ".color", "WHITE"));

@@ -85,4 +85,32 @@ class TeamStorageTest {
 
     assertEquals(deadline, reloadedDeadlines.get(teamId));
   }
+
+  @Test
+  void loadTeamsSkipsEntriesWithInvalidUuid() throws IOException {
+    TeamStorage storage = new TeamStorage(plugin, null);
+    Map<UUID, Long> deadlines = new HashMap<>();
+    storage.loadTeams(deadlines);
+
+    File teamsFile = new File(plugin.getDataFolder(), "teams.yml");
+    YamlConfiguration config = YamlConfiguration.loadConfiguration(teamsFile);
+
+    config.set("teams.not-a-uuid.name", "BrokenTeam");
+    config.set("teams.not-a-uuid.leader", "Nobody");
+
+    UUID validId = UUID.randomUUID();
+    config.set("teams." + validId + ".name", "ValidTeam");
+    config.set("teams." + validId + ".leader", "Leader");
+    config.save(teamsFile);
+
+    TeamStorage reloaded = new TeamStorage(plugin, null);
+    Map<UUID, Long> reloadedDeadlines = new HashMap<>();
+    reloaded.loadTeams(reloadedDeadlines);
+
+    assertEquals(1, reloaded.getTeams().size(), "Only the valid team should be loaded");
+    Team loadedTeam = reloaded.getTeams().get(validId);
+    assertNotNull(loadedTeam, "Valid team should be present after reload");
+    assertEquals("ValidTeam", loadedTeam.getName());
+    assertTrue(reloadedDeadlines.isEmpty(), "Invalid entries should not add deadlines");
+  }
 }
