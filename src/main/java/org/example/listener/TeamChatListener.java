@@ -11,6 +11,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.example.MyPurpurPlugin;
 import org.example.service.TeamService;
 import org.example.util.TeamMessageUtils;
+import org.example.util.TeamUtils;
 import org.jetbrains.annotations.NotNull;
 
 /** Слушатель событий, связанных с командами и чатом игроков. */
@@ -66,7 +67,7 @@ public class TeamChatListener implements Listener {
     if (teamName != null) {
       String prefix = teamManager.getTeamPrefix(teamName);
       NamedTextColor teamColor = teamManager.getTeamColor(teamName);
-      Component prefixComponent = Component.text("[" + prefix + "] ", teamColor);
+      Component prefixComponent = TeamUtils.createPrefixComponent(prefix, teamColor);
 
       event.renderer(
           (source, sourceDisplayName, message, viewer) ->
@@ -109,7 +110,7 @@ public class TeamChatListener implements Listener {
     if (teamName != null) {
       String prefix = teamManager.getTeamPrefix(teamName);
       NamedTextColor teamColor = teamManager.getTeamColor(teamName);
-      Component prefixComponent = Component.text("[" + prefix + "] ", teamColor);
+      Component prefixComponent = TeamUtils.createPrefixComponent(prefix, teamColor);
       player.playerListName(
           prefixComponent.append(Component.text(player.getName(), NamedTextColor.WHITE)));
     } else {
