@@ -79,7 +79,7 @@ class TeamManagerTest {
 
     teamManager.createTeam("Alpha", "AA", "white", leader);
     assertEquals("Alpha", teamManager.getPlayerTeam(leader));
-    assertTrue(teamManager.getTeamMembers("Alpha").contains(leader.getName()));
+    assertTrue(teamManager.getTeamMembers("Alpha").contains(leader.getUniqueId()));
 
     teamManager.addPlayerToTeam("Alpha", member);
     assertEquals("Alpha", teamManager.getPlayerTeam(member));
@@ -126,11 +126,11 @@ class TeamManagerTest {
     teamManager.createTeam(teamName, "VG", "white", leader);
 
     assertEquals(teamName, teamManager.getPlayerTeam(leader));
-    assertTrue(teamManager.getTeamMembers(teamName).contains(leader.getName()));
+    assertTrue(teamManager.getTeamMembers(teamName).contains(leader.getUniqueId()));
 
     teamManager.addPlayerToTeam(teamName, member);
     assertEquals(teamName, teamManager.getPlayerTeam(member));
-    assertTrue(teamManager.getTeamMembers(teamName).contains(member.getName()));
+    assertTrue(teamManager.getTeamMembers(teamName).contains(member.getUniqueId()));
   }
 
   @Test
@@ -200,8 +200,8 @@ class TeamManagerTest {
 
     assertNull(teamManager.getPlayerTeam(leader));
     assertEquals(teamName, teamManager.getPlayerTeam(successor));
-    assertEquals(successor.getName(), teamManager.getTeamLeader(teamName));
-    assertFalse(teamManager.getTeamMembers(teamName).contains(leader.getName()));
+    assertEquals(successor.getUniqueId(), teamManager.getTeamLeaderId(teamName));
+    assertFalse(teamManager.getTeamMembers(teamName).contains(leader.getUniqueId()));
   }
 
   @Test

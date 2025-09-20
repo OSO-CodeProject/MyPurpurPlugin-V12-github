@@ -12,16 +12,16 @@ import org.example.util.TeamUtils;
 public class Team {
   private final UUID id; // Уникальный неизменяемый идентификатор
   private String name; // Название команды, теперь изменяемое
-  private String leader;
-  private final List<String> members;
+  private UUID leader;
+  private final List<UUID> members;
   private String prefix;
   private NamedTextColor color;
 
-  public Team(String name, String leader, String prefix, String color) {
+  public Team(String name, UUID leader, String prefix, String color) {
     this(UUID.randomUUID(), name, leader, prefix, color);
   }
 
-  public Team(UUID id, String name, String leader, String prefix, String color) {
+  public Team(UUID id, String name, UUID leader, String prefix, String color) {
     this.id = id;
     this.name = name;
     this.leader = leader;
@@ -39,15 +39,15 @@ public class Team {
     return name;
   }
 
-  public String getLeader() {
+  public UUID getLeaderId() {
     return leader;
   }
 
-  public List<String> getMembers() {
+  public List<UUID> getMembers() {
     return new ArrayList<>(members);
   }
 
-  public String getFirstMember() {
+  public UUID getFirstMember() {
     return members.isEmpty() ? null : members.get(0);
   }
 
@@ -64,7 +64,7 @@ public class Team {
     this.name = name;
   }
 
-  public void setLeader(String leader) {
+  public void setLeader(UUID leader) {
     this.leader = leader;
   }
 
@@ -77,17 +77,17 @@ public class Team {
   }
 
   // Методы управления участниками
-  public void addMember(String member) {
+  public void addMember(UUID member) {
     if (!members.contains(member)) {
       members.add(member);
     }
   }
 
-  public void removeMember(String member) {
+  public void removeMember(UUID member) {
     members.remove(member);
   }
 
-  public void setMembers(List<String> newMembers) {
+  public void setMembers(List<UUID> newMembers) {
     members.clear();
     members.addAll(newMembers);
   }
@@ -98,12 +98,12 @@ public class Team {
   }
 
   // Проверка, является ли игрок участником
-  public boolean hasMember(String playerName) {
-    return members.contains(playerName);
+  public boolean hasMember(UUID playerId) {
+    return members.contains(playerId);
   }
 
   // Проверка, является ли игрок лидером
-  public boolean isLeader(String playerName) {
-    return leader.equals(playerName);
+  public boolean isLeader(UUID playerId) {
+    return leader.equals(playerId);
   }
 }

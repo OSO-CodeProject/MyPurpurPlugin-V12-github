@@ -1,6 +1,7 @@
 package org.example.command.sub;
 
 import java.util.List;
+import java.util.UUID;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.entity.Player;
@@ -28,7 +29,7 @@ public class MembersSubCommand implements SubCommand {
       return true;
     }
 
-    List<String> members = teamService.getTeamMembers(playerTeam);
+    List<UUID> members = teamService.getTeamMembers(playerTeam);
     String prefix = teamService.getTeamPrefix(playerTeam);
     NamedTextColor color = teamService.getTeamColor(playerTeam);
     Component prefixComponent = TeamUtils.createPrefixComponent(prefix, color);
@@ -39,8 +40,9 @@ public class MembersSubCommand implements SubCommand {
     player.sendMessage(Component.text(""));
     player.sendMessage(teamHeader);
     player.sendMessage(Component.text(""));
-    for (String memberName : members) {
-      Player member = teamService.getPlugin().getServer().getPlayer(memberName);
+    for (UUID memberId : members) {
+      String memberName = resolveName(memberId);
+      Player member = teamService.getPlugin().getServer().getPlayer(memberId);
       if (member != null) {
         player.sendMessage(
             Component.text("● ", NamedTextColor.GREEN)
@@ -79,5 +81,13 @@ public class MembersSubCommand implements SubCommand {
     return Component.text("📋 Участники команды ", NamedTextColor.AQUA)
         .append(prefixComponent)
         .append(Component.text(playerTeam + ":", NamedTextColor.WHITE));
+  }
+
+  private String resolveName(UUID playerId) {
+    if (playerId == null) {
+      return "Unknown";
+    }
+    String name = teamService.getPlugin().getServer().getOfflinePlayer(playerId).getName();
+    return name != null ? name : playerId.toString();
   }
 }

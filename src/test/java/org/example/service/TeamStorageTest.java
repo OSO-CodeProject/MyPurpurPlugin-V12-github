@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import be.seeseemelk.mockbukkit.MockBukkit;
 import be.seeseemelk.mockbukkit.ServerMock;
+import be.seeseemelk.mockbukkit.entity.PlayerMock;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -42,7 +43,8 @@ class TeamStorageTest {
     Map<UUID, Long> deadlines = new HashMap<>();
     storage.loadTeams(deadlines);
 
-    Team team = new Team(UUID.randomUUID(), "TestTeam", "Leader", "[T]", "red");
+    PlayerMock leader = server.addPlayer("Leader");
+    Team team = new Team(UUID.randomUUID(), "TestTeam", leader.getUniqueId(), "[T]", "red");
     storage.addTeam(team);
     storage.saveTeams(deadlines);
 
@@ -71,8 +73,10 @@ class TeamStorageTest {
     storage.loadTeams(deadlines);
 
     UUID teamId = UUID.randomUUID();
-    Team team = new Team(teamId, "DeadlineTeam", "Leader", "[D]", "blue");
-    team.setMembers(new ArrayList<>(List.of("Leader", "Member")));
+    PlayerMock leader = server.addPlayer("Leader");
+    PlayerMock member = server.addPlayer("Member");
+    Team team = new Team(teamId, "DeadlineTeam", leader.getUniqueId(), "[D]", "blue");
+    team.setMembers(new ArrayList<>(List.of(leader.getUniqueId(), member.getUniqueId())));
     storage.addTeam(team);
 
     long deadline = System.currentTimeMillis() + 60000L;
@@ -100,7 +104,8 @@ class TeamStorageTest {
 
     UUID validId = UUID.randomUUID();
     config.set("teams." + validId + ".name", "ValidTeam");
-    config.set("teams." + validId + ".leader", "Leader");
+    PlayerMock leader = server.addPlayer("ValidLeader");
+    config.set("teams." + validId + ".leader", leader.getUniqueId().toString());
     config.save(teamsFile);
 
     TeamStorage reloaded = new TeamStorage(plugin, null);
