@@ -42,8 +42,7 @@ class MembershipServiceTest {
     PluginConfig config = new PluginConfig(plugin);
     TeamStorage storage = new TeamStorage(plugin, config);
     DeadlineScheduler scheduler = new DeadlineScheduler(plugin, config, storage);
-    MembershipService membershipService =
-        new MembershipService(plugin, config, storage, scheduler);
+    MembershipService membershipService = new MembershipService(plugin, config, storage, scheduler);
 
     Team team = new Team(UUID.randomUUID(), "Alpha", "Captain", "AA", "WHITE");
     team.setMembers(List.of("Captain", "Successor", "Reserve"));
@@ -88,4 +87,3 @@ class MembershipServiceTest {
     Files.writeString(configFile.toPath(), contents, StandardCharsets.UTF_8);
   }
 }
-

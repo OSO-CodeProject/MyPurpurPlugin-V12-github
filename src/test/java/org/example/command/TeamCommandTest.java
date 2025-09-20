@@ -497,9 +497,7 @@ class TeamCommandTest {
 
     UUID teamId = teamManager.getTeamIdByName("Beta");
     assertNotNull(teamId);
-    scheduler
-        .getDeadlines()
-        .put(teamId, System.currentTimeMillis() - TimeUnit.MINUTES.toMillis(1));
+    scheduler.getDeadlines().put(teamId, System.currentTimeMillis() - TimeUnit.MINUTES.toMillis(1));
 
     while (leader.nextComponentMessage() != null) {}
 

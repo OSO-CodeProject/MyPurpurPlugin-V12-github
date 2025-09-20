@@ -125,9 +125,7 @@ public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, Tab
     String targetName = args[1];
     if (targetName.equalsIgnoreCase(player.getName())) {
       TeamMessageUtils.sendTeamMessage(
-          player,
-          Component.text(
-              "❌ Вы не можете исключить себя из команды!", NamedTextColor.RED));
+          player, Component.text("❌ Вы не можете исключить себя из команды!", NamedTextColor.RED));
       return true;
     }
     teamManager.kickPlayerFromTeam(teamName, player, targetName);
@@ -272,8 +270,9 @@ public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, Tab
               List<String> members = teamManager.getTeamMembers(teamName);
               for (String memberName : members) {
                 if (!memberName.equals(player.getName())
-                  && memberName.toLowerCase(Locale.ROOT)
-                      .startsWith(args[1].toLowerCase(Locale.ROOT))) {
+                    && memberName
+                        .toLowerCase(Locale.ROOT)
+                        .startsWith(args[1].toLowerCase(Locale.ROOT))) {
                   suggestions.add(memberName);
                 }
               }
