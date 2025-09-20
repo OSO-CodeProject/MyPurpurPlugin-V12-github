@@ -35,8 +35,16 @@ tasks.jar {
     archiveFileName.set("MyPurpurPlugin.jar")
 }
 
+val enableRealServerTests =
+    project.findProperty("enableRealServerTests")?.toString()?.toBoolean() == true
+
 tasks.test {
-    useJUnitPlatform()
+    useJUnitPlatform {
+        if (!enableRealServerTests) {
+            excludeTags("realServer")
+        }
+    }
+    systemProperty("enableRealServerTests", enableRealServerTests.toString())
     dependsOn(tasks.jar)
 }
 
