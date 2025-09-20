@@ -146,8 +146,7 @@ public class DeadlineScheduler {
   public void enforceTeamSizes(boolean triggeredByReload) {
     int max = pluginConfig.getMaxMembers();
     boolean changed = false;
-    boolean enforcementEnabled =
-        !triggeredByReload || pluginConfig.isEnforceMaxMembersOnReload();
+    boolean enforcementEnabled = !triggeredByReload || pluginConfig.isEnforceMaxMembersOnReload();
     boolean graceEnabled =
         pluginConfig.isGracePeriodEnabled() && pluginConfig.getGracePeriodMinutes() > 0;
 
@@ -298,7 +297,9 @@ public class DeadlineScheduler {
     if (deadlineAt == null) {
       String previousLeader = teamLeaderNames.get(teamId);
       String currentLeader = team.getLeader();
-      if (previousLeader != null && currentLeader != null && !previousLeader.equalsIgnoreCase(currentLeader)) {
+      if (previousLeader != null
+          && currentLeader != null
+          && !previousLeader.equalsIgnoreCase(currentLeader)) {
         clearLeaderDisplay(previousLeader);
       }
       return;
@@ -314,8 +315,7 @@ public class DeadlineScheduler {
     long remainingMillis = Math.max(0L, deadlineAt - System.currentTimeMillis());
     long minutesLeft = TimeUnit.MILLISECONDS.toMinutes(remainingMillis);
     long secondsLeft =
-        TimeUnit.MILLISECONDS.toSeconds(remainingMillis)
-            - TimeUnit.MINUTES.toSeconds(minutesLeft);
+        TimeUnit.MILLISECONDS.toSeconds(remainingMillis) - TimeUnit.MINUTES.toSeconds(minutesLeft);
     Component message = TeamMessageUtils.deadlineRemainingMessage(minutesLeft, secondsLeft, excess);
     notifyLeader(team, message);
     if (getDisplayMode() == DeadlineDisplayMode.SCOREBOARD) {
@@ -681,6 +681,7 @@ public class DeadlineScheduler {
     }
     return lines;
   }
+
   private static Method resolveComponentScoreMethod() {
     try {
       return Objective.class.getMethod("getScore", Component.class);
@@ -688,5 +689,4 @@ public class DeadlineScheduler {
       return null;
     }
   }
-
 }
