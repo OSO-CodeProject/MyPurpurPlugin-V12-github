@@ -40,39 +40,50 @@ public class PluginConfig {
     }
 
     config = YamlConfiguration.loadConfiguration(configFile);
-    setDefaults();
+    setDefaults(true);
   }
 
   /** Устанавливает значения по умолчанию для конфигурации. */
-  private void setDefaults() {
+  private void setDefaults(boolean persistChanges) {
+    boolean newKeysAdded = false;
+
     // Глобальные настройки
-    config.addDefault("debug-mode", true);
-    config.addDefault("force-white-chat", false);
+    newKeysAdded |= addDefaultIfMissing("debug-mode", true);
+    newKeysAdded |= addDefaultIfMissing("force-white-chat", false);
 
     // Основные настройки
-    config.addDefault("team.requires-op", false);
-    config.addDefault("team.notify-admins", true);
-    config.addDefault("team.max-members", 0);
-    config.addDefault("team.min-prefix-length", 1);
-    config.addDefault("team.max-prefix-length", 16);
-    config.addDefault("team.min-team-name-length", 3);
-    config.addDefault("team.max-team-name-length", 32);
-    config.addDefault("team.enforce-max-members-on-reload", true);
-    config.addDefault("team.grace-period-enabled", true);
-    config.addDefault("team.grace-period-minutes", 10);
-    config.addDefault("team.deadline-notify-period-seconds", 300L);
-    config.addDefault("team.save-interval-seconds", 60L);
-    config.addDefault("team.deadline-display-mode", "CHAT");
-    config.addDefault("team.deadline-removal-policy", "last-joined");
+    newKeysAdded |= addDefaultIfMissing("team.requires-op", false);
+    newKeysAdded |= addDefaultIfMissing("team.notify-admins", true);
+    newKeysAdded |= addDefaultIfMissing("team.max-members", 0);
+    newKeysAdded |= addDefaultIfMissing("team.min-prefix-length", 1);
+    newKeysAdded |= addDefaultIfMissing("team.max-prefix-length", 16);
+    newKeysAdded |= addDefaultIfMissing("team.min-team-name-length", 3);
+    newKeysAdded |= addDefaultIfMissing("team.max-team-name-length", 32);
+    newKeysAdded |= addDefaultIfMissing("team.enforce-max-members-on-reload", true);
+    newKeysAdded |= addDefaultIfMissing("team.grace-period-enabled", true);
+    newKeysAdded |= addDefaultIfMissing("team.grace-period-minutes", 10);
+    newKeysAdded |= addDefaultIfMissing("team.deadline-notify-period-seconds", 300L);
+    newKeysAdded |= addDefaultIfMissing("team.save-interval-seconds", 60L);
+    newKeysAdded |= addDefaultIfMissing("team.deadline-display-mode", "CHAT");
+    newKeysAdded |= addDefaultIfMissing("team.deadline-removal-policy", "last-joined");
 
     // Настройки меню
-    config.addDefault("menu.open-sound", "BLOCK_NOTE_BLOCK_PLING");
-    config.addDefault("menu.particle-effect", "FIREWORK");
-    config.addDefault("menu.sound-volume", 1.0);
-    config.addDefault("menu.sound-pitch", 1.0);
+    newKeysAdded |= addDefaultIfMissing("menu.open-sound", "BLOCK_NOTE_BLOCK_PLING");
+    newKeysAdded |= addDefaultIfMissing("menu.particle-effect", "FIREWORK");
+    newKeysAdded |= addDefaultIfMissing("menu.sound-volume", 1.0);
+    newKeysAdded |= addDefaultIfMissing("menu.sound-pitch", 1.0);
 
     config.options().copyDefaults(true);
-    saveConfig();
+
+    if (persistChanges && newKeysAdded) {
+      saveConfig();
+    }
+  }
+
+  private boolean addDefaultIfMissing(@NotNull String path, Object value) {
+    boolean missing = !config.contains(path);
+    config.addDefault(path, value);
+    return missing;
   }
 
   /** Сохраняет файл конфигурации. */
@@ -87,7 +98,7 @@ public class PluginConfig {
   /** Перезагружает конфигурацию из файла. */
   public void reloadConfig() {
     config = YamlConfiguration.loadConfiguration(configFile);
-    setDefaults();
+    setDefaults(false);
   }
 
   /**

@@ -8,6 +8,9 @@ import be.seeseemelk.mockbukkit.entity.PlayerMock;
 import be.seeseemelk.mockbukkit.plugin.PluginManagerMock;
 import java.io.File;
 import java.lang.reflect.Field;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
+import java.security.MessageDigest;
 import org.bukkit.command.CommandMap;
 import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -120,9 +123,6 @@ class PluginConfigTest {
     FileConfiguration configuration = (FileConfiguration) configField.get(pluginConfig);
 
     assertEquals("BLOCK_NOTE_BLOCK_PLING", configuration.getString("menu.open-sound"));
-
-    YamlConfiguration reloaded = YamlConfiguration.loadConfiguration(configFile);
-    assertEquals("BLOCK_NOTE_BLOCK_PLING", reloaded.getString("menu.open-sound"));
   }
 
   @Test
@@ -147,8 +147,51 @@ class PluginConfigTest {
     CommandMap commandMap = server.getCommandMap();
     assertTrue(commandMap.dispatch(console, "teamreload"));
 
-    YamlConfiguration reloaded = YamlConfiguration.loadConfiguration(configFile);
-    assertEquals("FIREWORK", reloaded.getString("menu.particle-effect"));
-    assertEquals(7, reloaded.getInt("team.max-members"));
+    Field configField = PluginConfig.class.getDeclaredField("config");
+    configField.setAccessible(true);
+    FileConfiguration configuration = (FileConfiguration) configField.get(pluginConfig);
+
+    assertEquals("FIREWORK", configuration.getString("menu.particle-effect"));
+    assertEquals(7, configuration.getInt("team.max-members"));
+  }
+
+  @Test
+  void reloadConfigKeepsFileHashAndComments() throws Exception {
+    server = MockBukkit.mock();
+    MyPurpurPlugin plugin = MockBukkit.load(MyPurpurPlugin.class);
+
+    Field cfgField = MyPurpurPlugin.class.getDeclaredField("pluginConfig");
+    cfgField.setAccessible(true);
+    PluginConfig pluginConfig = (PluginConfig) cfgField.get(plugin);
+
+    Field fileField = PluginConfig.class.getDeclaredField("configFile");
+    fileField.setAccessible(true);
+    File configFile = (File) fileField.get(pluginConfig);
+
+    String customComment = "# admin-note: keep this comment";
+    Files.writeString(
+        configFile.toPath(),
+        System.lineSeparator() + customComment + System.lineSeparator(),
+        StandardOpenOption.APPEND);
+
+    byte[] initialContent = Files.readAllBytes(configFile.toPath());
+    byte[] initialHash = MessageDigest.getInstance("SHA-256").digest(initialContent);
+
+    pluginConfig.reloadConfig();
+
+    byte[] afterFirstReload = Files.readAllBytes(configFile.toPath());
+    byte[] firstReloadHash = MessageDigest.getInstance("SHA-256").digest(afterFirstReload);
+
+    assertArrayEquals(initialHash, firstReloadHash, "Hashes should match after first reload");
+    assertTrue(new String(afterFirstReload).contains(customComment));
+
+    pluginConfig.reloadConfig();
+
+    byte[] afterSecondReload = Files.readAllBytes(configFile.toPath());
+    byte[] secondReloadHash = MessageDigest.getInstance("SHA-256").digest(afterSecondReload);
+
+    assertArrayEquals(
+        initialHash, secondReloadHash, "Hashes should remain stable after repeated reloads");
+    assertTrue(new String(afterSecondReload).contains(customComment));
   }
 }
