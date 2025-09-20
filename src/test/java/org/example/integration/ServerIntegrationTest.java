@@ -19,9 +19,9 @@ import org.junit.jupiter.api.Tag;
 /**
  * Integration test that interacts with a locally provisioned Purpur server via the console.
  *
- * <p>The test is tagged as {@code realServer} and will be skipped unless the Gradle property
- * {@code enableRealServerTests=true} is provided and the {@code PURPUR_SERVER_JAR} environment
- * variable (or {@code purpur.serverJar} system property) points to an existing Purpur server jar.
+ * <p>The test is tagged as {@code realServer} and will be skipped unless the Gradle property {@code
+ * enableRealServerTests=true} is provided and the {@code PURPUR_SERVER_JAR} environment variable
+ * (or {@code purpur.serverJar} system property) points to an existing Purpur server jar.
  */
 @Tag("realServer")
 public class ServerIntegrationTest {
@@ -42,9 +42,10 @@ public class ServerIntegrationTest {
 
   @BeforeAll
   static void startServer() throws Exception {
-    Assumptions.assumeTrue(Boolean.getBoolean("enableRealServerTests") ||
-        "true".equalsIgnoreCase(System.getProperty("enableRealServerTests")) ||
-        "true".equalsIgnoreCase(System.getenv("ENABLE_REAL_SERVER_TESTS")),
+    Assumptions.assumeTrue(
+        Boolean.getBoolean("enableRealServerTests")
+            || "true".equalsIgnoreCase(System.getProperty("enableRealServerTests"))
+            || "true".equalsIgnoreCase(System.getenv("ENABLE_REAL_SERVER_TESTS")),
         "Real server tests are disabled. Set enableRealServerTests=true to run.");
 
     Path provisionedJar = resolveProvisionedServerJar();
@@ -136,7 +137,8 @@ public class ServerIntegrationTest {
   }
 
   private static void waitForLogMessage(
-      java.util.function.Predicate<String> predicate, Duration timeout) throws InterruptedException {
+      java.util.function.Predicate<String> predicate, Duration timeout)
+      throws InterruptedException {
     long deadline = System.nanoTime() + timeout.toNanos();
     int cursor = 0;
     synchronized (logLock) {
