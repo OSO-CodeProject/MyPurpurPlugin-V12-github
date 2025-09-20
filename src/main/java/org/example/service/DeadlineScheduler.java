@@ -8,7 +8,6 @@ import java.util.concurrent.TimeUnit;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
-import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
@@ -36,7 +35,7 @@ public class DeadlineScheduler {
   private final PluginConfig pluginConfig;
   private final TeamStorage storage;
   private final Map<UUID, Long> deadlines = new ConcurrentHashMap<>();
-  private final Map<String, Scoreboard> leaderOriginalScoreboards = new ConcurrentHashMap<>();
+  private final Map<UUID, Scoreboard> leaderOriginalScoreboards = new ConcurrentHashMap<>();
   private final Map<UUID, UUID> teamLeaderIds = new ConcurrentHashMap<>();
   private BukkitTask task;
 
@@ -116,7 +115,7 @@ public class DeadlineScheduler {
     boolean removed = deadlines.remove(teamId) != null;
     UUID leaderId = teamLeaderIds.remove(teamId);
     if (leaderId != null) {
-      clearLeaderDisplay(resolvePlayerName(leaderId));
+      clearLeaderDisplay(leaderId);
     } else {
       clearLeaderDisplay(team);
     }
@@ -319,7 +318,7 @@ public class DeadlineScheduler {
     if (previousLeader != null
         && (currentLeader == null || !previousLeader.equals(currentLeader))) {
       teamLeaderIds.remove(teamId, previousLeader);
-      clearLeaderDisplay(resolvePlayerName(previousLeader));
+      clearLeaderDisplay(previousLeader);
     }
     Long deadlineAt = deadlines.get(teamId);
     if (deadlineAt == null) {
@@ -379,7 +378,7 @@ public class DeadlineScheduler {
       if (team == null) {
         UUID leaderId = teamLeaderIds.remove(teamId);
         if (leaderId != null) {
-          clearLeaderDisplay(resolvePlayerName(leaderId));
+          clearLeaderDisplay(leaderId);
         }
         deadlinesToRemove.add(teamId);
         changed = true;
@@ -436,7 +435,6 @@ public class DeadlineScheduler {
       deadlinesToRemove.stream()
           .map(teamLeaderIds::remove)
           .filter(Objects::nonNull)
-          .map(this::resolvePlayerName)
           .forEach(this::clearLeaderDisplay);
     }
     if (changed) {
@@ -562,19 +560,18 @@ public class DeadlineScheduler {
   private void clearLeaderDisplay(@NotNull Team team) {
     UUID notifiedLeader = teamLeaderIds.remove(team.getId());
     if (notifiedLeader != null) {
-      clearLeaderDisplay(resolvePlayerName(notifiedLeader));
+      clearLeaderDisplay(notifiedLeader);
     } else {
-      clearLeaderDisplay(resolvePlayerName(team.getLeaderId()));
+      clearLeaderDisplay(team.getLeaderId());
     }
   }
 
-  private void clearLeaderDisplay(String leaderName) {
-    if (leaderName == null || leaderName.isBlank()) {
+  private void clearLeaderDisplay(UUID leaderId) {
+    if (leaderId == null) {
       return;
     }
-    String key = leaderName.toLowerCase(Locale.ROOT);
-    Scoreboard original = leaderOriginalScoreboards.remove(key);
-    Player leader = plugin.getServer().getPlayer(leaderName);
+    Scoreboard original = leaderOriginalScoreboards.remove(leaderId);
+    Player leader = plugin.getServer().getPlayer(leaderId);
     DeadlineDisplayMode mode = getDisplayMode();
     if (leader != null) {
       if (original != null) {
@@ -591,18 +588,9 @@ public class DeadlineScheduler {
     }
   }
 
-  private String resolvePlayerName(UUID playerId) {
-    if (playerId == null) {
-      return null;
-    }
-    OfflinePlayer offlinePlayer = plugin.getServer().getOfflinePlayer(playerId);
-    return offlinePlayer != null ? offlinePlayer.getName() : null;
-  }
-
   private void notifyLeader(@NotNull Team team, @NotNull Component message) {
     UUID leaderId = team.getLeaderId();
-    String leaderName = resolvePlayerName(leaderId);
-    if (leaderName == null || leaderName.isBlank()) {
+    if (leaderId == null) {
       return;
     }
     Player leader = plugin.getServer().getPlayer(leaderId);
@@ -613,12 +601,12 @@ public class DeadlineScheduler {
     if (mode == DeadlineDisplayMode.SCOREBOARD) {
       UUID previousLeader = teamLeaderIds.put(team.getId(), leaderId);
       if (previousLeader != null && !previousLeader.equals(leaderId)) {
-        clearLeaderDisplay(resolvePlayerName(previousLeader));
+        clearLeaderDisplay(previousLeader);
       }
     } else {
       UUID previousLeader = teamLeaderIds.remove(team.getId());
       if (previousLeader != null) {
-        clearLeaderDisplay(resolvePlayerName(previousLeader));
+        clearLeaderDisplay(previousLeader);
       }
     }
     switch (mode) {
@@ -630,8 +618,7 @@ public class DeadlineScheduler {
 
   private void notifyLeaderWithoutScoreboard(@NotNull Team team, @NotNull Component message) {
     UUID leaderId = team.getLeaderId();
-    String leaderName = resolvePlayerName(leaderId);
-    if (leaderName == null || leaderName.isBlank()) {
+    if (leaderId == null) {
       return;
     }
     Player leader = plugin.getServer().getPlayer(leaderId);
@@ -656,8 +643,8 @@ public class DeadlineScheduler {
       TeamMessageUtils.sendTeamMessage(player, message);
       return;
     }
-    String key = player.getName().toLowerCase(Locale.ROOT);
-    leaderOriginalScoreboards.computeIfAbsent(key, k -> player.getScoreboard());
+    UUID playerId = player.getUniqueId();
+    leaderOriginalScoreboards.putIfAbsent(playerId, player.getScoreboard());
     Scoreboard scoreboard = manager.getNewScoreboard();
     Objective objective =
         scoreboard.registerNewObjective(

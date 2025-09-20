@@ -165,7 +165,8 @@ public class TeamStorage {
       Team team = entry.getValue();
       String path = "teams." + teamId;
       teamsConfig.set(path + ".name", team.getName());
-      teamsConfig.set(path + ".leader", team.getLeaderId().toString());
+      UUID leaderId = team.getLeaderId();
+      teamsConfig.set(path + ".leader", leaderId != null ? leaderId.toString() : null);
       teamsConfig.set(
           path + ".members",
           team.getMembers().stream().map(UUID::toString).collect(Collectors.toList()));
