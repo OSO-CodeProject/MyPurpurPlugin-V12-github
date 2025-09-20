@@ -87,6 +87,7 @@ public class PluginConfig {
   /** Перезагружает конфигурацию из файла. */
   public void reloadConfig() {
     config = YamlConfiguration.loadConfiguration(configFile);
+    setDefaults();
   }
 
   /**
