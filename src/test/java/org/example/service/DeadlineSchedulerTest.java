@@ -43,11 +43,15 @@ class DeadlineSchedulerTest {
     TeamStorage storage = new TeamStorage(plugin, config);
     DeadlineScheduler scheduler = new DeadlineScheduler(plugin, config, storage);
 
-    Team team = new Team(UUID.randomUUID(), "Alpha", "Leader", "", "WHITE");
-    team.setMembers(List.of("Leader", "MemberOne", "MemberTwo"));
-    storage.getTeams().put(team.getId(), team);
-
     PlayerMock leader = server.addPlayer("Leader");
+    PlayerMock memberOne = server.addPlayer("MemberOne");
+    PlayerMock memberTwo = server.addPlayer("MemberTwo");
+
+    Team team =
+        new Team(UUID.randomUUID(), "Alpha", leader.getUniqueId(), "", "WHITE");
+    team.setMembers(
+        List.of(leader.getUniqueId(), memberOne.getUniqueId(), memberTwo.getUniqueId()));
+    storage.getTeams().put(team.getId(), team);
     Scoreboard original = leader.getScoreboard();
 
     scheduler.enforceTeamSizes(false);
@@ -56,7 +60,7 @@ class DeadlineSchedulerTest {
     scheduler.getDeadlines().clear();
     assertNotNull(leader.getScoreboard().getObjective(DisplaySlot.SIDEBAR));
 
-    team.setMembers(List.of("Leader", "MemberOne"));
+    team.setMembers(List.of(leader.getUniqueId(), memberOne.getUniqueId()));
     scheduler.enforceTeamSizes(true);
 
     assertNull(leader.getScoreboard().getObjective(DisplaySlot.SIDEBAR));

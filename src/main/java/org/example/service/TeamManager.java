@@ -99,7 +99,7 @@ public class TeamManager implements TeamService {
   }
 
   @Override
-  public @NotNull List<String> getTeamMembers(String teamName) {
+  public @NotNull List<UUID> getTeamMembers(String teamName) {
     return storage.getTeamMembers(teamName);
   }
 
@@ -119,8 +119,8 @@ public class TeamManager implements TeamService {
   }
 
   @Override
-  public String getTeamLeader(String teamName) {
-    return storage.getTeamLeader(teamName);
+  public UUID getTeamLeaderId(String teamName) {
+    return storage.getTeamLeaderId(teamName);
   }
 
   @Override

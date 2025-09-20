@@ -1,6 +1,7 @@
 package org.example.util;
 
 import java.util.Set;
+import java.util.UUID;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.entity.Player;
@@ -30,12 +31,12 @@ public class TeamUtils {
    * @param excludedPlayers Игроки, которых нужно исключить из уведомления (может быть null)
    */
   public static void notifyTeamMembers(
-      String teamName, TeamService teamManager, Component message, Set<String> excludedPlayers) {
-    for (String memberName : teamManager.getTeamMembers(teamName)) {
-      if (excludedPlayers != null && excludedPlayers.contains(memberName)) {
+      String teamName, TeamService teamManager, Component message, Set<UUID> excludedPlayers) {
+    for (UUID memberId : teamManager.getTeamMembers(teamName)) {
+      if (excludedPlayers != null && excludedPlayers.contains(memberId)) {
         continue; // Пропускаем исключённых игроков
       }
-      Player member = teamManager.getPlugin().getServer().getPlayer(memberName);
+      Player member = teamManager.getPlugin().getServer().getPlayer(memberId);
       if (member != null) {
         TeamMessageUtils.sendTeamMessage(member, message);
       }

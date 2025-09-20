@@ -3,6 +3,7 @@ package org.example.service;
 import java.util.*;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.example.config.PluginConfig;
@@ -51,10 +52,10 @@ public class MembershipService {
       return;
     }
     // Создаём запись команды и связываем лидера с новой структурой.
-    Team team = new Team(teamName, leader.getName(), prefix, color);
+    Team team = new Team(teamName, leader.getUniqueId(), prefix, color);
     storage.addTeam(team);
     updateTeamMembersPrefixes(team);
-    storage.getPlayerTeams().put(leader.getName(), team.getId());
+    storage.getPlayerTeams().put(leader.getUniqueId(), team.getId());
     TeamMessageUtils.sendTeamMessage(
         leader, Component.text("✅ Команда создана", NamedTextColor.GREEN));
     scheduler.enforceTeamSizes(false);
@@ -81,8 +82,8 @@ public class MembershipService {
       return;
     }
     // Добавляем игрока и фиксируем изменения в хранилище.
-    team.addMember(player.getName());
-    storage.getPlayerTeams().put(player.getName(), team.getId());
+    team.addMember(player.getUniqueId());
+    storage.getPlayerTeams().put(player.getUniqueId(), team.getId());
     storage.markTeamDirty(team);
     TeamMessageUtils.sendTeamMessage(
         player, Component.text("✅ Вы вступили в команду", NamedTextColor.GREEN));
@@ -94,13 +95,14 @@ public class MembershipService {
     Team team = storage.getTeamByName(teamName);
     // Проводим проверки существования команды и членства игрока.
     if (team == null) return;
-    if (!team.hasMember(player.getName()) && !team.isLeader(player.getName())) return;
+    UUID playerId = player.getUniqueId();
+    if (!team.hasMember(playerId) && !team.isLeader(playerId)) return;
     // Удаляем игрока и очищаем обратные ссылки.
-    team.removeMember(player.getName());
-    storage.getPlayerTeams().remove(player.getName());
+    team.removeMember(playerId);
+    storage.getPlayerTeams().remove(playerId);
     boolean removedTeam = false;
     // Если ушедший игрок был лидером, либо закрываем команду, либо назначаем нового.
-    if (team.isLeader(player.getName())) {
+    if (team.isLeader(playerId)) {
       if (team.getMembers().isEmpty()) {
         scheduler.cancelDeadline(team);
         storage.removeTeam(team);
@@ -125,18 +127,21 @@ public class MembershipService {
       String teamName, @NotNull Player leader, @NotNull String targetName) {
     Team team = storage.getTeamByName(teamName);
     // Проверяем право лидера на это действие и наличие цели в команде.
-    if (team == null || !team.isLeader(leader.getName())) return;
-    if (!team.hasMember(targetName)) return;
-    if (team.isLeader(targetName)) {
+    if (team == null || !team.isLeader(leader.getUniqueId())) return;
+    UUID targetId = findMemberIdByName(team, targetName);
+    if (targetId == null) {
+      return;
+    }
+    if (team.isLeader(targetId)) {
       removePlayerFromTeam(teamName, leader);
       return;
     }
     // Удаляем участника и фиксируем изменения.
-    team.removeMember(targetName);
-    storage.getPlayerTeams().remove(targetName);
+    team.removeMember(targetId);
+    storage.getPlayerTeams().remove(targetId);
     storage.markTeamDirty(team);
     scheduler.enforceTeamSizes(false);
-    notifyPrefixUpdate(targetName, null);
+    notifyPrefixUpdate(targetId, null);
     updateTeamMembersPrefixes(team);
   }
 
@@ -144,10 +149,10 @@ public class MembershipService {
       String teamName, @NotNull Player leader, @NotNull Player newLeader) {
     Team team = storage.getTeamByName(teamName);
     // Убеждаемся, что изменение лидерства инициирует действующий лидер.
-    if (team == null || !team.isLeader(leader.getName())) return;
+    if (team == null || !team.isLeader(leader.getUniqueId())) return;
     // Назначать лидером можно только участника команды.
-    if (!team.hasMember(newLeader.getName())) return;
-    team.setLeader(newLeader.getName());
+    if (!team.hasMember(newLeader.getUniqueId())) return;
+    team.setLeader(newLeader.getUniqueId());
     storage.markTeamDirty(team);
     scheduler.handleLeaderTransfer(team);
     scheduler.enforceTeamSizes(false);
@@ -156,18 +161,18 @@ public class MembershipService {
   public void disbandTeam(String teamName, @NotNull Player leader) {
     Team team = storage.getTeamByName(teamName);
     // Разрешаем роспуск только лидеру существующей команды.
-    if (team == null || !team.isLeader(leader.getName())) return;
+    if (team == null || !team.isLeader(leader.getUniqueId())) return;
     // Сохраняем список участников до удаления, чтобы очистить их отображаемые префиксы.
-    List<String> members = team.getMembers();
+    List<UUID> members = team.getMembers();
     scheduler.cancelDeadline(team);
     // Удаляем команду и уведомляем игроков о сбросе префикса.
     storage.removeTeam(team);
-    for (String memberName : members) {
-      notifyPrefixUpdate(memberName, null);
+    for (UUID memberId : members) {
+      notifyPrefixUpdate(memberId, null);
     }
     // После уведомления очищаем соответствия игроков и команд.
-    for (String memberName : members) {
-      storage.getPlayerTeams().remove(memberName);
+    for (UUID memberId : members) {
+      storage.getPlayerTeams().remove(memberId);
     }
     scheduler.enforceTeamSizes(false);
   }
@@ -175,7 +180,7 @@ public class MembershipService {
   public void renameTeam(String oldTeamName, String newTeamName, @NotNull Player leader) {
     Team team = storage.getTeamByName(oldTeamName);
     // Проверяем полномочия и уникальность нового имени.
-    if (team == null || !team.isLeader(leader.getName())) return;
+    if (team == null || !team.isLeader(leader.getUniqueId())) return;
     if (storage.getTeamByName(newTeamName) != null) return;
     storage.updateTeamName(team, newTeamName);
   }
@@ -183,7 +188,7 @@ public class MembershipService {
   public void setTeamPrefix(String teamName, String newPrefix, @NotNull Player leader) {
     Team team = storage.getTeamByName(teamName);
     // Изменение префикса доступно только лидеру, при этом валидируем значение.
-    if (team == null || !team.isLeader(leader.getName())) return;
+    if (team == null || !team.isLeader(leader.getUniqueId())) return;
     if (TeamUtils.isPrefixLengthInvalid(newPrefix, pluginConfig, leader)) return;
     team.setPrefix(newPrefix);
     storage.markTeamDirty(team);
@@ -193,7 +198,7 @@ public class MembershipService {
   public void setTeamColor(String teamName, String newColor, @NotNull Player leader) {
     Team team = storage.getTeamByName(teamName);
     // Проверяем права и корректность цвета перед сохранением.
-    if (team == null || !team.isLeader(leader.getName())) return;
+    if (team == null || !team.isLeader(leader.getUniqueId())) return;
     NamedTextColor teamColor = NamedTextColor.NAMES.value(newColor.toLowerCase(Locale.ROOT));
     if (teamColor == null) {
       TeamMessageUtils.sendTeamMessage(
@@ -214,7 +219,7 @@ public class MembershipService {
 
   public void updateTeamMembersPrefixes(@NotNull Team team) {
     Component prefixComponent = team.getPrefixComponent();
-    for (String member : team.getMembers()) {
+    for (UUID member : team.getMembers()) {
       notifyPrefixUpdate(member, prefixComponent);
     }
   }
@@ -226,10 +231,23 @@ public class MembershipService {
         .callEvent(new TeamChatListener.PlayerPrefixUpdateEvent(player, prefix));
   }
 
-  private void notifyPrefixUpdate(@NotNull String playerName, @Nullable Component prefix) {
-    Player onlinePlayer = plugin.getServer().getPlayer(playerName);
+  private void notifyPrefixUpdate(@NotNull UUID playerId, @Nullable Component prefix) {
+    Player onlinePlayer = plugin.getServer().getPlayer(playerId);
     if (onlinePlayer != null) {
       notifyPrefixUpdate(onlinePlayer, prefix);
     }
+  }
+
+  private UUID findMemberIdByName(@NotNull Team team, @NotNull String targetName) {
+    for (UUID memberId : team.getMembers()) {
+      OfflinePlayer offlinePlayer = plugin.getServer().getOfflinePlayer(memberId);
+      if (offlinePlayer != null) {
+        String currentName = offlinePlayer.getName();
+        if (currentName != null && currentName.equalsIgnoreCase(targetName)) {
+          return memberId;
+        }
+      }
+    }
+    return null;
   }
 }

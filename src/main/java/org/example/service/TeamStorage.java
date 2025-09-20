@@ -6,6 +6,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import net.kyori.adventure.text.format.NamedTextColor;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -23,7 +24,7 @@ public class TeamStorage {
 
   private final Map<UUID, Team> teams = new ConcurrentHashMap<>();
   private final Map<String, UUID> teamIdsByName = new ConcurrentHashMap<>();
-  private final Map<String, UUID> playerTeams = new ConcurrentHashMap<>();
+  private final Map<UUID, UUID> playerTeams = new ConcurrentHashMap<>();
 
   private FileConfiguration teamsConfig;
   private File teamsFile;
@@ -58,6 +59,7 @@ public class TeamStorage {
     playerTeams.clear();
     deadlines.clear();
     var section = teamsConfig.getConfigurationSection("teams");
+    boolean legacyDataUpdated = false;
     if (section != null) {
       for (String teamIdStr : section.getKeys(false)) {
         UUID teamId;
@@ -77,8 +79,14 @@ public class TeamStorage {
                   "Skipping team entry " + teamId + " because it does not define a name.");
           continue;
         }
-        String leader = teamsConfig.getString("teams." + teamIdStr + ".leader", "");
-        if (leader == null || leader.isBlank()) {
+        String leaderRaw = teamsConfig.getString("teams." + teamIdStr + ".leader", "");
+        UUID leaderId = parseUuid(leaderRaw);
+        boolean leaderFromName = false;
+        if (leaderId == null) {
+          leaderId = resolvePlayerUuid(leaderRaw);
+          leaderFromName = leaderId != null;
+        }
+        if (leaderId == null) {
           plugin
               .getLogger()
               .warning(
@@ -88,20 +96,64 @@ public class TeamStorage {
         String prefix = teamsConfig.getString("teams." + teamIdStr + ".prefix", "");
         String color =
             normalizeColorKey(teamsConfig.getString("teams." + teamIdStr + ".color", "WHITE"));
-        Team team = new Team(teamId, name, leader, prefix, color);
-        team.setMembers(teamsConfig.getStringList("teams." + teamIdStr + ".members"));
+        List<String> rawMembers = teamsConfig.getStringList("teams." + teamIdStr + ".members");
+        List<UUID> memberIds = new ArrayList<>();
+        boolean convertedMembers = false;
+        for (String rawMember : rawMembers) {
+          UUID memberId = parseUuid(rawMember);
+          boolean convertedFromName = false;
+          if (memberId == null) {
+            memberId = resolvePlayerUuid(rawMember);
+            convertedFromName = memberId != null;
+          }
+          if (memberId == null) {
+            plugin
+                .getLogger()
+                .warning(
+                    "Skipping member entry '"
+                        + rawMember
+                        + "' for team "
+                        + teamId
+                        + " because it could not be converted to UUID.");
+            continue;
+          }
+          if (!memberIds.contains(memberId)) {
+            memberIds.add(memberId);
+          }
+          if (convertedFromName) {
+            convertedMembers = true;
+          }
+        }
+        if (!memberIds.contains(leaderId)) {
+          memberIds.add(0, leaderId);
+          convertedMembers = true;
+        } else if (!memberIds.isEmpty() && !leaderId.equals(memberIds.get(0))) {
+          memberIds.remove(leaderId);
+          memberIds.add(0, leaderId);
+          convertedMembers = true;
+        }
+        if (memberIds.isEmpty()) {
+          memberIds.add(leaderId);
+          convertedMembers = true;
+        }
+        Team team = new Team(teamId, name, leaderId, prefix, color);
+        team.setMembers(memberIds);
         long deadline = teamsConfig.getLong("teams." + teamIdStr + ".deadline", 0L);
         if (deadline > 0L) {
           deadlines.put(team.getId(), deadline);
         }
         addTeamInternal(team, false);
-        for (String member : team.getMembers()) {
+        for (UUID member : team.getMembers()) {
           playerTeams.put(member, team.getId());
         }
+        legacyDataUpdated = legacyDataUpdated || leaderFromName || convertedMembers;
       }
     }
     dirtyTeams.clear();
     deadlinesDirty = false;
+    if (legacyDataUpdated) {
+      saveTeams(deadlines);
+    }
   }
 
   /** Saves teams and deadlines back to teams.yml. */
@@ -113,8 +165,10 @@ public class TeamStorage {
       Team team = entry.getValue();
       String path = "teams." + teamId;
       teamsConfig.set(path + ".name", team.getName());
-      teamsConfig.set(path + ".leader", team.getLeader());
-      teamsConfig.set(path + ".members", team.getMembers());
+      teamsConfig.set(path + ".leader", team.getLeaderId().toString());
+      teamsConfig.set(
+          path + ".members",
+          team.getMembers().stream().map(UUID::toString).collect(Collectors.toList()));
       teamsConfig.set(path + ".prefix", team.getPrefix());
       teamsConfig.set(path + ".color", colorKeyFor(team.getColor()));
       Long deadline = deadlines.get(teamId);
@@ -180,7 +234,7 @@ public class TeamStorage {
     markTeamDirty(team);
   }
 
-  public Map<String, UUID> getPlayerTeams() {
+  public Map<UUID, UUID> getPlayerTeams() {
     return playerTeams;
   }
 
@@ -199,13 +253,13 @@ public class TeamStorage {
   }
 
   public String getPlayerTeam(@NotNull Player player) {
-    UUID id = playerTeams.get(player.getName());
+    UUID id = playerTeams.get(player.getUniqueId());
     Team team = id != null ? teams.get(id) : null;
     return team != null ? team.getName() : null;
   }
 
   @NotNull
-  public List<String> getTeamMembers(String teamName) {
+  public List<UUID> getTeamMembers(String teamName) {
     Team team = getTeamByName(teamName);
     return team != null ? new ArrayList<>(team.getMembers()) : List.of();
   }
@@ -226,9 +280,9 @@ public class TeamStorage {
     return team != null ? team.getColor() : NamedTextColor.WHITE;
   }
 
-  public String getTeamLeader(String teamName) {
+  public UUID getTeamLeaderId(String teamName) {
     Team team = getTeamByName(teamName);
-    return team != null ? team.getLeader() : null;
+    return team != null ? team.getLeaderId() : null;
   }
 
   public void markTeamDirty(@NotNull Team team) {
@@ -336,5 +390,24 @@ public class TeamStorage {
 
   private static String normalizeTeamKey(String name) {
     return name != null ? name.toLowerCase(Locale.ROOT) : null;
+  }
+
+  private UUID parseUuid(String value) {
+    if (value == null || value.isBlank()) {
+      return null;
+    }
+    try {
+      return UUID.fromString(value.trim());
+    } catch (IllegalArgumentException ex) {
+      return null;
+    }
+  }
+
+  private UUID resolvePlayerUuid(String value) {
+    if (value == null || value.isBlank()) {
+      return null;
+    }
+    OfflinePlayer offlinePlayer = plugin.getServer().getOfflinePlayer(value.trim());
+    return offlinePlayer != null ? offlinePlayer.getUniqueId() : null;
   }
 }

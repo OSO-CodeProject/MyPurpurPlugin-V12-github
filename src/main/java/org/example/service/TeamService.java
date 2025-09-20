@@ -112,7 +112,7 @@ public interface TeamService {
    * @return Список участников команды
    */
   @NotNull
-  List<String> getTeamMembers(String teamName);
+  List<UUID> getTeamMembers(String teamName);
 
   /**
    * Получает список названий всех команд.
@@ -145,7 +145,7 @@ public interface TeamService {
    * @param teamName Название команды
    * @return Имя лидера команды или null, если команда не существует
    */
-  String getTeamLeader(String teamName);
+  UUID getTeamLeaderId(String teamName);
 
   /**
    * Получает экземпляр плагина.
