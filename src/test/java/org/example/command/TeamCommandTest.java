@@ -340,7 +340,7 @@ class TeamCommandTest {
 
     assertTrue(commandMap.dispatch(leader, "teamadmin kick kicktarget"));
 
-    assertFalse(teamManager.getTeamMembers("Delta").contains("KickTarget"));
+    assertFalse(teamManager.getTeamMembers("Delta").contains(member.getUniqueId()));
     assertNull(teamManager.getPlayerTeam(member));
   }
 
@@ -363,7 +363,7 @@ class TeamCommandTest {
 
     assertTrue(commandMap.dispatch(leader, "teamadmin transfer transferheir"));
 
-    assertEquals("TransferHeir", teamManager.getTeamLeader("Sigma"));
+    assertEquals(successor.getUniqueId(), teamManager.getTeamLeaderId("Sigma"));
   }
 
   @Test

@@ -16,9 +16,9 @@ public class Team {
   private final UUID id; // Уникальный неизменяемый идентификатор
   private String name; // Название команды, теперь изменяемое
 
-  private String leader;
-  private final List<String> members;
-  private final Set<String> memberNamesLower;
+  private UUID leader;
+  private final List<UUID> members;
+  private final Set<UUID> memberLookup;
 
   private String prefix;
   private NamedTextColor color;
@@ -32,10 +32,11 @@ public class Team {
     this.name = name;
     this.leader = leader;
     this.members = new ArrayList<>();
-    this.memberNamesLower = new HashSet<>();
+    this.memberLookup = new HashSet<>();
     addMember(leader);
     this.prefix = prefix;
-    this.color = NamedTextColor.NAMES.valueOr(color.toLowerCase(Locale.ROOT), NamedTextColor.WHITE);
+    this.color =
+        NamedTextColor.NAMES.valueOr(color.toLowerCase(Locale.ROOT), NamedTextColor.WHITE);
   }
 
   // Геттеры
@@ -74,6 +75,7 @@ public class Team {
 
   public void setLeader(UUID leader) {
     this.leader = leader;
+    addMember(leader);
   }
 
   public void setPrefix(String prefix) {
@@ -81,37 +83,41 @@ public class Team {
   }
 
   public void setColor(String color) {
-    this.color = NamedTextColor.NAMES.valueOr(color.toLowerCase(Locale.ROOT), NamedTextColor.WHITE);
+    this.color =
+        NamedTextColor.NAMES.valueOr(color.toLowerCase(Locale.ROOT), NamedTextColor.WHITE);
   }
 
   // Методы управления участниками
 
-  public void addMember(String member) {
-    String normalized = normalize(member);
-    if (memberNamesLower.add(normalized)) {
-
+  public void addMember(UUID member) {
+    if (member == null) {
+      return;
+    }
+    if (memberLookup.add(member)) {
       members.add(member);
     }
   }
 
-
-  public void removeMember(String member) {
-    String normalized = normalize(member);
-    if (memberNamesLower.remove(normalized)) {
-      members.removeIf(existing -> existing.equalsIgnoreCase(member));
+  public void removeMember(UUID member) {
+    if (member == null) {
+      return;
     }
-
+    if (memberLookup.remove(member)) {
+      members.removeIf(existing -> existing.equals(member));
+    }
   }
 
   public void setMembers(List<UUID> newMembers) {
     members.clear();
-    memberNamesLower.clear();
-    for (String newMember : newMembers) {
+    memberLookup.clear();
+    if (newMembers == null) {
+      return;
+    }
+    for (UUID newMember : newMembers) {
       if (newMember == null) {
         continue;
       }
-      String normalized = normalize(newMember);
-      if (memberNamesLower.add(normalized)) {
+      if (memberLookup.add(newMember)) {
         members.add(newMember);
       }
     }
@@ -124,28 +130,25 @@ public class Team {
 
   // Проверка, является ли игрок участником
 
-  public boolean hasMember(String playerName) {
-    return memberNamesLower.contains(normalize(playerName));
+  public boolean hasMember(UUID playerId) {
+    return playerId != null && memberLookup.contains(playerId);
   }
 
   // Проверка, является ли игрок лидером
-  public boolean isLeader(String playerName) {
-    return leader.equalsIgnoreCase(playerName);
+  public boolean isLeader(UUID playerId) {
+    return playerId != null && playerId.equals(leader);
   }
 
   @Nullable
-  public String findMember(String playerName) {
-    String normalized = normalize(playerName);
-    for (String member : members) {
-      if (normalize(member).equals(normalized)) {
+  public UUID findMember(UUID playerId) {
+    if (playerId == null) {
+      return null;
+    }
+    for (UUID member : members) {
+      if (member.equals(playerId)) {
         return member;
       }
     }
     return null;
-  }
-
-  private String normalize(String playerName) {
-    return playerName.toLowerCase(Locale.ROOT);
-
   }
 }
