@@ -44,15 +44,17 @@ class MembershipServiceTest {
     DeadlineScheduler scheduler = new DeadlineScheduler(plugin, config, storage);
     MembershipService membershipService = new MembershipService(plugin, config, storage, scheduler);
 
-    Team team = new Team(UUID.randomUUID(), "Alpha", "Captain", "AA", "WHITE");
-    team.setMembers(List.of("Captain", "Successor", "Reserve"));
-    storage.getTeams().put(team.getId(), team);
-    storage.getPlayerTeams().put("Captain", team.getId());
-    storage.getPlayerTeams().put("Successor", team.getId());
-    storage.getPlayerTeams().put("Reserve", team.getId());
-
     PlayerMock captain = server.addPlayer("Captain");
     PlayerMock successor = server.addPlayer("Successor");
+    PlayerMock reserve = server.addPlayer("Reserve");
+
+    Team team =
+        new Team(UUID.randomUUID(), "Alpha", captain.getUniqueId(), "AA", "WHITE");
+    team.setMembers(List.of(captain.getUniqueId(), successor.getUniqueId(), reserve.getUniqueId()));
+    storage.getTeams().put(team.getId(), team);
+    storage.getPlayerTeams().put(captain.getUniqueId(), team.getId());
+    storage.getPlayerTeams().put(successor.getUniqueId(), team.getId());
+    storage.getPlayerTeams().put(reserve.getUniqueId(), team.getId());
     Scoreboard captainOriginal = captain.getScoreboard();
     Scoreboard successorOriginal = successor.getScoreboard();
 
@@ -79,15 +81,17 @@ class MembershipServiceTest {
     DeadlineScheduler scheduler = new DeadlineScheduler(plugin, config, storage);
     MembershipService membershipService = new MembershipService(plugin, config, storage, scheduler);
 
-    Team team = new Team(UUID.randomUUID(), "Alpha", "Captain", "AA", "WHITE");
-    team.setMembers(List.of("Captain", "Successor", "Reserve"));
-    storage.getTeams().put(team.getId(), team);
-    storage.getPlayerTeams().put("Captain", team.getId());
-    storage.getPlayerTeams().put("Successor", team.getId());
-    storage.getPlayerTeams().put("Reserve", team.getId());
-
     PlayerMock captain = server.addPlayer("Captain");
     PlayerMock successor = server.addPlayer("Successor");
+    PlayerMock reserve = server.addPlayer("Reserve");
+
+    Team team =
+        new Team(UUID.randomUUID(), "Alpha", captain.getUniqueId(), "AA", "WHITE");
+    team.setMembers(List.of(captain.getUniqueId(), successor.getUniqueId(), reserve.getUniqueId()));
+    storage.getTeams().put(team.getId(), team);
+    storage.getPlayerTeams().put(captain.getUniqueId(), team.getId());
+    storage.getPlayerTeams().put(successor.getUniqueId(), team.getId());
+    storage.getPlayerTeams().put(reserve.getUniqueId(), team.getId());
     Scoreboard captainOriginal = captain.getScoreboard();
     Scoreboard successorOriginal = successor.getScoreboard();
 
@@ -101,7 +105,7 @@ class MembershipServiceTest {
     assertSame(captainOriginal, captain.getScoreboard());
     assertNull(captain.getScoreboard().getObjective(DisplaySlot.SIDEBAR));
 
-    assertEquals("Successor", team.getLeader());
+    assertEquals(successor.getUniqueId(), team.getLeaderId());
     assertNotSame(successorOriginal, successor.getScoreboard());
     assertNotNull(successor.getScoreboard().getObjective(DisplaySlot.SIDEBAR));
   }
@@ -114,14 +118,17 @@ class MembershipServiceTest {
     DeadlineScheduler scheduler = new DeadlineScheduler(plugin, config, storage);
     MembershipService membershipService = new MembershipService(plugin, config, storage, scheduler);
 
-    Team team = new Team(UUID.randomUUID(), "Alpha", "Captain", "AA", "WHITE");
-    team.setMembers(List.of("Captain", "MemberOne", "MemberTwo"));
-    storage.getTeams().put(team.getId(), team);
-    storage.getPlayerTeams().put("Captain", team.getId());
-    storage.getPlayerTeams().put("MemberOne", team.getId());
-    storage.getPlayerTeams().put("MemberTwo", team.getId());
-
     PlayerMock captain = server.addPlayer("Captain");
+    PlayerMock memberOne = server.addPlayer("MemberOne");
+    PlayerMock memberTwo = server.addPlayer("MemberTwo");
+
+    Team team =
+        new Team(UUID.randomUUID(), "Alpha", captain.getUniqueId(), "AA", "WHITE");
+    team.setMembers(List.of(captain.getUniqueId(), memberOne.getUniqueId(), memberTwo.getUniqueId()));
+    storage.getTeams().put(team.getId(), team);
+    storage.getPlayerTeams().put(captain.getUniqueId(), team.getId());
+    storage.getPlayerTeams().put(memberOne.getUniqueId(), team.getId());
+    storage.getPlayerTeams().put(memberTwo.getUniqueId(), team.getId());
     Scoreboard captainOriginal = captain.getScoreboard();
 
     scheduler.enforceTeamSizes(false);

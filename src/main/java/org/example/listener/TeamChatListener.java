@@ -34,8 +34,8 @@ public class TeamChatListener implements Listener {
     updatePlayerPrefix(player);
     String teamName = teamManager.getPlayerTeam(player);
     if (teamName != null && teamManager.getTeamIdByName(teamName) != null) {
-      String leaderName = teamManager.getTeamLeader(teamName);
-      if (player.getName().equals(leaderName)) {
+      UUID leaderId = teamManager.getTeamLeaderId(teamName);
+      if (leaderId != null && player.getUniqueId().equals(leaderId)) {
         Long deadline = teamManager.getTeamDeadline(teamName);
         if (deadline != null) {
           long remaining = deadline - System.currentTimeMillis();

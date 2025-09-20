@@ -3,6 +3,7 @@ package org.example.command.sub;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.UUID;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.CommandSender;
@@ -41,8 +42,8 @@ public class JoinSubCommand implements SubCommand {
       if (playerTeam == null) {
         String partial = args[1].toLowerCase(Locale.ROOT);
         for (String teamName : teamService.getTeamNames()) {
-          String leader = teamService.getTeamLeader(teamName);
-          if (leader == null || !leader.equals(player.getName())) {
+          UUID leaderId = teamService.getTeamLeaderId(teamName);
+          if (leaderId == null || !leaderId.equals(player.getUniqueId())) {
             if (teamName.toLowerCase(Locale.ROOT).startsWith(partial)) {
               suggestions.add(teamName);
             }

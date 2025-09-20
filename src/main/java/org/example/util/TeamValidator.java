@@ -1,5 +1,6 @@
 package org.example.util;
 
+import java.util.UUID;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.entity.Player;
@@ -24,8 +25,8 @@ public class TeamValidator {
       TeamMessageUtils.sendTeamMessage(leader, TeamMessageUtils.teamDoesNotExistMessage(teamName));
       return true;
     }
-    String currentLeader = teamService.getTeamLeader(teamName);
-    if (!leader.getName().equals(currentLeader)) {
+    UUID currentLeader = teamService.getTeamLeaderId(teamName);
+    if (!leader.getUniqueId().equals(currentLeader)) {
       Component prefix =
           TeamUtils.createPrefixComponent(
               teamService.getTeamPrefix(teamName), teamService.getTeamColor(teamName));

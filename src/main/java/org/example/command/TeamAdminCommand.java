@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.UUID;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.Command;
@@ -265,14 +266,16 @@ public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, Tab
         if (args[0].equalsIgnoreCase("transfer") || args[0].equalsIgnoreCase("kick")) {
           String teamName = teamManager.getPlayerTeam(player);
           if (teamName != null && teamManager.getTeamIdByName(teamName) != null) {
-            String leaderName = teamManager.getTeamLeader(teamName);
-            if (player.getName().equals(leaderName)) {
-              List<String> members = teamManager.getTeamMembers(teamName);
-              for (String memberName : members) {
-                if (!memberName.equals(player.getName())
-                    && memberName
-                        .toLowerCase(Locale.ROOT)
-                        .startsWith(args[1].toLowerCase(Locale.ROOT))) {
+            UUID leaderId = teamManager.getTeamLeaderId(teamName);
+            if (player.getUniqueId().equals(leaderId)) {
+              List<UUID> members = teamManager.getTeamMembers(teamName);
+              String lowerInput = args[1].toLowerCase(Locale.ROOT);
+              for (UUID memberId : members) {
+                if (memberId.equals(player.getUniqueId())) {
+                  continue;
+                }
+                String memberName = resolveName(memberId);
+                if (memberName.toLowerCase(Locale.ROOT).startsWith(lowerInput)) {
                   suggestions.add(memberName);
                 }
               }
@@ -297,5 +300,13 @@ public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, Tab
       Collections.sort(suggestions);
     }
     return suggestions;
+  }
+
+  private String resolveName(UUID playerId) {
+    if (playerId == null) {
+      return "";
+    }
+    String name = teamManager.getPlugin().getServer().getOfflinePlayer(playerId).getName();
+    return name != null ? name : playerId.toString();
   }
 }
