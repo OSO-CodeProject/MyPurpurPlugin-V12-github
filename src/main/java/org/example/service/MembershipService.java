@@ -126,17 +126,22 @@ public class MembershipService {
     Team team = storage.getTeamByName(teamName);
     // Проверяем право лидера на это действие и наличие цели в команде.
     if (team == null || !team.isLeader(leader.getName())) return;
-    if (!team.hasMember(targetName)) return;
-    if (team.isLeader(targetName)) {
+    String normalizedTarget = targetName.toLowerCase(Locale.ROOT);
+    if (!team.hasMember(normalizedTarget)) return;
+    if (team.isLeader(normalizedTarget)) {
       removePlayerFromTeam(teamName, leader);
       return;
     }
+    String actualTargetName = team.findMember(normalizedTarget);
+    if (actualTargetName == null) {
+      return;
+    }
     // Удаляем участника и фиксируем изменения.
-    team.removeMember(targetName);
-    storage.getPlayerTeams().remove(targetName);
+    team.removeMember(actualTargetName);
+    storage.getPlayerTeams().remove(actualTargetName);
     storage.markTeamDirty(team);
     scheduler.enforceTeamSizes(false);
-    notifyPrefixUpdate(targetName, null);
+    notifyPrefixUpdate(actualTargetName, null);
     updateTeamMembersPrefixes(team);
   }
 

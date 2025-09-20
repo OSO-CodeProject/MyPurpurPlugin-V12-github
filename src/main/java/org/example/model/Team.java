@@ -1,12 +1,15 @@
 package org.example.model;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.example.util.TeamUtils;
+import org.jetbrains.annotations.Nullable;
 
 /** Представляет команду с уникальным идентификатором и изменяемыми данными. */
 public class Team {
@@ -14,6 +17,7 @@ public class Team {
   private String name; // Название команды, теперь изменяемое
   private String leader;
   private final List<String> members;
+  private final Set<String> memberNamesLower;
   private String prefix;
   private NamedTextColor color;
 
@@ -25,7 +29,9 @@ public class Team {
     this.id = id;
     this.name = name;
     this.leader = leader;
-    this.members = new ArrayList<>(List.of(leader));
+    this.members = new ArrayList<>();
+    this.memberNamesLower = new HashSet<>();
+    addMember(leader);
     this.prefix = prefix;
     this.color = NamedTextColor.NAMES.valueOr(color.toLowerCase(Locale.ROOT), NamedTextColor.WHITE);
   }
@@ -78,18 +84,31 @@ public class Team {
 
   // Методы управления участниками
   public void addMember(String member) {
-    if (!members.contains(member)) {
+    String normalized = normalize(member);
+    if (memberNamesLower.add(normalized)) {
       members.add(member);
     }
   }
 
   public void removeMember(String member) {
-    members.remove(member);
+    String normalized = normalize(member);
+    if (memberNamesLower.remove(normalized)) {
+      members.removeIf(existing -> existing.equalsIgnoreCase(member));
+    }
   }
 
   public void setMembers(List<String> newMembers) {
     members.clear();
-    members.addAll(newMembers);
+    memberNamesLower.clear();
+    for (String newMember : newMembers) {
+      if (newMember == null) {
+        continue;
+      }
+      String normalized = normalize(newMember);
+      if (memberNamesLower.add(normalized)) {
+        members.add(newMember);
+      }
+    }
   }
 
   // Утилитный метод для префикса
@@ -99,11 +118,26 @@ public class Team {
 
   // Проверка, является ли игрок участником
   public boolean hasMember(String playerName) {
-    return members.contains(playerName);
+    return memberNamesLower.contains(normalize(playerName));
   }
 
   // Проверка, является ли игрок лидером
   public boolean isLeader(String playerName) {
-    return leader.equals(playerName);
+    return leader.equalsIgnoreCase(playerName);
+  }
+
+  @Nullable
+  public String findMember(String playerName) {
+    String normalized = normalize(playerName);
+    for (String member : members) {
+      if (normalize(member).equals(normalized)) {
+        return member;
+      }
+    }
+    return null;
+  }
+
+  private String normalize(String playerName) {
+    return playerName.toLowerCase(Locale.ROOT);
   }
 }
