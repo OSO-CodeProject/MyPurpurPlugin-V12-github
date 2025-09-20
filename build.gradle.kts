@@ -28,6 +28,7 @@ dependencies {
     testImplementation("com.github.seeseemelk:MockBukkit-v1.21:3.133.2")
     testImplementation("io.papermc.paper:paper-api:1.21.1-R0.1-SNAPSHOT")
     testImplementation("org.spigotmc:spigot-api:1.21.1-R0.1-SNAPSHOT")
+    testImplementation("org.mockito:mockito-core:5.12.0")
 }
 
 tasks.jar {
