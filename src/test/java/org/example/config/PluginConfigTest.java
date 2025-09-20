@@ -9,6 +9,7 @@ import be.seeseemelk.mockbukkit.plugin.PluginManagerMock;
 import java.io.File;
 import java.lang.reflect.Field;
 import org.bukkit.command.CommandMap;
+import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.example.MyPurpurPlugin;
@@ -93,5 +94,61 @@ class PluginConfigTest {
     pluginConfig.reloadConfig();
 
     assertEquals(32, pluginConfig.getMaxTeamNameLength());
+  }
+
+  @Test
+  void reloadConfigRestoresDeletedKeyWithDefault() throws Exception {
+    server = MockBukkit.mock();
+    MyPurpurPlugin plugin = MockBukkit.load(MyPurpurPlugin.class);
+
+    Field cfgField = MyPurpurPlugin.class.getDeclaredField("pluginConfig");
+    cfgField.setAccessible(true);
+    PluginConfig pluginConfig = (PluginConfig) cfgField.get(plugin);
+
+    Field fileField = PluginConfig.class.getDeclaredField("configFile");
+    fileField.setAccessible(true);
+    File configFile = (File) fileField.get(pluginConfig);
+
+    YamlConfiguration yaml = YamlConfiguration.loadConfiguration(configFile);
+    yaml.set("menu.open-sound", null);
+    yaml.save(configFile);
+
+    pluginConfig.reloadConfig();
+
+    Field configField = PluginConfig.class.getDeclaredField("config");
+    configField.setAccessible(true);
+    FileConfiguration configuration = (FileConfiguration) configField.get(pluginConfig);
+
+    assertEquals("BLOCK_NOTE_BLOCK_PLING", configuration.getString("menu.open-sound"));
+
+    YamlConfiguration reloaded = YamlConfiguration.loadConfiguration(configFile);
+    assertEquals("BLOCK_NOTE_BLOCK_PLING", reloaded.getString("menu.open-sound"));
+  }
+
+  @Test
+  void teamReloadCommandRepopulatesDefaultsAndKeepsOverrides() throws Exception {
+    server = MockBukkit.mock();
+    MyPurpurPlugin plugin = MockBukkit.load(MyPurpurPlugin.class);
+
+    Field cfgField = MyPurpurPlugin.class.getDeclaredField("pluginConfig");
+    cfgField.setAccessible(true);
+    PluginConfig pluginConfig = (PluginConfig) cfgField.get(plugin);
+
+    Field fileField = PluginConfig.class.getDeclaredField("configFile");
+    fileField.setAccessible(true);
+    File configFile = (File) fileField.get(pluginConfig);
+
+    YamlConfiguration yaml = YamlConfiguration.loadConfiguration(configFile);
+    yaml.set("menu.particle-effect", null);
+    yaml.set("team.max-members", 7);
+    yaml.save(configFile);
+
+    ConsoleCommandSender console = server.getConsoleSender();
+    CommandMap commandMap = server.getCommandMap();
+    assertTrue(commandMap.dispatch(console, "teamreload"));
+
+    YamlConfiguration reloaded = YamlConfiguration.loadConfiguration(configFile);
+    assertEquals("FIREWORK", reloaded.getString("menu.particle-effect"));
+    assertEquals(7, reloaded.getInt("team.max-members"));
   }
 }
