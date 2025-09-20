@@ -322,6 +322,51 @@ class TeamCommandTest {
   }
 
   @Test
+  void adminKickCommandMatchesMemberIgnoringCase() {
+    CommandMap commandMap = server.getCommandMap();
+
+    PlayerMock leader = server.addPlayer("KickBoss");
+    leader.addAttachment(plugin, "mypurpurplugin.team", true);
+    leader.addAttachment(plugin, "mypurpurplugin.teamadmin", true);
+
+    assertTrue(commandMap.dispatch(leader, "team create Delta DD WHITE"));
+    assertEquals("Delta", teamManager.getPlayerTeam(leader));
+
+    PlayerMock member = server.addPlayer("KickTarget");
+    teamManager.addPlayerToTeam("Delta", member);
+    assertEquals("Delta", teamManager.getPlayerTeam(member));
+
+    while (leader.nextComponentMessage() != null) {}
+
+    assertTrue(commandMap.dispatch(leader, "teamadmin kick kicktarget"));
+
+    assertFalse(teamManager.getTeamMembers("Delta").contains("KickTarget"));
+    assertNull(teamManager.getPlayerTeam(member));
+  }
+
+  @Test
+  void adminTransferCommandMatchesMemberIgnoringCase() {
+    CommandMap commandMap = server.getCommandMap();
+
+    PlayerMock leader = server.addPlayer("TransferChief");
+    leader.addAttachment(plugin, "mypurpurplugin.team", true);
+    leader.addAttachment(plugin, "mypurpurplugin.teamadmin", true);
+
+    assertTrue(commandMap.dispatch(leader, "team create Sigma SG WHITE"));
+    assertEquals("Sigma", teamManager.getPlayerTeam(leader));
+
+    PlayerMock successor = server.addPlayer("TransferHeir");
+    teamManager.addPlayerToTeam("Sigma", successor);
+    assertEquals("Sigma", teamManager.getPlayerTeam(successor));
+
+    while (leader.nextComponentMessage() != null) {}
+
+    assertTrue(commandMap.dispatch(leader, "teamadmin transfer transferheir"));
+
+    assertEquals("TransferHeir", teamManager.getTeamLeader("Sigma"));
+  }
+
+  @Test
   void asyncChatEventAddsTeamPrefix() {
     CommandMap commandMap = server.getCommandMap();
     PlayerMock leader = server.addPlayer("Leader");
