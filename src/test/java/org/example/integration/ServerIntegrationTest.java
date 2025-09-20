@@ -3,28 +3,54 @@ package org.example.integration;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.*;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Tag;
 
-/** Integration test that starts a Purpur server and interacts with the plugin via the console. */
+/**
+ * Integration test that interacts with a locally provisioned Purpur server via the console.
+ *
+ * <p>The test is tagged as {@code realServer} and will be skipped unless the Gradle property
+ * {@code enableRealServerTests=true} is provided and the {@code PURPUR_SERVER_JAR} environment
+ * variable (or {@code purpur.serverJar} system property) points to an existing Purpur server jar.
+ */
+@Tag("realServer")
 public class ServerIntegrationTest {
+
+  private static final Pattern LOG_PATTERN =
+      Pattern.compile("^\\[(?<time>[^]]+)] \\[(?<thread>[^]]+)] (?<level>[A-Z]+): (?<message>.*)$");
 
   private static Process serverProcess;
   private static BufferedWriter serverInput;
-  private static final StringBuilder serverOutput = new StringBuilder();
+  private static final Object logLock = new Object();
+  private static final List<LogEvent> logEvents = new ArrayList<>();
 
   private static final Path TEST_DIR = Paths.get("build", "test-server");
   private static final Path PLUGINS_DIR = TEST_DIR.resolve("plugins");
   private static final Path SERVER_JAR = TEST_DIR.resolve("purpur.jar");
 
+  private record LogEvent(String thread, String level, String message, String rawLine) {}
+
   @BeforeAll
   static void startServer() throws Exception {
+    Assumptions.assumeTrue(Boolean.getBoolean("enableRealServerTests") ||
+        "true".equalsIgnoreCase(System.getProperty("enableRealServerTests")) ||
+        "true".equalsIgnoreCase(System.getenv("ENABLE_REAL_SERVER_TESTS")),
+        "Real server tests are disabled. Set enableRealServerTests=true to run.");
+
+    Path provisionedJar = resolveProvisionedServerJar();
+
     Files.createDirectories(PLUGINS_DIR);
-    downloadServerIfNeeded();
+    Files.copy(provisionedJar, SERVER_JAR, StandardCopyOption.REPLACE_EXISTING);
     copyPluginJar();
     Files.writeString(TEST_DIR.resolve("eula.txt"), "eula=true\n", StandardCharsets.UTF_8);
 
@@ -46,8 +72,10 @@ public class ServerIntegrationTest {
                           serverProcess.getInputStream(), StandardCharsets.UTF_8))) {
                 String line;
                 while ((line = r.readLine()) != null) {
-                  synchronized (serverOutput) {
-                    serverOutput.append(line).append('\n');
+                  LogEvent event = parseLogLine(line);
+                  synchronized (logLock) {
+                    logEvents.add(event);
+                    logLock.notifyAll();
                   }
                 }
               } catch (IOException ignored) {
@@ -56,7 +84,7 @@ public class ServerIntegrationTest {
     reader.setDaemon(true);
     reader.start();
 
-    waitForOutput("Done", 120_000);
+    waitForLogMessage(message -> message.startsWith("Done ("), Duration.ofSeconds(90));
   }
 
   @AfterAll
@@ -71,16 +99,25 @@ public class ServerIntegrationTest {
     }
   }
 
-  private static void downloadServerIfNeeded() throws IOException {
-    if (Files.exists(SERVER_JAR)) {
-      return;
+  private static Path resolveProvisionedServerJar() {
+    String configuredPath = System.getProperty("purpur.serverJar");
+    if (configuredPath == null || configuredPath.isBlank()) {
+      configuredPath = System.getenv("PURPUR_SERVER_JAR");
     }
-    try (InputStream in =
-        new URL("https://api.purpurmc.org/v2/purpur/1.21.3/latest/download").openStream()) {
-      Files.copy(in, SERVER_JAR);
-    } catch (IOException ex) {
-      Assumptions.assumeTrue(false, "Failed to download server jar: " + ex.getMessage());
-    }
+
+    Assumptions.assumeTrue(
+        configuredPath != null && !configuredPath.isBlank(),
+        "PURPUR_SERVER_JAR environment variable or purpur.serverJar system property must point to a Purpur server jar");
+
+    final String resolvedPath = configuredPath;
+    Path jarPath = Paths.get(resolvedPath);
+    Assumptions.assumeTrue(
+        Files.isRegularFile(jarPath),
+        () ->
+            "Purpur server jar not found at "
+                + resolvedPath
+                + ". Please download it manually before running the integration test.");
+    return jarPath;
   }
 
   private static void copyPluginJar() throws IOException {
@@ -89,17 +126,37 @@ public class ServerIntegrationTest {
         pluginJar, PLUGINS_DIR.resolve("MyPurpurPlugin.jar"), StandardCopyOption.REPLACE_EXISTING);
   }
 
-  private static void waitForOutput(String token, long timeoutMillis) throws InterruptedException {
-    long start = System.currentTimeMillis();
-    while (System.currentTimeMillis() - start < timeoutMillis) {
-      synchronized (serverOutput) {
-        if (serverOutput.toString().contains(token)) {
-          return;
-        }
-      }
-      Thread.sleep(200);
+  private static LogEvent parseLogLine(String line) {
+    Matcher matcher = LOG_PATTERN.matcher(line);
+    if (matcher.matches()) {
+      return new LogEvent(
+          matcher.group("thread"), matcher.group("level"), matcher.group("message"), line);
     }
-    throw new IllegalStateException("Timed out waiting for output: " + token);
+    return new LogEvent("unknown", "INFO", line, line);
+  }
+
+  private static void waitForLogMessage(
+      java.util.function.Predicate<String> predicate, Duration timeout) throws InterruptedException {
+    long deadline = System.nanoTime() + timeout.toNanos();
+    int cursor = 0;
+    synchronized (logLock) {
+      while (true) {
+        for (; cursor < logEvents.size(); cursor++) {
+          String message = logEvents.get(cursor).message();
+          if (predicate.test(message)) {
+            return;
+          }
+        }
+        long remaining = deadline - System.nanoTime();
+        if (remaining <= 0) {
+          String capturedLogs =
+              logEvents.stream().map(LogEvent::rawLine).collect(Collectors.joining("\n"));
+          throw new IllegalStateException(
+              "Timed out waiting for log message. Captured logs:\n" + capturedLogs);
+        }
+        TimeUnit.NANOSECONDS.timedWait(logLock, remaining);
+      }
+    }
   }
 
   @Test
@@ -109,6 +166,8 @@ public class ServerIntegrationTest {
 
     serverInput.write("teamreload\n");
     serverInput.flush();
-    waitForOutput("Конфигурация плагина успешно перезагружена", 15_000);
+    waitForLogMessage(
+        message -> message.contains("Конфигурация плагина успешно перезагружена"),
+        Duration.ofSeconds(20));
   }
 }
