@@ -106,6 +106,7 @@ public class MembershipService {
         removedTeam = true;
       } else {
         team.setLeader(team.getMembers().get(0));
+        scheduler.handleLeaderTransfer(team);
       }
     }
     // Отмечаем изменившуюся команду и пересчитываем дедлайны.
