@@ -345,6 +345,31 @@ class TeamCommandTest {
   }
 
   @Test
+  void adminKickCommandClearsMembershipAndTabPrefix() {
+    CommandMap commandMap = server.getCommandMap();
+
+    PlayerMock leader = server.addPlayer("KickCaptain");
+    leader.addAttachment(plugin, "mypurpurplugin.team", true);
+    leader.addAttachment(plugin, "mypurpurplugin.teamadmin", true);
+
+    PlayerMock member = server.addPlayer("KickRecruit");
+
+    assertTrue(commandMap.dispatch(leader, "team create Gamma GM WHITE"));
+    teamManager.addPlayerToTeam("Gamma", member);
+
+    Component expectedPrefix =
+        Component.text("[GM] ", NamedTextColor.WHITE)
+            .append(Component.text(member.getName(), NamedTextColor.WHITE));
+    assertEquals(expectedPrefix, member.playerListName());
+
+    assertTrue(commandMap.dispatch(leader, "teamadmin kick KickRecruit"));
+
+    assertNull(teamManager.getPlayerTeam(member));
+    Component reset = Component.text(member.getName(), NamedTextColor.WHITE);
+    assertEquals(reset, member.playerListName());
+  }
+
+  @Test
   void adminTransferCommandMatchesMemberIgnoringCase() {
     CommandMap commandMap = server.getCommandMap();
 
