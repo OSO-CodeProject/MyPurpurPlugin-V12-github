@@ -105,6 +105,27 @@ public class DeadlineScheduler {
   }
 
   /**
+   * Принудительно завершает льготный период указанной команды, очищая связанные уведомления
+   * лидера.
+   */
+  public void cancelDeadline(@NotNull Team team) {
+    if (team == null) {
+      return;
+    }
+    UUID teamId = team.getId();
+    boolean removed = deadlines.remove(teamId) != null;
+    String leaderName = teamLeaderNames.remove(teamId);
+    if (leaderName != null) {
+      clearLeaderDisplay(leaderName);
+    } else {
+      clearLeaderDisplay(team);
+    }
+    if (removed) {
+      storage.markDeadlinesDirty();
+    }
+  }
+
+  /**
    * Запускает периодическую проверку дедлайнов и автоматически перезапускает задачу, если она уже
    * была активна.
    */

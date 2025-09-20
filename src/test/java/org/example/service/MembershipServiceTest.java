@@ -106,6 +106,36 @@ class MembershipServiceTest {
     assertNotNull(successor.getScoreboard().getObjective(DisplaySlot.SIDEBAR));
   }
 
+  @Test
+  void disbandingTeamClearsDeadlineWarningImmediately() throws IOException {
+    prepareConfig();
+    PluginConfig config = new PluginConfig(plugin);
+    TeamStorage storage = new TeamStorage(plugin, config);
+    DeadlineScheduler scheduler = new DeadlineScheduler(plugin, config, storage);
+    MembershipService membershipService = new MembershipService(plugin, config, storage, scheduler);
+
+    Team team = new Team(UUID.randomUUID(), "Alpha", "Captain", "AA", "WHITE");
+    team.setMembers(List.of("Captain", "MemberOne", "MemberTwo"));
+    storage.getTeams().put(team.getId(), team);
+    storage.getPlayerTeams().put("Captain", team.getId());
+    storage.getPlayerTeams().put("MemberOne", team.getId());
+    storage.getPlayerTeams().put("MemberTwo", team.getId());
+
+    PlayerMock captain = server.addPlayer("Captain");
+    Scoreboard captainOriginal = captain.getScoreboard();
+
+    scheduler.enforceTeamSizes(false);
+
+    assertNotNull(captain.getScoreboard().getObjective(DisplaySlot.SIDEBAR));
+    assertNotSame(captainOriginal, captain.getScoreboard());
+
+    membershipService.disbandTeam("Alpha", captain);
+
+    assertTrue(scheduler.getDeadlines().isEmpty());
+    assertSame(captainOriginal, captain.getScoreboard());
+    assertNull(captain.getScoreboard().getObjective(DisplaySlot.SIDEBAR));
+  }
+
   private void prepareConfig() throws IOException {
     File dataFolder = plugin.getDataFolder();
     if (!dataFolder.exists() && !dataFolder.mkdirs()) {
