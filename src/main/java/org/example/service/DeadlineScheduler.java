@@ -293,15 +293,15 @@ public class DeadlineScheduler {
       return;
     }
     UUID teamId = team.getId();
+    String currentLeader = team.getLeader();
+    String previousLeader = teamLeaderNames.get(teamId);
+    if (previousLeader != null
+        && (currentLeader == null || !previousLeader.equalsIgnoreCase(currentLeader))) {
+      teamLeaderNames.remove(teamId, previousLeader);
+      clearLeaderDisplay(previousLeader);
+    }
     Long deadlineAt = deadlines.get(teamId);
     if (deadlineAt == null) {
-      String previousLeader = teamLeaderNames.get(teamId);
-      String currentLeader = team.getLeader();
-      if (previousLeader != null
-          && currentLeader != null
-          && !previousLeader.equalsIgnoreCase(currentLeader)) {
-        clearLeaderDisplay(previousLeader);
-      }
       return;
     }
     int max = pluginConfig.getMaxMembers();

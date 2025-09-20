@@ -71,6 +71,41 @@ class MembershipServiceTest {
     assertNotNull(successor.getScoreboard().getObjective(DisplaySlot.SIDEBAR));
   }
 
+  @Test
+  void removingLeaderRetargetsDeadlineWarning() throws IOException {
+    prepareConfig();
+    PluginConfig config = new PluginConfig(plugin);
+    TeamStorage storage = new TeamStorage(plugin, config);
+    DeadlineScheduler scheduler = new DeadlineScheduler(plugin, config, storage);
+    MembershipService membershipService = new MembershipService(plugin, config, storage, scheduler);
+
+    Team team = new Team(UUID.randomUUID(), "Alpha", "Captain", "AA", "WHITE");
+    team.setMembers(List.of("Captain", "Successor", "Reserve"));
+    storage.getTeams().put(team.getId(), team);
+    storage.getPlayerTeams().put("Captain", team.getId());
+    storage.getPlayerTeams().put("Successor", team.getId());
+    storage.getPlayerTeams().put("Reserve", team.getId());
+
+    PlayerMock captain = server.addPlayer("Captain");
+    PlayerMock successor = server.addPlayer("Successor");
+    Scoreboard captainOriginal = captain.getScoreboard();
+    Scoreboard successorOriginal = successor.getScoreboard();
+
+    scheduler.enforceTeamSizes(false);
+
+    assertNotNull(captain.getScoreboard().getObjective(DisplaySlot.SIDEBAR));
+    assertNull(successor.getScoreboard().getObjective(DisplaySlot.SIDEBAR));
+
+    membershipService.removePlayerFromTeam("Alpha", captain);
+
+    assertSame(captainOriginal, captain.getScoreboard());
+    assertNull(captain.getScoreboard().getObjective(DisplaySlot.SIDEBAR));
+
+    assertEquals("Successor", team.getLeader());
+    assertNotSame(successorOriginal, successor.getScoreboard());
+    assertNotNull(successor.getScoreboard().getObjective(DisplaySlot.SIDEBAR));
+  }
+
   private void prepareConfig() throws IOException {
     File dataFolder = plugin.getDataFolder();
     if (!dataFolder.exists() && !dataFolder.mkdirs()) {
