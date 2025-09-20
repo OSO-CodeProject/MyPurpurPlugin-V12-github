@@ -8,15 +8,19 @@ import be.seeseemelk.mockbukkit.entity.PlayerMock;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.example.MyPurpurPlugin;
 import org.example.config.PluginConfig;
+import org.example.listener.TeamChatListener;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 
 /** Unit tests for {@link TeamManager}. */
 class TeamManagerTest {
@@ -229,5 +233,35 @@ class TeamManagerTest {
         Component.text("[NW] ", NamedTextColor.RED)
             .append(Component.text(leader.getName(), NamedTextColor.WHITE));
     assertEquals(leaderRecolored, leader.playerListName());
+  }
+
+  @Test
+  void duplicatePrefixUpdatesTriggerSingleListNameChange() {
+    TeamChatListener listener = new TeamChatListener(teamManager);
+    org.bukkit.entity.Player player = Mockito.mock(org.bukkit.entity.Player.class);
+    UUID playerId = UUID.randomUUID();
+    Mockito.when(player.getUniqueId()).thenReturn(playerId);
+    Mockito.when(player.getName()).thenReturn("Duplicate");
+
+    Component prefix = Component.text("[DP] ", NamedTextColor.BLUE);
+
+    listener.onPlayerPrefixUpdate(new TeamChatListener.PlayerPrefixUpdateEvent(player, prefix));
+    listener.onPlayerPrefixUpdate(new TeamChatListener.PlayerPrefixUpdateEvent(player, prefix));
+    listener.onPlayerPrefixUpdate(new TeamChatListener.PlayerPrefixUpdateEvent(player, null));
+    listener.onPlayerPrefixUpdate(new TeamChatListener.PlayerPrefixUpdateEvent(player, prefix));
+
+    ArgumentCaptor<Component> captor = ArgumentCaptor.forClass(Component.class);
+    Mockito.verify(player, Mockito.times(3)).playerListName(captor.capture());
+
+    List<Component> updates = captor.getAllValues();
+    Component expectedPrefix =
+        Component.text("[DP] ", NamedTextColor.BLUE)
+            .append(Component.text("Duplicate", NamedTextColor.WHITE));
+    Component expectedReset = Component.text("Duplicate", NamedTextColor.WHITE);
+
+    assertEquals(3, updates.size());
+    assertEquals(expectedPrefix, updates.get(0));
+    assertEquals(expectedReset, updates.get(1));
+    assertEquals(expectedPrefix, updates.get(2));
   }
 }
