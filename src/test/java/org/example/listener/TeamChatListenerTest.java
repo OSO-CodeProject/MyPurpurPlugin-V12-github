@@ -126,7 +126,30 @@ class TeamChatListenerTest extends MockBukkitTestBase {
     player.playerListName(Component.text("Manual", NamedTextColor.WHITE));
     server.getPluginManager().callEvent(new TeamChatListener.PlayerPrefixUpdateEvent(player, prefix));
 
-    assertEquals("[O] Quitter", PlainTextComponentSerializer.plainText().serialize(player.playerListName()));
+    assertEquals("[O] Manual", PlainTextComponentSerializer.plainText().serialize(player.playerListName()));
+  }
+
+  @Test
+  void clearingPrefixRestoresCustomPlayerListName() {
+    PlayerMock player = server.addPlayer("Custom");
+    Component customName =
+        Component.text("Fancy ", NamedTextColor.GOLD)
+            .append(Component.text("Name", NamedTextColor.AQUA));
+    player.playerListName(customName);
+    teamService.assignPlayer(player, "Stylish", "S", NamedTextColor.LIGHT_PURPLE);
+
+    Component prefix = Component.text("[S] ", NamedTextColor.LIGHT_PURPLE);
+    server
+        .getPluginManager()
+        .callEvent(new TeamChatListener.PlayerPrefixUpdateEvent(player, prefix));
+
+    assertEquals(prefix.append(customName), player.playerListName());
+
+    server
+        .getPluginManager()
+        .callEvent(new TeamChatListener.PlayerPrefixUpdateEvent(player, null));
+
+    assertEquals(customName, player.playerListName());
   }
 
   @Test

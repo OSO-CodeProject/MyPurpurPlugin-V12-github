@@ -6,6 +6,7 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -24,6 +25,7 @@ public class TeamChatListener implements Listener {
 
   private final TeamService teamManager;
   private final Map<UUID, Component> lastPlayerPrefixes = new ConcurrentHashMap<>();
+  private final Map<UUID, Component> originalPlayerListNames = new ConcurrentHashMap<>();
 
   public TeamChatListener(@NotNull TeamService teamManager) {
     this.teamManager = teamManager;
@@ -59,6 +61,7 @@ public class TeamChatListener implements Listener {
   public void onPlayerQuit(@NotNull PlayerQuitEvent event) {
     Player player = event.getPlayer();
     lastPlayerPrefixes.remove(player.getUniqueId());
+    originalPlayerListNames.remove(player.getUniqueId());
     ((MyPurpurPlugin) teamManager.getPlugin())
         .debugTeamAction("Игрок вышел", player.getName(), null);
   }
@@ -104,19 +107,21 @@ public class TeamChatListener implements Listener {
       }
       ((MyPurpurPlugin) teamManager.getPlugin())
           .debug("Устанавливаем префикс для игрока " + player.getName() + ": " + prefix);
+      Component originalName = getOrStoreOriginalPlayerListName(player, cachedPrefix, prefix);
       lastPlayerPrefixes.put(playerId, prefix);
-      player.playerListName(prefix.append(Component.text(player.getName(), NamedTextColor.WHITE)));
+      player.playerListName(prefix.append(originalName));
     } else {
       ((MyPurpurPlugin) teamManager.getPlugin())
           .debug("Сбрасываем префикс для игрока " + player.getName());
       lastPlayerPrefixes.remove(playerId);
-      player.playerListName(Component.text(player.getName(), NamedTextColor.WHITE));
+      restoreOriginalPlayerListName(player);
     }
   }
 
   /** Clears cached prefix information for all tracked players. */
   public void clearCachedPrefixes() {
     lastPlayerPrefixes.clear();
+    originalPlayerListNames.clear();
   }
 
   private void updatePlayerPrefix(@NotNull Player player) {
@@ -129,12 +134,85 @@ public class TeamChatListener implements Listener {
       String prefix = teamManager.getTeamPrefix(teamName);
       NamedTextColor teamColor = teamManager.getTeamColor(teamName);
       Component prefixComponent = TeamUtils.createPrefixComponent(prefix, teamColor);
+      Component cachedPrefix = lastPlayerPrefixes.get(playerId);
+      Component originalName =
+          getOrStoreOriginalPlayerListName(player, cachedPrefix, prefixComponent);
       lastPlayerPrefixes.put(playerId, prefixComponent);
-      player.playerListName(
-          prefixComponent.append(Component.text(player.getName(), NamedTextColor.WHITE)));
+      player.playerListName(prefixComponent.append(originalName));
     } else {
       lastPlayerPrefixes.remove(playerId);
-      player.playerListName(Component.text(player.getName(), NamedTextColor.WHITE));
+      restoreOriginalPlayerListName(player);
+    }
+  }
+
+  private @NotNull Component getOrStoreOriginalPlayerListName(
+      @NotNull Player player, Component activePrefix, Component applyingPrefix) {
+    UUID playerId = player.getUniqueId();
+    Component current = getCurrentPlayerListName(player);
+    Component existing = originalPlayerListNames.get(playerId);
+    if (existing != null) {
+      if (activePrefix == null) {
+        Component sanitized = stripPrefixIfPresent(current, applyingPrefix);
+        if (sanitized != null) {
+          current = sanitized;
+        }
+        if (!Objects.equals(existing, current)) {
+          originalPlayerListNames.put(playerId, current);
+          existing = current;
+        }
+      }
+      return existing;
+    }
+
+    Component sanitized = stripKnownPrefix(current, activePrefix, applyingPrefix);
+    Component toStore = sanitized != null ? sanitized : current;
+    originalPlayerListNames.put(playerId, toStore);
+    return toStore;
+  }
+
+  private @NotNull Component getCurrentPlayerListName(@NotNull Player player) {
+    Component current = player.playerListName();
+    if (current == null) {
+      current = Component.text(player.getName(), NamedTextColor.WHITE);
+    }
+    return current;
+  }
+
+  private Component stripKnownPrefix(
+      @NotNull Component current, Component activePrefix, Component applyingPrefix) {
+    Component prefixToStrip = activePrefix != null ? activePrefix : applyingPrefix;
+    if (prefixToStrip == null) {
+      return null;
+    }
+    return stripPrefixIfPresent(current, prefixToStrip);
+  }
+
+  private Component stripPrefixIfPresent(@NotNull Component current, @NotNull Component prefix) {
+    if (!(current instanceof TextComponent currentText) || !(prefix instanceof TextComponent prefixText)) {
+      return null;
+    }
+    if (!Objects.equals(currentText.content(), prefixText.content())
+        || !Objects.equals(currentText.style(), prefixText.style())) {
+      return null;
+    }
+    if (current.children().isEmpty()) {
+      return Component.empty();
+    }
+    if (current.children().size() == 1) {
+      return current.children().get(0);
+    }
+    Component remainder = Component.empty();
+    for (Component child : current.children()) {
+      remainder = remainder.append(child);
+    }
+    return remainder;
+  }
+
+  private void restoreOriginalPlayerListName(@NotNull Player player) {
+    UUID playerId = player.getUniqueId();
+    Component original = originalPlayerListNames.remove(playerId);
+    if (original != null) {
+      player.playerListName(original);
     }
   }
 
