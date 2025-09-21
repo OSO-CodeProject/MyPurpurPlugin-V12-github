@@ -67,6 +67,27 @@ class DeadlineSchedulerTest {
     assertSame(original, leader.getScoreboard());
   }
 
+  @Test
+  void resetLeaderDisplaysKeepsCustomScoreboardWithoutDeadline() throws IOException {
+    prepareConfig();
+    PluginConfig config = new PluginConfig(plugin);
+    TeamStorage storage = new TeamStorage(plugin, config);
+    DeadlineScheduler scheduler = new DeadlineScheduler(plugin, config, storage);
+
+    PlayerMock leader = server.addPlayer("Leader");
+    Team team =
+        new Team(UUID.randomUUID(), "Alpha", leader.getUniqueId(), "", "WHITE");
+    team.setMembers(List.of(leader.getUniqueId()));
+    storage.getTeams().put(team.getId(), team);
+
+    Scoreboard custom = server.getScoreboardManager().getNewScoreboard();
+    leader.setScoreboard(custom);
+
+    scheduler.resetLeaderDisplays();
+
+    assertSame(custom, leader.getScoreboard());
+  }
+
   private void prepareConfig() throws IOException {
     File dataFolder = plugin.getDataFolder();
     if (!dataFolder.exists() && !dataFolder.mkdirs()) {
