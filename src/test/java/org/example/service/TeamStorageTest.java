@@ -8,6 +8,7 @@ import be.seeseemelk.mockbukkit.entity.PlayerMock;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -145,5 +146,39 @@ class TeamStorageTest {
 
     YamlConfiguration afterShutdown = YamlConfiguration.loadConfiguration(teamsFile);
     assertNull(afterShutdown.getString("teams." + team.getId() + ".name"));
+  }
+
+  @Test
+  void loadTeamsSkipsUncachedPlayerNames() throws IOException {
+    TeamStorage storage = new TeamStorage(plugin, null);
+    Map<UUID, Long> deadlines = new HashMap<>();
+    storage.loadTeams(deadlines);
+
+    File teamsFile = new File(plugin.getDataFolder(), "teams.yml");
+    YamlConfiguration config = YamlConfiguration.loadConfiguration(teamsFile);
+
+    UUID teamId = UUID.randomUUID();
+    PlayerMock leader = server.addPlayer("KnownLeader");
+    config.set("teams." + teamId + ".name", "LegacyTeam");
+    config.set("teams." + teamId + ".leader", leader.getUniqueId().toString());
+    config.set("teams." + teamId + ".members", List.of("UncachedMember"));
+    config.save(teamsFile);
+
+    TeamStorage reloaded = new TeamStorage(plugin, null);
+    Map<UUID, Long> reloadedDeadlines = new HashMap<>();
+    reloaded.loadTeams(reloadedDeadlines);
+
+    Team loadedTeam = reloaded.getTeams().get(teamId);
+    assertNotNull(loadedTeam, "Team should load even with unresolved member names");
+    assertEquals(
+        List.of(leader.getUniqueId()),
+        loadedTeam.getMembers(),
+        "Only cached members should remain after loading");
+
+    long uncachedEntries =
+        Arrays.stream(server.getOfflinePlayers())
+            .filter(player -> "UncachedMember".equalsIgnoreCase(player.getName()))
+            .count();
+    assertEquals(0L, uncachedEntries, "No offline profile should be created for uncached names");
   }
 }

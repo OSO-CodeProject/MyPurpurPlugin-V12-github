@@ -416,7 +416,17 @@ public class TeamStorage {
     if (value == null || value.isBlank()) {
       return null;
     }
-    OfflinePlayer offlinePlayer = plugin.getServer().getOfflinePlayer(value.trim());
-    return offlinePlayer != null ? offlinePlayer.getUniqueId() : null;
+    String trimmed = value.trim();
+    OfflinePlayer offlinePlayer = plugin.getServer().getOfflinePlayerIfCached(trimmed);
+    if (offlinePlayer == null) {
+      plugin
+          .getLogger()
+          .warning(
+              "Cannot resolve player name '"
+                  + trimmed
+                  + "' because no cached profile is available.");
+      return null;
+    }
+    return offlinePlayer.getUniqueId();
   }
 }
