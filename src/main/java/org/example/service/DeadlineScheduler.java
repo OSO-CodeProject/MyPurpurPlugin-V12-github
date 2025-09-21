@@ -627,8 +627,21 @@ public class DeadlineScheduler {
     UUID notifiedLeader = teamLeaderIds.remove(team.getId());
     if (notifiedLeader != null) {
       clearLeaderDisplay(notifiedLeader);
-    } else {
-      clearLeaderDisplay(team.getLeaderId());
+      return;
+    }
+    UUID leaderId = team.getLeaderId();
+    if (leaderId == null) {
+      return;
+    }
+    DeadlineDisplayMode mode = getDisplayMode();
+    if (mode == DeadlineDisplayMode.SCOREBOARD) {
+      if (leaderOriginalScoreboards.containsKey(leaderId)) {
+        clearLeaderDisplay(leaderId);
+      }
+      return;
+    }
+    if (mode == DeadlineDisplayMode.ACTION_BAR) {
+      clearLeaderDisplay(leaderId);
     }
   }
 
@@ -636,16 +649,19 @@ public class DeadlineScheduler {
     if (leaderId == null) {
       return;
     }
-    Scoreboard original = leaderOriginalScoreboards.remove(leaderId);
+    boolean hadOriginalScoreboard = leaderOriginalScoreboards.containsKey(leaderId);
+    Scoreboard original = hadOriginalScoreboard ? leaderOriginalScoreboards.remove(leaderId) : null;
     Player leader = plugin.getServer().getPlayer(leaderId);
     DeadlineDisplayMode mode = getDisplayMode();
     if (leader != null) {
-      if (original != null) {
-        leader.setScoreboard(original);
-      } else if (mode == DeadlineDisplayMode.SCOREBOARD) {
-        ScoreboardManager manager = plugin.getServer().getScoreboardManager();
-        if (manager != null) {
-          leader.setScoreboard(manager.getMainScoreboard());
+      if (hadOriginalScoreboard) {
+        if (original != null) {
+          leader.setScoreboard(original);
+        } else if (mode == DeadlineDisplayMode.SCOREBOARD) {
+          ScoreboardManager manager = plugin.getServer().getScoreboardManager();
+          if (manager != null) {
+            leader.setScoreboard(manager.getMainScoreboard());
+          }
         }
       }
       if (mode == DeadlineDisplayMode.ACTION_BAR) {
