@@ -136,7 +136,7 @@ public class TeamStorage {
           memberIds.add(leaderId);
           convertedMembers = true;
         }
-        Team team = new Team(teamId, name, leaderId, prefix, color);
+        Team team = new Team(teamId, name != null ? name.trim() : null, leaderId, prefix, color);
         team.setMembers(memberIds);
         long deadline = teamsConfig.getLong("teams." + teamIdStr + ".deadline", 0L);
         if (deadline > 0L) {
@@ -213,11 +213,12 @@ public class TeamStorage {
   }
 
   public void updateTeamName(@NotNull Team team, @NotNull String newName) {
+    String normalizedNewNameValue = newName.trim();
     String currentName = team.getName();
-    if (Objects.equals(currentName, newName)) {
+    if (Objects.equals(currentName, normalizedNewNameValue)) {
       return;
     }
-    String normalizedNewName = normalizeTeamKey(newName);
+    String normalizedNewName = normalizeTeamKey(normalizedNewNameValue);
     if (normalizedNewName != null) {
       UUID existingId = teamIdsByName.get(normalizedNewName);
       if (existingId != null && !existingId.equals(team.getId())) {
@@ -228,7 +229,7 @@ public class TeamStorage {
     if (normalizedCurrentName != null) {
       teamIdsByName.remove(normalizedCurrentName);
     }
-    team.setName(newName);
+    team.setName(normalizedNewNameValue);
     if (normalizedNewName != null) {
       teamIdsByName.put(normalizedNewName, team.getId());
     }
@@ -390,7 +391,7 @@ public class TeamStorage {
   }
 
   private static String normalizeTeamKey(String name) {
-    return name != null ? name.toLowerCase(Locale.ROOT) : null;
+    return name != null ? name.trim().toLowerCase(Locale.ROOT) : null;
   }
 
   private UUID parseUuid(String value) {

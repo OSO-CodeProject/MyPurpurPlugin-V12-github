@@ -95,7 +95,7 @@ public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, Tab
               "❌ Вы не состоите в команде и не можете передать лидерство!", NamedTextColor.RED));
       return true;
     }
-    String newLeaderName = args[1];
+    String newLeaderName = args[1].trim();
     Player newLeader = teamManager.getPlugin().getServer().getPlayerExact(newLeaderName);
     if (newLeader == null || !newLeader.isOnline()) {
       TeamMessageUtils.sendTeamMessage(
@@ -123,7 +123,7 @@ public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, Tab
               "❌ Вы не состоите в команде и не можете исключать игроков!", NamedTextColor.RED));
       return true;
     }
-    String targetName = args[1];
+    String targetName = args[1].trim();
     if (targetName.equalsIgnoreCase(player.getName())) {
       TeamMessageUtils.sendTeamMessage(
           player, Component.text("❌ Вы не можете исключить себя из команды!", NamedTextColor.RED));
@@ -162,7 +162,7 @@ public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, Tab
               "❌ Вы не состоите в команде и не можете её переименовать!", NamedTextColor.RED));
       return true;
     }
-    String newTeamName = args[1];
+    String newTeamName = args[1].trim();
     if (TeamUtils.isTeamNameLengthInvalid(newTeamName, pluginConfig, player)) {
       return true;
     }
@@ -186,7 +186,7 @@ public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, Tab
               "❌ Вы не состоите в команде и не можете изменить её префикс!", NamedTextColor.RED));
       return true;
     }
-    String newPrefix = args[1];
+    String newPrefix = args[1].trim();
     teamManager.setTeamPrefix(teamName, newPrefix, player);
     return true;
   }
@@ -206,7 +206,7 @@ public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, Tab
               "❌ Вы не состоите в команде и не можете изменить её цвет!", NamedTextColor.RED));
       return true;
     }
-    String newColor = args[1];
+    String newColor = args[1].trim();
     teamManager.setTeamColor(teamName, newColor, player);
     return true;
   }

@@ -34,25 +34,31 @@ public class MembershipService {
   }
 
   public void createTeam(String teamName, String prefix, String color, @NotNull Player leader) {
+    String normalizedTeamName = teamName == null ? "" : teamName.trim();
+    String normalizedPrefix = prefix == null ? "" : prefix.trim();
+    String normalizedColor = color == null ? "" : color.trim();
     // Убеждаемся, что имя и лидер свободны, чтобы не создавать дубликатов команд.
-    if (storage.getPlayerTeam(leader) != null || storage.getTeamByName(teamName) != null) {
-      TeamMessageUtils.sendTeamMessage(leader, TeamMessageUtils.teamAlreadyExistsMessage(teamName));
+    if (storage.getPlayerTeam(leader) != null
+        || storage.getTeamByName(normalizedTeamName) != null) {
+      TeamMessageUtils.sendTeamMessage(
+          leader, TeamMessageUtils.teamAlreadyExistsMessage(normalizedTeamName));
       return;
     }
     // Проверяем, что игрок выбрал поддерживаемый цвет для корректного отображения.
-    NamedTextColor teamColor = NamedTextColor.NAMES.value(color.toLowerCase(Locale.ROOT));
+    NamedTextColor teamColor =
+        NamedTextColor.NAMES.value(normalizedColor.toLowerCase(Locale.ROOT));
     if (teamColor == null) {
       TeamMessageUtils.sendTeamMessage(
           leader, Component.text("❌ Неверный цвет команды", NamedTextColor.RED));
       return;
     }
     // Валидируем длину имени и префикса согласно настройкам плагина.
-    if (TeamUtils.isTeamNameLengthInvalid(teamName, pluginConfig, leader)
-        || TeamUtils.isPrefixLengthInvalid(prefix, pluginConfig, leader)) {
+    if (TeamUtils.isTeamNameLengthInvalid(normalizedTeamName, pluginConfig, leader)
+        || TeamUtils.isPrefixLengthInvalid(normalizedPrefix, pluginConfig, leader)) {
       return;
     }
     // Создаём запись команды и связываем лидера с новой структурой.
-    Team team = new Team(teamName, leader.getUniqueId(), prefix, color);
+    Team team = new Team(normalizedTeamName, leader.getUniqueId(), normalizedPrefix, normalizedColor);
     storage.addTeam(team);
     updateTeamMembersPrefixes(team);
     storage.getPlayerTeams().put(leader.getUniqueId(), team.getId());
@@ -62,10 +68,12 @@ public class MembershipService {
   }
 
   public void addPlayerToTeam(String teamName, @NotNull Player player) {
-    Team team = storage.getTeamByName(teamName);
+    String normalizedTeamName = teamName == null ? "" : teamName.trim();
+    Team team = storage.getTeamByName(normalizedTeamName);
     // Если команда не найдена — сообщаем игроку и прекращаем обработку.
     if (team == null) {
-      TeamMessageUtils.sendTeamMessage(player, TeamMessageUtils.teamDoesNotExistMessage(teamName));
+      TeamMessageUtils.sendTeamMessage(
+          player, TeamMessageUtils.teamDoesNotExistMessage(normalizedTeamName));
       return;
     }
     // Не допускаем вступления игроков, у которых уже есть команда.
@@ -184,16 +192,18 @@ public class MembershipService {
     Team team = storage.getTeamByName(oldTeamName);
     // Проверяем полномочия и уникальность нового имени.
     if (team == null || !team.isLeader(leader.getUniqueId())) return;
-    if (storage.getTeamByName(newTeamName) != null) return;
-    storage.updateTeamName(team, newTeamName);
+    String normalizedNewName = newTeamName == null ? "" : newTeamName.trim();
+    if (storage.getTeamByName(normalizedNewName) != null) return;
+    storage.updateTeamName(team, normalizedNewName);
   }
 
   public void setTeamPrefix(String teamName, String newPrefix, @NotNull Player leader) {
     Team team = storage.getTeamByName(teamName);
     // Изменение префикса доступно только лидеру, при этом валидируем значение.
     if (team == null || !team.isLeader(leader.getUniqueId())) return;
-    if (TeamUtils.isPrefixLengthInvalid(newPrefix, pluginConfig, leader)) return;
-    team.setPrefix(newPrefix);
+    String normalizedPrefix = newPrefix == null ? "" : newPrefix.trim();
+    if (TeamUtils.isPrefixLengthInvalid(normalizedPrefix, pluginConfig, leader)) return;
+    team.setPrefix(normalizedPrefix);
     storage.markTeamDirty(team);
     updateTeamMembersPrefixes(team);
   }
@@ -202,13 +212,15 @@ public class MembershipService {
     Team team = storage.getTeamByName(teamName);
     // Проверяем права и корректность цвета перед сохранением.
     if (team == null || !team.isLeader(leader.getUniqueId())) return;
-    NamedTextColor teamColor = NamedTextColor.NAMES.value(newColor.toLowerCase(Locale.ROOT));
+    String normalizedColor = newColor == null ? "" : newColor.trim();
+    NamedTextColor teamColor =
+        NamedTextColor.NAMES.value(normalizedColor.toLowerCase(Locale.ROOT));
     if (teamColor == null) {
       TeamMessageUtils.sendTeamMessage(
           leader, Component.text("❌ Неверный цвет команды", NamedTextColor.RED));
       return;
     }
-    team.setColor(newColor);
+    team.setColor(normalizedColor);
     storage.markTeamDirty(team);
     updateTeamMembersPrefixes(team);
   }

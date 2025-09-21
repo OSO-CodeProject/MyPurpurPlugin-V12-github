@@ -29,12 +29,12 @@ public class Team {
 
   public Team(UUID id, String name, UUID leader, String prefix, String color) {
     this.id = id;
-    this.name = name;
+    this.name = normalizeName(name);
     this.leader = leader;
     this.members = new ArrayList<>();
     this.memberLookup = new HashSet<>();
     addMember(leader);
-    this.prefix = prefix;
+    this.prefix = normalizePrefix(prefix);
     this.color =
         NamedTextColor.NAMES.valueOr(color.toLowerCase(Locale.ROOT), NamedTextColor.WHITE);
   }
@@ -70,7 +70,7 @@ public class Team {
 
   // Сеттеры
   public void setName(String name) {
-    this.name = name;
+    this.name = normalizeName(name);
   }
 
   public void setLeader(UUID leader) {
@@ -79,7 +79,7 @@ public class Team {
   }
 
   public void setPrefix(String prefix) {
-    this.prefix = prefix;
+    this.prefix = normalizePrefix(prefix);
   }
 
   public void setColor(String color) {
@@ -150,5 +150,13 @@ public class Team {
       }
     }
     return null;
+  }
+
+  private static String normalizeName(String name) {
+    return name == null ? "" : name.trim();
+  }
+
+  private static String normalizePrefix(String prefix) {
+    return prefix == null ? "" : prefix.trim();
   }
 }

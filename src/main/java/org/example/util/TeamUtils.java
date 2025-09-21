@@ -53,21 +53,35 @@ public class TeamUtils {
    */
   public static boolean isPrefixLengthInvalid(
       String prefix, PluginConfig pluginConfig, Player player) {
+    String normalizedPrefix = prefix == null ? "" : prefix.trim();
     int minPrefixLength = pluginConfig.getMinPrefixLength();
     int maxPrefixLength = pluginConfig.getMaxPrefixLength();
-    if (prefix.length() < minPrefixLength) {
+    int actualLength = normalizedPrefix.length();
+    if (actualLength < minPrefixLength) {
       TeamMessageUtils.sendTeamMessage(
           player,
           Component.text(
-              "❌ Префикс слишком короткий!\nМинимальная длина — " + minPrefixLength + " символов.",
+              "❌ Префикс слишком короткий! (значение: \""
+                  + normalizedPrefix
+                  + "\", длина: "
+                  + actualLength
+                  + ")\nМинимальная длина — "
+                  + minPrefixLength
+                  + " символов.",
               NamedTextColor.RED));
       return true;
     }
-    if (prefix.length() > maxPrefixLength) {
+    if (actualLength > maxPrefixLength) {
       TeamMessageUtils.sendTeamMessage(
           player,
           Component.text(
-              "❌ Префикс слишком длинный!\nМаксимальная длина — " + maxPrefixLength + " символов.",
+              "❌ Префикс слишком длинный! (значение: \""
+                  + normalizedPrefix
+                  + "\", длина: "
+                  + actualLength
+                  + ")\nМаксимальная длина — "
+                  + maxPrefixLength
+                  + " символов.",
               NamedTextColor.RED));
       return true;
     }
@@ -84,23 +98,33 @@ public class TeamUtils {
    */
   public static boolean isTeamNameLengthInvalid(
       String teamName, PluginConfig pluginConfig, Player player) {
+    String normalizedName = teamName == null ? "" : teamName.trim();
     int minTeamNameLength = pluginConfig.getMinTeamNameLength();
     int maxTeamNameLength = pluginConfig.getMaxTeamNameLength();
-    if (teamName.length() < minTeamNameLength) {
+    int actualLength = normalizedName.length();
+    if (actualLength < minTeamNameLength) {
       TeamMessageUtils.sendTeamMessage(
           player,
           Component.text(
-              "❌ Название команды слишком короткое!\nМинимальная длина — "
+              "❌ Название команды слишком короткое! (значение: \""
+                  + normalizedName
+                  + "\", длина: "
+                  + actualLength
+                  + ")\nМинимальная длина — "
                   + minTeamNameLength
                   + " символов.",
               NamedTextColor.RED));
       return true;
     }
-    if (teamName.length() > maxTeamNameLength) {
+    if (actualLength > maxTeamNameLength) {
       TeamMessageUtils.sendTeamMessage(
           player,
           Component.text(
-              "❌ Название команды слишком длинное!\nМаксимальная длина — "
+              "❌ Название команды слишком длинное! (значение: \""
+                  + normalizedName
+                  + "\", длина: "
+                  + actualLength
+                  + ")\nМаксимальная длина — "
                   + maxTeamNameLength
                   + " символов.",
               NamedTextColor.RED));
