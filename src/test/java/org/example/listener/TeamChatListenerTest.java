@@ -156,6 +156,32 @@ class TeamChatListenerTest extends MockBukkitTestBase {
         "[NEW] Immediate: Test", PlainTextComponentSerializer.plainText().serialize(rendered));
   }
 
+  @Test
+  void warmCacheAppliesPrefixForOnlinePlayersOnPluginEnable() {
+    HandlerList.unregisterAll(listener);
+    listener.clearCachedPrefixes();
+
+    PlayerMock player = server.addPlayer("Reloaded");
+    teamService.assignPlayer(player, "Reload", "R", NamedTextColor.DARK_AQUA);
+
+    listener = new TeamChatListener(teamService);
+    server.getPluginManager().registerEvents(listener, plugin);
+
+    Component message = Component.text("Hi", NamedTextColor.WHITE);
+    Set<Audience> viewers = new HashSet<>();
+    ChatRenderer initialRenderer = ChatRenderer.defaultRenderer();
+    SignedMessage signedMessage = SignedMessage.system("Hi", message);
+    AsyncChatEvent event =
+        new AsyncChatEvent(false, player, viewers, initialRenderer, message, message, signedMessage);
+
+    server.getPluginManager().callEvent(event);
+
+    Component rendered =
+        event.renderer().render(player, Component.text(player.getName()), event.message(), Audience.empty());
+    assertEquals(
+        "[R] Reloaded: Hi", PlainTextComponentSerializer.plainText().serialize(rendered));
+  }
+
   private static class StubTeamService implements TeamService {
     private final org.bukkit.plugin.java.JavaPlugin plugin;
     private final PluginConfig config;

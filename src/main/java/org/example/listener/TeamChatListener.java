@@ -27,6 +27,7 @@ public class TeamChatListener implements Listener {
 
   public TeamChatListener(@NotNull TeamService teamManager) {
     this.teamManager = teamManager;
+    Bukkit.getOnlinePlayers().forEach(this::updatePlayerPrefix);
   }
 
   @EventHandler
@@ -78,9 +79,10 @@ public class TeamChatListener implements Listener {
 
     event.renderer(
         (source, sourceDisplayName, message, viewer) -> {
+          Component latestPrefixComponent = lastPlayerPrefixes.get(playerId);
           Component base = Component.empty();
-          if (prefixComponent != null) {
-            base = base.append(prefixComponent);
+          if (latestPrefixComponent != null) {
+            base = base.append(latestPrefixComponent);
           }
           Component formattedMessage = forceWhiteChat ? message.color(NamedTextColor.WHITE) : message;
           return base.append(sourceDisplayName).append(Component.text(": ")).append(formattedMessage);
