@@ -7,6 +7,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -64,30 +65,26 @@ public class TeamChatListener implements Listener {
   @EventHandler
   public void onPlayerChat(@NotNull AsyncChatEvent event) {
     Player player = event.getPlayer();
-    String teamName = teamManager.getPlayerTeam(player);
     ((MyPurpurPlugin) teamManager.getPlugin())
-        .debugTeamAction("Обработка сообщения от игрока", player.getName(), teamName);
+        .debugTeamAction("Обработка сообщения от игрока", player.getName(), null);
 
     boolean forceWhiteChat = teamManager.getPluginConfig().isForceWhiteChat();
+    UUID playerId = player.getUniqueId();
+    Component prefixComponent = lastPlayerPrefixes.get(playerId);
 
-    if (teamName != null) {
-      String prefix = teamManager.getTeamPrefix(teamName);
-      NamedTextColor teamColor = teamManager.getTeamColor(teamName);
-      Component prefixComponent = TeamUtils.createPrefixComponent(prefix, teamColor);
-
-      event.renderer(
-          (source, sourceDisplayName, message, viewer) ->
-              prefixComponent
-                  .append(sourceDisplayName)
-                  .append(Component.text(": "))
-                  .append(forceWhiteChat ? message.color(NamedTextColor.WHITE) : message));
-    } else {
-      event.renderer(
-          (source, sourceDisplayName, message, viewer) ->
-              sourceDisplayName
-                  .append(Component.text(": "))
-                  .append(forceWhiteChat ? message.color(NamedTextColor.WHITE) : message));
+    if (prefixComponent == null) {
+      Bukkit.getScheduler().runTask(teamManager.getPlugin(), () -> updatePlayerPrefix(player));
     }
+
+    event.renderer(
+        (source, sourceDisplayName, message, viewer) -> {
+          Component base = Component.empty();
+          if (prefixComponent != null) {
+            base = base.append(prefixComponent);
+          }
+          Component formattedMessage = forceWhiteChat ? message.color(NamedTextColor.WHITE) : message;
+          return base.append(sourceDisplayName).append(Component.text(": ")).append(formattedMessage);
+        });
   }
 
   @EventHandler
