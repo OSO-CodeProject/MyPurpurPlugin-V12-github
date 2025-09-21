@@ -64,7 +64,7 @@ public class MembershipService {
     storage.getPlayerTeams().put(leader.getUniqueId(), team.getId());
     TeamMessageUtils.sendTeamMessage(
         leader, Component.text("✅ Команда создана", NamedTextColor.GREEN));
-    scheduler.enforceTeamSizes(false);
+    scheduler.evaluateTeam(team);
   }
 
   public void addPlayerToTeam(String teamName, @NotNull Player player) {
@@ -95,7 +95,7 @@ public class MembershipService {
     storage.markTeamDirty(team);
     TeamMessageUtils.sendTeamMessage(
         player, Component.text("✅ Вы вступили в команду", NamedTextColor.GREEN));
-    scheduler.enforceTeamSizes(false);
+    scheduler.evaluateTeam(team);
     updateTeamMembersPrefixes(team);
   }
 
@@ -124,7 +124,9 @@ public class MembershipService {
     if (!removedTeam) {
       storage.markTeamDirty(team);
     }
-    scheduler.enforceTeamSizes(false);
+    if (!removedTeam) {
+      scheduler.evaluateTeam(team);
+    }
     notifyPrefixUpdate(player, null);
     if (!removedTeam) {
       updateTeamMembersPrefixes(team);
@@ -150,7 +152,7 @@ public class MembershipService {
     team.removeMember(targetId);
     storage.getPlayerTeams().remove(targetId);
     storage.markTeamDirty(team);
-    scheduler.enforceTeamSizes(false);
+    scheduler.evaluateTeam(team);
     notifyPrefixUpdate(targetId, null);
 
     updateTeamMembersPrefixes(team);
@@ -166,7 +168,7 @@ public class MembershipService {
     team.setLeader(newLeader.getUniqueId());
     storage.markTeamDirty(team);
     scheduler.handleLeaderTransfer(team);
-    scheduler.enforceTeamSizes(false);
+    scheduler.evaluateTeam(team);
   }
 
   public void disbandTeam(String teamName, @NotNull Player leader) {
@@ -185,7 +187,6 @@ public class MembershipService {
     for (UUID memberId : members) {
       storage.getPlayerTeams().remove(memberId);
     }
-    scheduler.enforceTeamSizes(false);
   }
 
   public void renameTeam(String oldTeamName, String newTeamName, @NotNull Player leader) {

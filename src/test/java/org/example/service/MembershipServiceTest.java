@@ -47,7 +47,7 @@ class MembershipServiceTest extends MockBukkitTestBase {
     assertEquals(leader.getUniqueId(), team.getLeaderId(), "Лидер сохраняется");
     assertEquals("A", team.getPrefix(), "Префикс сохраняется");
     assertEquals("Alpha", storage.getPlayerTeam(leader), "Игрок связан с командой");
-    assertEquals(1, scheduler.enforceCalls, "После создания вызывается проверка лимитов");
+    assertEquals(1, scheduler.evaluateCalls, "После создания вызывается проверка лимитов");
   }
 
   @Test
@@ -70,7 +70,7 @@ class MembershipServiceTest extends MockBukkitTestBase {
     assertFalse(
         storage.getPlayerTeams().containsKey(secondMember.getUniqueId()),
         "Игрок не должен иметь записи о команде");
-    assertEquals(2, scheduler.enforceCalls, "Проверка лимитов вызывается при успешном добавлении");
+    assertEquals(2, scheduler.evaluateCalls, "Проверка лимитов вызывается при успешном добавлении");
   }
 
   @Test
@@ -127,6 +127,7 @@ class MembershipServiceTest extends MockBukkitTestBase {
 
   private static class TestDeadlineScheduler extends DeadlineScheduler {
     int enforceCalls;
+    int evaluateCalls;
     final Set<String> cancelledTeams = new HashSet<>();
     final Set<String> leaderTransfers = new HashSet<>();
 
@@ -142,6 +143,11 @@ class MembershipServiceTest extends MockBukkitTestBase {
     @Override
     public void enforceTeamSizes() {
       enforceCalls++;
+    }
+
+    @Override
+    public void evaluateTeam(Team team) {
+      evaluateCalls++;
     }
 
     @Override

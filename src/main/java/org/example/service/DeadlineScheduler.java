@@ -24,6 +24,7 @@ import org.example.listener.TeamChatListener;
 import org.example.model.Team;
 import org.example.util.TeamMessageUtils;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Планировщик, который следит за размерами команд и временем, отведённым на их уменьшение до
@@ -188,45 +189,144 @@ public class DeadlineScheduler {
       resetAllLeaderDisplays();
     }
 
-    for (Map.Entry<UUID, Team> entry : storage.getTeams().entrySet()) {
-      Team team = entry.getValue();
-      int size = team.getMembers().size();
-      UUID teamId = entry.getKey();
-      if (size <= max) {
-        if (deadlines.remove(teamId) != null) {
-          changed = true;
-        }
-        clearLeaderDisplay(team);
-        continue;
-      }
+    long now = System.currentTimeMillis();
+    for (Team team : storage.getTeams().values()) {
+      changed |=
+          evaluateTeamState(team, max, enforcementEnabled, graceEnabled, now);
+    }
+    if (changed) {
+      storage.markDeadlinesDirty();
+    }
+  }
 
-      int excess = size - max;
+  /**
+   * Переоценивает состояние конкретной команды и при необходимости обновляет дедлайн или проводит
+   * удаление лишних участников без полного обхода всех команд.
+   */
+  public void evaluateTeam(@Nullable Team team) {
+    evaluateTeam(team, false);
+  }
+
+  /**
+   * Переоценивает состояние конкретной команды с учётом источника вызова.
+   *
+   * @param team команда, для которой следует обновить дедлайн
+   * @param triggeredByReload {@code true}, если проверка вызвана перезагрузкой плагина или сервера
+   */
+  public void evaluateTeam(@Nullable Team team, boolean triggeredByReload) {
+    if (team == null) {
+      return;
+    }
+    int max = pluginConfig.getMaxMembers();
+    boolean enforcementEnabled = !triggeredByReload || pluginConfig.isEnforceMaxMembersOnReload();
+    boolean graceEnabled =
+        pluginConfig.isGracePeriodEnabled() && pluginConfig.getGracePeriodMinutes() > 0;
+    long now = System.currentTimeMillis();
+    long startedAt = System.nanoTime();
+    boolean changed = evaluateTeamState(team, max, enforcementEnabled, graceEnabled, now);
+    if (changed) {
+      storage.markDeadlinesDirty();
+    }
+    if (pluginConfig.isDebugModeEnabled()) {
+      long elapsedMicros = TimeUnit.NANOSECONDS.toMicros(System.nanoTime() - startedAt);
       plugin
           .getLogger()
-          .warning("Команда " + team.getName() + " превышает лимит: " + size + " из " + max + ".");
+          .info(
+              "Пересчёт команды "
+                  + team.getName()
+                  + " занял "
+                  + elapsedMicros
+                  + " мкс (reload="
+                  + triggeredByReload
+                  + ")");
+    }
+  }
 
-      if (!enforcementEnabled) {
-        Component leaderMessage = buildEnforcementDisabledMessage(max, excess);
-        DeadlineDisplayMode mode = getDisplayMode();
-        if (mode == DeadlineDisplayMode.SCOREBOARD) {
-          notifyLeaderWithoutScoreboard(team, leaderMessage);
-          clearLeaderDisplay(team);
-        } else {
-          notifyLeader(team, leaderMessage);
-        }
+  private boolean evaluateTeamState(
+      @NotNull Team team,
+      int max,
+      boolean enforcementEnabled,
+      boolean graceEnabled,
+      long now) {
+    boolean changed = false;
+    UUID teamId = team.getId();
+
+    if (max <= 0) {
+      if (deadlines.remove(teamId) != null) {
+        changed = true;
+      }
+      clearLeaderDisplay(team);
+      return changed;
+    }
+
+    int size = team.getMembers().size();
+    if (size <= max) {
+      if (deadlines.remove(teamId) != null) {
+        changed = true;
+      }
+      clearLeaderDisplay(team);
+      return changed;
+    }
+
+    int excess = size - max;
+    plugin
+        .getLogger()
+        .warning("Команда " + team.getName() + " превышает лимит: " + size + " из " + max + ".");
+
+    if (!enforcementEnabled) {
+      Component leaderMessage = buildEnforcementDisabledMessage(max, excess);
+      DeadlineDisplayMode mode = getDisplayMode();
+      if (mode == DeadlineDisplayMode.SCOREBOARD) {
+        notifyLeaderWithoutScoreboard(team, leaderMessage);
+        clearLeaderDisplay(team);
+      } else {
+        notifyLeader(team, leaderMessage);
+      }
+      notifyAdmins(
+          adminBaseMessage(team, size, max)
+              .append(Component.space())
+              .append(
+                  Component.text("Автоматическое сокращение отключено.", NamedTextColor.GOLD)));
+      if (deadlines.remove(teamId) != null) {
+        changed = true;
+      }
+      return changed;
+    }
+
+    if (!graceEnabled) {
+      if (deadlines.remove(teamId) != null) {
+        changed = true;
+      }
+      clearLeaderDisplay(team);
+      int removed = removeExtraPlayers(team, max);
+      if (removed > 0) {
+        Component leaderMessage = TeamMessageUtils.forcedRemovalMessage(removed);
+        notifyLeader(team, leaderMessage);
         notifyAdmins(
             adminBaseMessage(team, size, max)
                 .append(Component.space())
                 .append(
-                    Component.text("Автоматическое сокращение отключено.", NamedTextColor.GOLD)));
-        continue;
+                    Component.text(
+                        "Удалено " + removed + " участника(ов) без льготного периода.",
+                        NamedTextColor.RED)));
+        plugin
+            .getLogger()
+            .info(
+                "Команда "
+                    + team.getName()
+                    + ": удалено "
+                    + removed
+                    + " участника(ов) без льготного периода.");
       }
+      return changed;
+    }
 
-      if (!graceEnabled) {
-        if (deadlines.remove(teamId) != null) {
-          changed = true;
-          clearLeaderDisplay(team);
-        }
+    Long existingDeadline = deadlines.get(teamId);
+    if (existingDeadline != null) {
+      if (existingDeadline <= now) {
+        changed = true;
+        deadlines.remove(teamId);
+        clearLeaderDisplay(team);
         int removed = removeExtraPlayers(team, max);
         if (removed > 0) {
           Component leaderMessage = TeamMessageUtils.forcedRemovalMessage(removed);
@@ -236,76 +336,42 @@ public class DeadlineScheduler {
                   .append(Component.space())
                   .append(
                       Component.text(
-                          "Удалено " + removed + " участника(ов) без льготного периода.",
+                          "Льготный период истёк, удалено " + removed + " участника(ов).",
                           NamedTextColor.RED)));
           plugin
               .getLogger()
               .info(
-                  "Команда "
+                  "Льготный период команды "
                       + team.getName()
-                      + ": удалено "
+                      + " истёк, удалено "
                       + removed
-                      + " участника(ов) без льготного периода.");
+                      + " игрок(ов).");
         }
-        continue;
+        return changed;
       }
+      return changed;
+    }
 
-      Long existingDeadline = deadlines.get(teamId);
-      long now = System.currentTimeMillis();
-      if (existingDeadline != null) {
-        if (existingDeadline <= now) {
-          changed = true;
-          deadlines.remove(teamId);
-          clearLeaderDisplay(team);
-          int removed = removeExtraPlayers(team, max);
-          if (removed > 0) {
-            Component leaderMessage = TeamMessageUtils.forcedRemovalMessage(removed);
-            notifyLeader(team, leaderMessage);
-            notifyAdmins(
-                adminBaseMessage(team, size, max)
-                    .append(Component.space())
-                    .append(
-                        Component.text(
-                            "Льготный период истёк, удалено " + removed + " участника(ов).",
-                            NamedTextColor.RED)));
-            plugin
-                .getLogger()
-                .info(
-                    "Льготный период команды "
-                        + team.getName()
-                        + " истёк, удалено "
-                        + removed
-                        + " игрок(ов).");
-          }
-          continue;
-        }
-        continue;
-      }
-      long deadlineAt = now + pluginConfig.getGracePeriodMinutes() * 60L * 1000L;
-      Long previous = deadlines.put(teamId, deadlineAt);
-      boolean deadlineUpdated = !Objects.equals(previous, deadlineAt);
-      if (deadlineUpdated) {
-        changed = true;
-      }
-      if (deadlineUpdated) {
-        Component leaderMessage =
-            TeamMessageUtils.deadlineWarningMessage(
-                max, pluginConfig.getGracePeriodMinutes(), excess);
-        notifyLeader(team, leaderMessage);
-        notifyAdmins(
-            adminBaseMessage(team, size, max)
-                .append(Component.space())
-                .append(
-                    Component.text(
-                        "Лидеру дано "
-                            + pluginConfig.getGracePeriodMinutes()
-                            + " мин. на сокращение.",
-                        NamedTextColor.GOLD)));
-      }
+    long deadlineAt = now + pluginConfig.getGracePeriodMinutes() * 60L * 1000L;
+    Long previous = deadlines.put(teamId, deadlineAt);
+    boolean deadlineUpdated = !Objects.equals(previous, deadlineAt);
+    if (deadlineUpdated) {
+      changed = true;
+      Component leaderMessage =
+          TeamMessageUtils.deadlineWarningMessage(
+              max, pluginConfig.getGracePeriodMinutes(), excess);
+      notifyLeader(team, leaderMessage);
+      notifyAdmins(
+          adminBaseMessage(team, size, max)
+              .append(Component.space())
+              .append(
+                  Component.text(
+                      "Лидеру дано "
+                          + pluginConfig.getGracePeriodMinutes()
+                          + " мин. на сокращение.",
+                      NamedTextColor.GOLD)));
     }
-    if (changed) {
-      storage.markDeadlinesDirty();
-    }
+    return changed;
   }
 
   public void handleLeaderTransfer(@NotNull Team team) {
