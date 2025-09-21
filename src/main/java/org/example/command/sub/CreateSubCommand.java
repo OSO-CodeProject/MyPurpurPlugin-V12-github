@@ -28,7 +28,10 @@ public class CreateSubCommand implements SubCommand {
               NamedTextColor.RED));
       return true;
     }
-    teamService.createTeam(args[1], args[2], args[3], player);
+    String teamName = args[1].trim();
+    String prefix = args[2].trim();
+    String color = args[3].trim();
+    teamService.createTeam(teamName, prefix, color, player);
     return true;
   }
 

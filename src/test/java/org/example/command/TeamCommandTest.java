@@ -184,6 +184,22 @@ class TeamCommandTest {
   }
 
   @Test
+  void joinCommandMatchesNameWhenTeamCreatedWithTrailingWhitespace() {
+    CommandMap commandMap = server.getCommandMap();
+
+    PlayerMock leader = server.addPlayer("WhitespaceLeader");
+    leader.addAttachment(plugin, "mypurpurplugin.team", true);
+    teamManager.createTeam("Omega ", "OO", "WHITE", leader);
+    assertEquals("Omega", teamManager.getPlayerTeam(leader));
+
+    PlayerMock recruit = server.addPlayer("WhitespaceRecruit");
+    recruit.addAttachment(plugin, "mypurpurplugin.team", true);
+
+    assertTrue(commandMap.dispatch(recruit, "team join Omega"));
+    assertEquals("Omega", teamManager.getPlayerTeam(recruit));
+  }
+
+  @Test
   void deniesCommandWithoutPermission() {
     CommandMap commandMap = server.getCommandMap();
     PlayerMock player = server.addPlayer("Player");

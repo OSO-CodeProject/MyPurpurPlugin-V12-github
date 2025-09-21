@@ -27,7 +27,8 @@ public class JoinSubCommand implements SubCommand {
           Component.text("❌ Использование: /team join <название>", NamedTextColor.RED));
       return true;
     }
-    teamService.addPlayerToTeam(args[1], player);
+    String teamName = args[1].trim();
+    teamService.addPlayerToTeam(teamName, player);
     return true;
   }
 
