@@ -153,6 +153,34 @@ class TeamChatListenerTest extends MockBukkitTestBase {
   }
 
   @Test
+  void customListNameRestoredAfterMultiplePrefixUpdates() {
+    PlayerMock player = server.addPlayer("Formatter");
+    Component customName =
+        Component.text("Rainbow ", NamedTextColor.LIGHT_PURPLE)
+            .append(Component.text("Player", NamedTextColor.GREEN));
+    player.playerListName(customName);
+    teamService.assignPlayer(player, "Palette", "P", NamedTextColor.DARK_AQUA);
+
+    Component firstPrefix = Component.text("[P] ", NamedTextColor.DARK_AQUA);
+    Component secondPrefix = Component.text("{P} ", NamedTextColor.DARK_PURPLE);
+
+    server
+        .getPluginManager()
+        .callEvent(new TeamChatListener.PlayerPrefixUpdateEvent(player, firstPrefix));
+    assertEquals(firstPrefix.append(customName), player.playerListName());
+
+    server
+        .getPluginManager()
+        .callEvent(new TeamChatListener.PlayerPrefixUpdateEvent(player, secondPrefix));
+    assertEquals(secondPrefix.append(customName), player.playerListName());
+
+    server
+        .getPluginManager()
+        .callEvent(new TeamChatListener.PlayerPrefixUpdateEvent(player, null));
+    assertEquals(customName, player.playerListName());
+  }
+
+  @Test
   void chatEventUsesLatestCachedPrefixImmediately() {
     PlayerMock player = server.addPlayer("Immediate");
     teamService.assignPlayer(player, "Delta", "D", NamedTextColor.DARK_GREEN);
