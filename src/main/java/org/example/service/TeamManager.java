@@ -6,6 +6,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.example.config.PluginConfig;
+import org.example.listener.TeamChatListener;
 import org.jetbrains.annotations.NotNull;
 
 /** Facade over team related services. Delegates work to specialised classes. */
@@ -169,6 +170,15 @@ public class TeamManager implements TeamService {
 
   @Override
   public void shutdown() {
+    plugin
+        .getServer()
+        .getOnlinePlayers()
+        .forEach(
+            player ->
+                plugin
+                    .getServer()
+                    .getPluginManager()
+                    .callEvent(new TeamChatListener.PlayerPrefixUpdateEvent(player, null)));
     storage.stopAutoSave();
     scheduler.resetLeaderDisplays();
     scheduler.stop();
