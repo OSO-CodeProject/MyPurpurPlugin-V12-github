@@ -20,13 +20,12 @@ class TeamManagerShutdownIntegrationTest extends MockBukkitTestBase {
     server.getPluginManager().callEvent(new TeamChatListener.PlayerPrefixUpdateEvent(alice, prefix));
     server.getPluginManager().callEvent(new TeamChatListener.PlayerPrefixUpdateEvent(bob, prefix));
 
-    assertEquals(
-        prefix.append(Component.text("Alice", NamedTextColor.WHITE)), alice.playerListName());
-    assertEquals(prefix.append(Component.text("Bob", NamedTextColor.WHITE)), bob.playerListName());
+    assertEquals(prefix.append(Component.text("Alice")), alice.playerListName());
+    assertEquals(prefix.append(Component.text("Bob")), bob.playerListName());
 
     plugin.getTeamManager().shutdown();
 
-    assertEquals(Component.text("Alice", NamedTextColor.WHITE), alice.playerListName());
-    assertEquals(Component.text("Bob", NamedTextColor.WHITE), bob.playerListName());
+    assertEquals(Component.text("Alice"), alice.playerListName());
+    assertEquals(Component.text("Bob"), bob.playerListName());
   }
 }

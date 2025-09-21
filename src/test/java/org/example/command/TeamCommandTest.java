@@ -374,14 +374,13 @@ class TeamCommandTest {
     teamManager.addPlayerToTeam("Gamma", member);
 
     Component expectedPrefix =
-        Component.text("[GM] ", NamedTextColor.WHITE)
-            .append(Component.text(member.getName(), NamedTextColor.WHITE));
+        Component.text("[GM] ", NamedTextColor.WHITE).append(Component.text(member.getName()));
     assertEquals(expectedPrefix, member.playerListName());
 
     assertTrue(commandMap.dispatch(leader, "teamadmin kick KickRecruit"));
 
     assertNull(teamManager.getPlayerTeam(member));
-    Component reset = Component.text(member.getName(), NamedTextColor.WHITE);
+    Component reset = Component.text(member.getName());
     assertEquals(reset, member.playerListName());
   }
 
