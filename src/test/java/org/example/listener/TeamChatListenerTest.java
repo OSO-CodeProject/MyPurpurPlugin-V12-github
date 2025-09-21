@@ -68,6 +68,11 @@ class TeamChatListenerTest extends MockBukkitTestBase {
     PlayerMock player = server.addPlayer("Chatter");
     teamService.createTeam("Beta", player, "B", NamedTextColor.BLUE);
 
+    Component prefixComponent = Component.text("[B] ", NamedTextColor.BLUE);
+    server
+        .getPluginManager()
+        .callEvent(new TeamChatListener.PlayerPrefixUpdateEvent(player, prefixComponent));
+
     Component message = Component.text("Привет", NamedTextColor.GREEN);
     Set<Audience> viewers = new HashSet<>();
     ChatRenderer initialRenderer = ChatRenderer.defaultRenderer();
@@ -122,6 +127,33 @@ class TeamChatListenerTest extends MockBukkitTestBase {
     server.getPluginManager().callEvent(new TeamChatListener.PlayerPrefixUpdateEvent(player, prefix));
 
     assertEquals("[O] Quitter", PlainTextComponentSerializer.plainText().serialize(player.playerListName()));
+  }
+
+  @Test
+  void chatEventUsesLatestCachedPrefixImmediately() {
+    PlayerMock player = server.addPlayer("Immediate");
+    teamService.assignPlayer(player, "Delta", "D", NamedTextColor.DARK_GREEN);
+
+    Component prefix = Component.text("[NEW] ", NamedTextColor.DARK_GREEN);
+    server
+        .getPluginManager()
+        .callEvent(new TeamChatListener.PlayerPrefixUpdateEvent(player, prefix));
+
+    Component message = Component.text("Test", NamedTextColor.YELLOW);
+    Set<Audience> viewers = new HashSet<>();
+    ChatRenderer initialRenderer = ChatRenderer.defaultRenderer();
+    SignedMessage signedMessage = SignedMessage.system("Test", message);
+    AsyncChatEvent event =
+        new AsyncChatEvent(
+            false, player, viewers, initialRenderer, message, message, signedMessage);
+
+    assertDoesNotThrow(() -> server.getPluginManager().callEvent(event));
+
+    Component rendered =
+        event.renderer()
+            .render(player, Component.text(player.getName()), event.message(), Audience.empty());
+    assertEquals(
+        "[NEW] Immediate: Test", PlainTextComponentSerializer.plainText().serialize(rendered));
   }
 
   private static class StubTeamService implements TeamService {

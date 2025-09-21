@@ -14,14 +14,14 @@ import org.jetbrains.annotations.Nullable;
 /** Представляет команду с уникальным идентификатором и изменяемыми данными. */
 public class Team {
   private final UUID id; // Уникальный неизменяемый идентификатор
-  private String name; // Название команды, теперь изменяемое
+  private volatile String name; // Название команды, теперь изменяемое
 
   private UUID leader;
   private final List<UUID> members;
   private final Set<UUID> memberLookup;
 
-  private String prefix;
-  private NamedTextColor color;
+  private volatile String prefix;
+  private volatile NamedTextColor color;
 
   public Team(String name, UUID leader, String prefix, String color) {
     this(UUID.randomUUID(), name, leader, prefix, color);
