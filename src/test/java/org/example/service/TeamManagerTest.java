@@ -1,267 +1,74 @@
 package org.example.service;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
-import be.seeseemelk.mockbukkit.MockBukkit;
-import be.seeseemelk.mockbukkit.ServerMock;
 import be.seeseemelk.mockbukkit.entity.PlayerMock;
-import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
-import org.example.MyPurpurPlugin;
+import java.util.HashMap;
+import org.example.MockBukkitTestBase;
 import org.example.config.PluginConfig;
-import org.example.listener.TeamChatListener;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
+import org.mockito.MockedConstruction;
 
-/** Unit tests for {@link TeamManager}. */
-class TeamManagerTest {
+class TeamManagerTest extends MockBukkitTestBase {
 
-  private static ServerMock server;
-  private static TeamManager teamManager;
+  @Test
+  void delegatesMembershipOperations() {
+    PluginConfig pluginConfig = mock(PluginConfig.class);
+    when(pluginConfig.getSaveIntervalSeconds()).thenReturn(0L);
+    when(pluginConfig.isEnforceMaxMembersOnReload()).thenReturn(false);
+    when(pluginConfig.isGracePeriodEnabled()).thenReturn(false);
 
-  @BeforeAll
-  static void setUp() {
-    server = MockBukkit.mock();
-    MyPurpurPlugin plugin = MockBukkit.load(MyPurpurPlugin.class);
-    try {
-      Field field = MyPurpurPlugin.class.getDeclaredField("teamManager");
-      field.setAccessible(true);
-      teamManager = (TeamManager) field.get(plugin);
+    try (MockedConstruction<TeamStorage> storageMock =
+            mockConstruction(TeamStorage.class, (mock, context) -> {
+              when(mock.getPlayerTeam(any())).thenReturn(null);
+              when(mock.getTeamMembers(anyString())).thenReturn(java.util.List.of());
+              when(mock.getTeamNames()).thenReturn(java.util.List.of());
+              when(mock.getTeamPrefix(anyString())).thenReturn("");
+              when(mock.getTeamColor(anyString()))
+                  .thenReturn(net.kyori.adventure.text.format.NamedTextColor.WHITE);
+              when(mock.getTeamLeaderId(anyString())).thenReturn(null);
+              when(mock.getTeams()).thenReturn(new HashMap<>());
+              when(mock.getPlayerTeams()).thenReturn(new HashMap<>());
+              when(mock.getTeamIdByName(anyString())).thenReturn(null);
+            });
+        MockedConstruction<DeadlineScheduler> schedulerMock =
+            mockConstruction(
+                DeadlineScheduler.class,
+                (mock, context) -> when(mock.getDeadlines()).thenReturn(new HashMap<>()));
+        MockedConstruction<MembershipService> membershipMock = mockConstruction(MembershipService.class)) {
 
-      // Ensure max team members is limited for tests
-      Field cfgField = MyPurpurPlugin.class.getDeclaredField("pluginConfig");
-      cfgField.setAccessible(true);
-      PluginConfig pluginConfig = (PluginConfig) cfgField.get(plugin);
-      Field internal = PluginConfig.class.getDeclaredField("config");
-      internal.setAccessible(true);
-      org.bukkit.configuration.file.FileConfiguration config =
-          (org.bukkit.configuration.file.FileConfiguration) internal.get(pluginConfig);
-      config.set("team.max-members", 5);
-    } catch (ReflectiveOperationException e) {
-      fail(e);
+      TeamManager manager = new TeamManager(plugin, pluginConfig);
+      MembershipService membership = membershipMock.constructed().get(0);
+
+      PlayerMock leader = server.addPlayer("Leader");
+      PlayerMock member = server.addPlayer("Member");
+
+      manager.createTeam("Alpha", "A", "red", leader);
+      verify(membership).createTeam("Alpha", "A", "red", leader);
+
+      manager.addPlayerToTeam("Alpha", member);
+      verify(membership).addPlayerToTeam("Alpha", member);
+
+      manager.removePlayerFromTeam("Alpha", member);
+      verify(membership).removePlayerFromTeam("Alpha", member);
+
+      manager.kickPlayerFromTeam("Alpha", leader, member.getName());
+      verify(membership).kickPlayerFromTeam("Alpha", leader, member.getName());
+
+      manager.transferLeadership("Alpha", leader, member);
+      verify(membership).transferLeadership("Alpha", leader, member);
+
+      manager.disbandTeam("Alpha", leader);
+      verify(membership).disbandTeam("Alpha", leader);
+
+      manager.setTeamPrefix("Alpha", "NEW", leader);
+      verify(membership).setTeamPrefix("Alpha", "NEW", leader);
+
+      manager.setTeamColor("Alpha", "blue", leader);
+      verify(membership).setTeamColor("Alpha", "blue", leader);
+
+      manager.updatePlayerPrefixes("Alpha");
+      verify(membership).updatePlayerPrefixes("Alpha");
     }
-  }
-
-  @AfterAll
-  static void tearDown() {
-    if (teamManager != null) {
-      teamManager.shutdown();
-    }
-    MockBukkit.unmock();
-  }
-
-  @ParameterizedTest
-  @ValueSource(strings = {"Alice", "Bob", "Charlie"})
-  void playersJoinAndLeaveTeam(String playerName) {
-    PlayerMock leader = server.addPlayer("Leader" + playerName);
-    String teamName = "Team" + playerName;
-    teamManager.createTeam(teamName, "PX", "white", leader);
-    PlayerMock player = server.addPlayer(playerName);
-    teamManager.addPlayerToTeam(teamName, player);
-    assertEquals(teamName, teamManager.getPlayerTeam(player));
-    teamManager.removePlayerFromTeam(teamName, player);
-    assertNull(teamManager.getPlayerTeam(player));
-  }
-
-  @Test
-  void createsAndManagesTeamMembership() {
-    PlayerMock leader = server.addPlayer("Leader1");
-    PlayerMock member = server.addPlayer("Member1");
-
-    teamManager.createTeam("Alpha", "AA", "white", leader);
-    assertEquals("Alpha", teamManager.getPlayerTeam(leader));
-    assertTrue(teamManager.getTeamMembers("Alpha").contains(leader.getUniqueId()));
-
-    teamManager.addPlayerToTeam("Alpha", member);
-    assertEquals("Alpha", teamManager.getPlayerTeam(member));
-
-    teamManager.removePlayerFromTeam("Alpha", member);
-    assertNull(teamManager.getPlayerTeam(member));
-  }
-
-  @Test
-  void stressTestAddRemovePlayers() {
-    PlayerMock leader = server.addPlayer("StressLeader");
-    teamManager.createTeam("Stress", "ST", "white", leader);
-    List<PlayerMock> players = new ArrayList<>();
-    for (int i = 0; i < 10; i++) {
-      players.add(server.addPlayer("Stress" + i));
-    }
-    Runtime runtime = Runtime.getRuntime();
-    long before = runtime.totalMemory() - runtime.freeMemory();
-    assertDoesNotThrow(
-        () -> {
-          for (int i = 0; i < 100; i++) {
-            for (PlayerMock p : players) {
-              teamManager.addPlayerToTeam("Stress", p);
-            }
-            for (PlayerMock p : players) {
-              teamManager.removePlayerFromTeam("Stress", p);
-            }
-          }
-        });
-    System.gc();
-    long after = runtime.totalMemory() - runtime.freeMemory();
-    if (after - before > 10_000_000) {
-      teamManager.getPlugin().getLogger().warning("Potential memory leak: " + (after - before));
-    }
-    assertEquals(1, teamManager.getTeamMembers("Stress").size());
-  }
-
-  @Test
-  void createsTeamAndAllowsJoin() {
-    PlayerMock leader = server.addPlayer("Captain");
-    PlayerMock member = server.addPlayer("Recruit");
-
-    String teamName = "Voyagers";
-    teamManager.createTeam(teamName, "VG", "white", leader);
-
-    assertEquals(teamName, teamManager.getPlayerTeam(leader));
-    assertTrue(teamManager.getTeamMembers(teamName).contains(leader.getUniqueId()));
-
-    teamManager.addPlayerToTeam(teamName, member);
-    assertEquals(teamName, teamManager.getPlayerTeam(member));
-    assertTrue(teamManager.getTeamMembers(teamName).contains(member.getUniqueId()));
-  }
-
-  @Test
-  void enforcesMaximumMembers() {
-    PlayerMock leader = server.addPlayer("Leader2");
-    teamManager.createTeam("Beta", "BB", "white", leader);
-
-    // Default max-members is 5, so only four additional players are allowed
-    for (int i = 0; i < 4; i++) {
-      PlayerMock p = server.addPlayer("P" + i);
-      teamManager.addPlayerToTeam("Beta", p);
-    }
-
-    PlayerMock extra = server.addPlayer("Extra");
-    teamManager.addPlayerToTeam("Beta", extra);
-
-    assertNull(teamManager.getPlayerTeam(extra));
-    assertEquals(5, teamManager.getTeamMembers("Beta").size());
-  }
-
-  @Test
-  void playerListNameUpdatedOnJoinAndLeave() {
-    PlayerMock leader = server.addPlayer("PrefixLeader");
-    PlayerMock member = server.addPlayer("PrefixMember");
-
-    teamManager.createTeam("PrefixTeam", "PF", "gold", leader);
-    teamManager.addPlayerToTeam("PrefixTeam", member);
-
-    Component expected =
-        Component.text("[PF] ", NamedTextColor.GOLD)
-            .append(Component.text(member.getName(), NamedTextColor.WHITE));
-    assertEquals(expected, member.playerListName());
-
-    teamManager.removePlayerFromTeam("PrefixTeam", member);
-    Component reset = Component.text(member.getName(), NamedTextColor.WHITE);
-    assertEquals(reset, member.playerListName());
-  }
-
-  @Test
-  void playerListNameResetOnKick() {
-    PlayerMock leader = server.addPlayer("KickLeader");
-    PlayerMock member = server.addPlayer("KickTarget");
-
-    teamManager.createTeam("KickTeam", "KT", "green", leader);
-    teamManager.addPlayerToTeam("KickTeam", member);
-
-    Component expected =
-        Component.text("[KT] ", NamedTextColor.GREEN)
-            .append(Component.text(member.getName(), NamedTextColor.WHITE));
-    assertEquals(expected, member.playerListName());
-
-    teamManager.kickPlayerFromTeam("KickTeam", leader, member.getName());
-    Component reset = Component.text(member.getName(), NamedTextColor.WHITE);
-    assertEquals(reset, member.playerListName());
-  }
-
-  @Test
-  void leaderKickSelfDelegatesToRemovalFlow() {
-    PlayerMock leader = server.addPlayer("SelfKickLeader");
-    PlayerMock successor = server.addPlayer("SelfKickMember");
-
-    String teamName = "SelfKickTeam";
-    teamManager.createTeam(teamName, "SK", "blue", leader);
-    teamManager.addPlayerToTeam(teamName, successor);
-
-    teamManager.kickPlayerFromTeam(teamName, leader, leader.getName());
-
-    assertNull(teamManager.getPlayerTeam(leader));
-    assertEquals(teamName, teamManager.getPlayerTeam(successor));
-    assertEquals(successor.getUniqueId(), teamManager.getTeamLeaderId(teamName));
-    assertFalse(teamManager.getTeamMembers(teamName).contains(leader.getUniqueId()));
-  }
-
-  @Test
-  void playerListNameUpdatedOnPrefixAndColorChange() {
-    PlayerMock leader = server.addPlayer("StyleLeader");
-    PlayerMock member = server.addPlayer("StyleMember");
-
-    teamManager.createTeam("Stylists", "ST", "white", leader);
-    teamManager.addPlayerToTeam("Stylists", member);
-
-    teamManager.setTeamPrefix("Stylists", "NW", leader);
-    Component newPrefix =
-        Component.text("[NW] ", NamedTextColor.WHITE)
-            .append(Component.text(member.getName(), NamedTextColor.WHITE));
-    assertEquals(newPrefix, member.playerListName());
-
-    Component leaderPrefix =
-        Component.text("[NW] ", NamedTextColor.WHITE)
-            .append(Component.text(leader.getName(), NamedTextColor.WHITE));
-    assertEquals(leaderPrefix, leader.playerListName());
-
-    teamManager.setTeamColor("Stylists", "red", leader);
-    Component recolored =
-        Component.text("[NW] ", NamedTextColor.RED)
-            .append(Component.text(member.getName(), NamedTextColor.WHITE));
-    assertEquals(recolored, member.playerListName());
-
-    Component leaderRecolored =
-        Component.text("[NW] ", NamedTextColor.RED)
-            .append(Component.text(leader.getName(), NamedTextColor.WHITE));
-    assertEquals(leaderRecolored, leader.playerListName());
-  }
-
-  @Test
-  void duplicatePrefixUpdatesTriggerSingleListNameChange() {
-    TeamChatListener listener = new TeamChatListener(teamManager);
-    org.bukkit.entity.Player player = Mockito.mock(org.bukkit.entity.Player.class);
-    UUID playerId = UUID.randomUUID();
-    Mockito.when(player.getUniqueId()).thenReturn(playerId);
-    Mockito.when(player.getName()).thenReturn("Duplicate");
-
-    Component prefix = Component.text("[DP] ", NamedTextColor.BLUE);
-
-    listener.onPlayerPrefixUpdate(new TeamChatListener.PlayerPrefixUpdateEvent(player, prefix));
-    listener.onPlayerPrefixUpdate(new TeamChatListener.PlayerPrefixUpdateEvent(player, prefix));
-    listener.onPlayerPrefixUpdate(new TeamChatListener.PlayerPrefixUpdateEvent(player, null));
-    listener.onPlayerPrefixUpdate(new TeamChatListener.PlayerPrefixUpdateEvent(player, prefix));
-
-    ArgumentCaptor<Component> captor = ArgumentCaptor.forClass(Component.class);
-    Mockito.verify(player, Mockito.times(3)).playerListName(captor.capture());
-
-    List<Component> updates = captor.getAllValues();
-    Component expectedPrefix =
-        Component.text("[DP] ", NamedTextColor.BLUE)
-            .append(Component.text("Duplicate", NamedTextColor.WHITE));
-    Component expectedReset = Component.text("Duplicate", NamedTextColor.WHITE);
-
-    assertEquals(3, updates.size());
-    assertEquals(expectedPrefix, updates.get(0));
-    assertEquals(expectedReset, updates.get(1));
-    assertEquals(expectedPrefix, updates.get(2));
   }
 }

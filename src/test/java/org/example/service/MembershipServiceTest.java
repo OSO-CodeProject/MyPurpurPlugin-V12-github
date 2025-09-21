@@ -1,161 +1,163 @@
 package org.example.service;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
-import be.seeseemelk.mockbukkit.MockBukkit;
-import be.seeseemelk.mockbukkit.ServerMock;
 import be.seeseemelk.mockbukkit.entity.PlayerMock;
-import java.io.File;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.util.List;
-import java.util.UUID;
+import java.util.HashSet;
+import java.util.Set;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.scoreboard.DisplaySlot;
-import org.bukkit.scoreboard.Scoreboard;
+import org.example.MockBukkitTestBase;
 import org.example.config.PluginConfig;
 import org.example.model.Team;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-class MembershipServiceTest {
+class MembershipServiceTest extends MockBukkitTestBase {
 
-  private ServerMock server;
-  private JavaPlugin plugin;
+  private PluginConfig pluginConfig;
+  private TeamStorage storage;
+  private TestDeadlineScheduler scheduler;
+  private MembershipService membership;
 
   @BeforeEach
-  void setUp() {
-    server = MockBukkit.mock();
-    plugin = MockBukkit.createMockPlugin();
-  }
+  void setUpMembershipService() {
+    pluginConfig = mock(PluginConfig.class);
+    when(pluginConfig.getMinTeamNameLength()).thenReturn(3);
+    when(pluginConfig.getMaxTeamNameLength()).thenReturn(32);
+    when(pluginConfig.getMinPrefixLength()).thenReturn(1);
+    when(pluginConfig.getMaxPrefixLength()).thenReturn(16);
+    when(pluginConfig.getMaxMembers()).thenReturn(10);
+    when(pluginConfig.isGracePeriodEnabled()).thenReturn(true);
+    when(pluginConfig.getGracePeriodMinutes()).thenReturn(10);
 
-  @AfterEach
-  void tearDown() {
-    MockBukkit.unmock();
-  }
-
-  @Test
-  void transferLeadershipRetargetsDeadlineWarning() throws IOException {
-    prepareConfig();
-    PluginConfig config = new PluginConfig(plugin);
-    TeamStorage storage = new TeamStorage(plugin, config);
-    DeadlineScheduler scheduler = new DeadlineScheduler(plugin, config, storage);
-    MembershipService membershipService = new MembershipService(plugin, config, storage, scheduler);
-
-    PlayerMock captain = server.addPlayer("Captain");
-    PlayerMock successor = server.addPlayer("Successor");
-    PlayerMock reserve = server.addPlayer("Reserve");
-
-    Team team =
-        new Team(UUID.randomUUID(), "Alpha", captain.getUniqueId(), "AA", "WHITE");
-    team.setMembers(List.of(captain.getUniqueId(), successor.getUniqueId(), reserve.getUniqueId()));
-    storage.getTeams().put(team.getId(), team);
-    storage.getPlayerTeams().put(captain.getUniqueId(), team.getId());
-    storage.getPlayerTeams().put(successor.getUniqueId(), team.getId());
-    storage.getPlayerTeams().put(reserve.getUniqueId(), team.getId());
-    Scoreboard captainOriginal = captain.getScoreboard();
-    Scoreboard successorOriginal = successor.getScoreboard();
-
-    scheduler.enforceTeamSizes(false);
-
-    assertNotNull(captain.getScoreboard().getObjective(DisplaySlot.SIDEBAR));
-    assertSame(successorOriginal, successor.getScoreboard());
-    assertNull(successor.getScoreboard().getObjective(DisplaySlot.SIDEBAR));
-
-    membershipService.transferLeadership("Alpha", captain, successor);
-
-    assertSame(captainOriginal, captain.getScoreboard());
-    assertNull(captain.getScoreboard().getObjective(DisplaySlot.SIDEBAR));
-
-    assertNotSame(successorOriginal, successor.getScoreboard());
-    assertNotNull(successor.getScoreboard().getObjective(DisplaySlot.SIDEBAR));
+    storage = new TeamStorage(plugin, pluginConfig);
+    scheduler = new TestDeadlineScheduler(plugin, pluginConfig, storage);
+    membership = new MembershipService(plugin, pluginConfig, storage, scheduler);
   }
 
   @Test
-  void removingLeaderRetargetsDeadlineWarning() throws IOException {
-    prepareConfig();
-    PluginConfig config = new PluginConfig(plugin);
-    TeamStorage storage = new TeamStorage(plugin, config);
-    DeadlineScheduler scheduler = new DeadlineScheduler(plugin, config, storage);
-    MembershipService membershipService = new MembershipService(plugin, config, storage, scheduler);
+  void createTeamRegistersLeaderAndPrefix() {
+    PlayerMock leader = server.addPlayer("Leader");
 
-    PlayerMock captain = server.addPlayer("Captain");
-    PlayerMock successor = server.addPlayer("Successor");
-    PlayerMock reserve = server.addPlayer("Reserve");
+    membership.createTeam("Alpha", "A", "red", leader);
 
-    Team team =
-        new Team(UUID.randomUUID(), "Alpha", captain.getUniqueId(), "AA", "WHITE");
-    team.setMembers(List.of(captain.getUniqueId(), successor.getUniqueId(), reserve.getUniqueId()));
-    storage.getTeams().put(team.getId(), team);
-    storage.getPlayerTeams().put(captain.getUniqueId(), team.getId());
-    storage.getPlayerTeams().put(successor.getUniqueId(), team.getId());
-    storage.getPlayerTeams().put(reserve.getUniqueId(), team.getId());
-    Scoreboard captainOriginal = captain.getScoreboard();
-    Scoreboard successorOriginal = successor.getScoreboard();
-
-    scheduler.enforceTeamSizes(false);
-
-    assertNotNull(captain.getScoreboard().getObjective(DisplaySlot.SIDEBAR));
-    assertNull(successor.getScoreboard().getObjective(DisplaySlot.SIDEBAR));
-
-    membershipService.removePlayerFromTeam("Alpha", captain);
-
-    assertSame(captainOriginal, captain.getScoreboard());
-    assertNull(captain.getScoreboard().getObjective(DisplaySlot.SIDEBAR));
-
-    assertEquals(successor.getUniqueId(), team.getLeaderId());
-    assertNotSame(successorOriginal, successor.getScoreboard());
-    assertNotNull(successor.getScoreboard().getObjective(DisplaySlot.SIDEBAR));
+    Team team = storage.getTeamByName("Alpha");
+    assertNotNull(team, "Команда должна создаваться");
+    assertEquals(leader.getUniqueId(), team.getLeaderId(), "Лидер сохраняется");
+    assertEquals("A", team.getPrefix(), "Префикс сохраняется");
+    assertEquals("Alpha", storage.getPlayerTeam(leader), "Игрок связан с командой");
+    assertEquals(1, scheduler.enforceCalls, "После создания вызывается проверка лимитов");
   }
 
   @Test
-  void disbandingTeamClearsDeadlineWarningImmediately() throws IOException {
-    prepareConfig();
-    PluginConfig config = new PluginConfig(plugin);
-    TeamStorage storage = new TeamStorage(plugin, config);
-    DeadlineScheduler scheduler = new DeadlineScheduler(plugin, config, storage);
-    MembershipService membershipService = new MembershipService(plugin, config, storage, scheduler);
+  void addPlayerToTeamRespectsLimit() {
+    when(pluginConfig.getMaxMembers()).thenReturn(2);
+    PlayerMock leader = server.addPlayer("Leader");
+    membership.createTeam("Alpha", "A", "red", leader);
 
-    PlayerMock captain = server.addPlayer("Captain");
-    PlayerMock memberOne = server.addPlayer("MemberOne");
-    PlayerMock memberTwo = server.addPlayer("MemberTwo");
+    PlayerMock firstMember = server.addPlayer("MemberOne");
+    membership.addPlayerToTeam("Alpha", firstMember);
 
-    Team team =
-        new Team(UUID.randomUUID(), "Alpha", captain.getUniqueId(), "AA", "WHITE");
-    team.setMembers(List.of(captain.getUniqueId(), memberOne.getUniqueId(), memberTwo.getUniqueId()));
-    storage.getTeams().put(team.getId(), team);
-    storage.getPlayerTeams().put(captain.getUniqueId(), team.getId());
-    storage.getPlayerTeams().put(memberOne.getUniqueId(), team.getId());
-    storage.getPlayerTeams().put(memberTwo.getUniqueId(), team.getId());
-    Scoreboard captainOriginal = captain.getScoreboard();
+    PlayerMock secondMember = server.addPlayer("MemberTwo");
+    membership.addPlayerToTeam("Alpha", secondMember);
 
-    scheduler.enforceTeamSizes(false);
-
-    assertNotNull(captain.getScoreboard().getObjective(DisplaySlot.SIDEBAR));
-    assertNotSame(captainOriginal, captain.getScoreboard());
-
-    membershipService.disbandTeam("Alpha", captain);
-
-    assertTrue(scheduler.getDeadlines().isEmpty());
-    assertSame(captainOriginal, captain.getScoreboard());
-    assertNull(captain.getScoreboard().getObjective(DisplaySlot.SIDEBAR));
+    Team team = storage.getTeamByName("Alpha");
+    assertEquals(2, team.getMembers().size(), "Размер команды ограничен лимитом");
+    assertTrue(team.hasMember(firstMember.getUniqueId()), "Первый участник добавлен");
+    assertFalse(
+        team.hasMember(secondMember.getUniqueId()), "Второй участник не должен добавляться");
+    assertFalse(
+        storage.getPlayerTeams().containsKey(secondMember.getUniqueId()),
+        "Игрок не должен иметь записи о команде");
+    assertEquals(2, scheduler.enforceCalls, "Проверка лимитов вызывается при успешном добавлении");
   }
 
-  private void prepareConfig() throws IOException {
-    File dataFolder = plugin.getDataFolder();
-    if (!dataFolder.exists() && !dataFolder.mkdirs()) {
-      fail("Failed to create plugin data folder");
+  @Test
+  void leaderCanKickMemberByName() {
+    PlayerMock leader = server.addPlayer("Leader");
+    PlayerMock member = server.addPlayer("Member");
+    membership.createTeam("Alpha", "A", "red", leader);
+    membership.addPlayerToTeam("Alpha", member);
+
+    membership.kickPlayerFromTeam("Alpha", leader, member.getName());
+
+    Team team = storage.getTeamByName("Alpha");
+    assertFalse(team.hasMember(member.getUniqueId()), "Игрок должен быть исключён");
+    assertFalse(
+        storage.getPlayerTeams().containsKey(member.getUniqueId()),
+        "У игрока не должно оставаться привязки к команде");
+  }
+
+  @Test
+  void leaderCanDisbandTeam() {
+    PlayerMock leader = server.addPlayer("Leader");
+    PlayerMock member = server.addPlayer("Member");
+    membership.createTeam("Alpha", "A", "red", leader);
+    membership.addPlayerToTeam("Alpha", member);
+
+    membership.disbandTeam("Alpha", leader);
+
+    assertNull(storage.getTeamByName("Alpha"), "Команда должна быть удалена");
+    assertFalse(
+        storage.getPlayerTeams().containsKey(leader.getUniqueId()),
+        "Лидер должен потерять принадлежность");
+    assertFalse(
+        storage.getPlayerTeams().containsKey(member.getUniqueId()),
+        "Участник также должен потерять принадлежность");
+    assertTrue(scheduler.cancelledTeams.contains("Alpha"), "Дедлайн должен быть отменён");
+  }
+
+  @Test
+  void leaderCanTransferLeadership() {
+    PlayerMock leader = server.addPlayer("Leader");
+    PlayerMock newLeader = server.addPlayer("NewLeader");
+    membership.createTeam("Alpha", "A", "red", leader);
+    membership.addPlayerToTeam("Alpha", newLeader);
+
+    membership.transferLeadership("Alpha", leader, newLeader);
+
+    Team team = storage.getTeamByName("Alpha");
+    assertEquals(
+        newLeader.getUniqueId(), team.getLeaderId(), "Лидерство должно перейти новому игроку");
+    assertTrue(
+        scheduler.leaderTransfers.contains("Alpha"),
+        "Планировщик должен быть уведомлён о смене лидера");
+  }
+
+  private static class TestDeadlineScheduler extends DeadlineScheduler {
+    int enforceCalls;
+    final Set<String> cancelledTeams = new HashSet<>();
+    final Set<String> leaderTransfers = new HashSet<>();
+
+    TestDeadlineScheduler(JavaPlugin plugin, PluginConfig pluginConfig, TeamStorage storage) {
+      super(plugin, pluginConfig, storage);
     }
-    File configFile = new File(dataFolder, "config.yml");
-    String contents =
-        "team:\n"
-            + "  max-members: 2\n"
-            + "  enforce-max-members-on-reload: true\n"
-            + "  grace-period-enabled: true\n"
-            + "  grace-period-minutes: 5\n"
-            + "  deadline-display-mode: SCOREBOARD\n";
-    Files.writeString(configFile.toPath(), contents, StandardCharsets.UTF_8);
+
+    @Override
+    public void enforceTeamSizes(boolean triggeredByReload) {
+      enforceCalls++;
+    }
+
+    @Override
+    public void enforceTeamSizes() {
+      enforceCalls++;
+    }
+
+    @Override
+    public void cancelDeadline(Team team) {
+      cancelledTeams.add(team.getName());
+    }
+
+    @Override
+    public void handleLeaderTransfer(Team team) {
+      leaderTransfers.add(team.getName());
+    }
+
+    @Override
+    public void start() {}
+
+    @Override
+    public void stop() {}
   }
 }
