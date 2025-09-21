@@ -118,8 +118,15 @@ public class TeamChatListener implements Listener {
     }
   }
 
-  /** Clears cached prefix information for all tracked players. */
+  /** Clears cached prefix information for all tracked players and restores their original names. */
   public void clearCachedPrefixes() {
+    originalPlayerListNames.forEach(
+        (playerId, originalName) -> {
+          Player player = Bukkit.getPlayer(playerId);
+          if (player != null) {
+            player.playerListName(originalName);
+          }
+        });
     lastPlayerPrefixes.clear();
     originalPlayerListNames.clear();
   }
