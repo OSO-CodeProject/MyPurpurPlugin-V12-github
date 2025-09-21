@@ -26,6 +26,7 @@ public class TeamChatListener implements Listener {
   private final TeamService teamManager;
   private final Map<UUID, Component> lastPlayerPrefixes = new ConcurrentHashMap<>();
   private final Map<UUID, Component> originalPlayerListNames = new ConcurrentHashMap<>();
+  private final Map<UUID, Component> originalPlayerDisplayNames = new ConcurrentHashMap<>();
 
   public TeamChatListener(@NotNull TeamService teamManager) {
     this.teamManager = teamManager;
@@ -62,6 +63,7 @@ public class TeamChatListener implements Listener {
     Player player = event.getPlayer();
     lastPlayerPrefixes.remove(player.getUniqueId());
     originalPlayerListNames.remove(player.getUniqueId());
+    originalPlayerDisplayNames.remove(player.getUniqueId());
     ((MyPurpurPlugin) teamManager.getPlugin())
         .debugTeamAction("Игрок вышел", player.getName(), null);
   }
@@ -108,13 +110,16 @@ public class TeamChatListener implements Listener {
       ((MyPurpurPlugin) teamManager.getPlugin())
           .debug("Устанавливаем префикс для игрока " + player.getName() + ": " + prefix);
       Component originalName = getOrStoreOriginalPlayerListName(player, prefix);
+      Component originalDisplayName = getOrStoreOriginalPlayerDisplayName(player, prefix);
       lastPlayerPrefixes.put(playerId, prefix);
       player.playerListName(prefix.append(originalName));
+      player.displayName(prefix.append(originalDisplayName));
     } else {
       ((MyPurpurPlugin) teamManager.getPlugin())
           .debug("Сбрасываем префикс для игрока " + player.getName());
       lastPlayerPrefixes.remove(playerId);
       restoreOriginalPlayerListName(player);
+      restoreOriginalPlayerDisplayName(player);
     }
   }
 
@@ -127,8 +132,16 @@ public class TeamChatListener implements Listener {
             player.playerListName(originalName);
           }
         });
+    originalPlayerDisplayNames.forEach(
+        (playerId, originalDisplay) -> {
+          Player player = Bukkit.getPlayer(playerId);
+          if (player != null) {
+            player.displayName(originalDisplay);
+          }
+        });
     lastPlayerPrefixes.clear();
     originalPlayerListNames.clear();
+    originalPlayerDisplayNames.clear();
   }
 
   private void updatePlayerPrefix(@NotNull Player player) {
@@ -143,11 +156,14 @@ public class TeamChatListener implements Listener {
       Component prefixComponent = TeamUtils.createPrefixComponent(prefix, teamColor);
       Component cachedPrefix = lastPlayerPrefixes.get(playerId);
       Component originalName = getOrStoreOriginalPlayerListName(player, prefixComponent);
+      Component originalDisplayName = getOrStoreOriginalPlayerDisplayName(player, prefixComponent);
       lastPlayerPrefixes.put(playerId, prefixComponent);
       player.playerListName(prefixComponent.append(originalName));
+      player.displayName(prefixComponent.append(originalDisplayName));
     } else {
       lastPlayerPrefixes.remove(playerId);
       restoreOriginalPlayerListName(player);
+      restoreOriginalPlayerDisplayName(player);
     }
   }
 
@@ -177,7 +193,40 @@ public class TeamChatListener implements Listener {
       return displayName;
     }
 
-    return Component.text(player.getName(), NamedTextColor.WHITE);
+    return Component.text(player.getName());
+  }
+
+  private @NotNull Component getOrStoreOriginalPlayerDisplayName(
+      @NotNull Player player, Component applyingPrefix) {
+    UUID playerId = player.getUniqueId();
+    Component existing = originalPlayerDisplayNames.get(playerId);
+    if (existing != null) {
+      return existing;
+    }
+
+    Component current = getCurrentPlayerDisplayName(player);
+    Component sanitized = stripKnownPrefix(current, lastPlayerPrefixes.get(playerId), applyingPrefix);
+    Component toStore = sanitized != null ? sanitized : current;
+    originalPlayerDisplayNames.put(playerId, toStore);
+    return toStore;
+  }
+
+  private @NotNull Component getCurrentPlayerDisplayName(@NotNull Player player) {
+    Component displayName = player.displayName();
+    if (displayName != null && !isSimplePlayerName(displayName, player)) {
+      return displayName;
+    }
+
+    Component currentListName = player.playerListName();
+    if (currentListName != null) {
+      return currentListName;
+    }
+
+    if (displayName != null) {
+      return displayName;
+    }
+
+    return Component.text(player.getName());
   }
 
   private Component stripKnownPrefix(
@@ -216,6 +265,20 @@ public class TeamChatListener implements Listener {
     if (original != null) {
       player.playerListName(original);
     }
+  }
+
+  private void restoreOriginalPlayerDisplayName(@NotNull Player player) {
+    UUID playerId = player.getUniqueId();
+    Component original = originalPlayerDisplayNames.remove(playerId);
+    if (original != null) {
+      player.displayName(original);
+    }
+  }
+
+  private boolean isSimplePlayerName(@NotNull Component component, @NotNull Player player) {
+    Component plainName = Component.text(player.getName());
+    Component whiteName = Component.text(player.getName(), NamedTextColor.WHITE);
+    return component.equals(plainName) || component.equals(whiteName);
   }
 
   /** Внутренний класс для события обновления префикса игрока. */

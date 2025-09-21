@@ -153,6 +153,32 @@ class TeamChatListenerTest extends MockBukkitTestBase {
   }
 
   @Test
+  void customDisplayNameRestoredAfterPrefixUpdates() {
+    PlayerMock player = server.addPlayer("Display");
+    Component customDisplay =
+        Component.text("Colorful ", NamedTextColor.DARK_GREEN)
+            .append(Component.text("Player", NamedTextColor.LIGHT_PURPLE));
+    player.playerListName(customDisplay);
+    player.displayName(customDisplay);
+    teamService.assignPlayer(player, "Showcase", "S", NamedTextColor.DARK_GREEN);
+
+    Component prefix = Component.text("[S] ", NamedTextColor.DARK_GREEN);
+    server
+        .getPluginManager()
+        .callEvent(new TeamChatListener.PlayerPrefixUpdateEvent(player, prefix));
+
+    assertEquals(prefix.append(customDisplay), player.playerListName());
+    assertEquals(prefix.append(customDisplay), player.displayName());
+
+    server
+        .getPluginManager()
+        .callEvent(new TeamChatListener.PlayerPrefixUpdateEvent(player, null));
+
+    assertEquals(customDisplay, player.playerListName());
+    assertEquals(customDisplay, player.displayName());
+  }
+
+  @Test
   void customListNameRestoredAfterMultiplePrefixUpdates() {
     PlayerMock player = server.addPlayer("Formatter");
     Component customName =
