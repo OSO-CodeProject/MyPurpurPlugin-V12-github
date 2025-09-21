@@ -24,6 +24,8 @@ public class MyPurpurPlugin extends JavaPlugin {
   @SuppressWarnings("FieldCanBeLocal")
   private PluginConfig pluginConfig;
 
+  private TeamChatListener teamChatListener;
+
   private boolean debugMode = true;
 
   @Override
@@ -45,7 +47,8 @@ public class MyPurpurPlugin extends JavaPlugin {
     registerCommand("debugtoggle", new DebugToggleCommand(this));
 
     // Регистрация слушателя чата
-    getServer().getPluginManager().registerEvents(new TeamChatListener(teamManager), this);
+    teamChatListener = new TeamChatListener(teamManager);
+    getServer().getPluginManager().registerEvents(teamChatListener, this);
 
     getLogger().info("Плагин MyPurpurPlugin успешно загружен!");
   }
@@ -133,10 +136,21 @@ public class MyPurpurPlugin extends JavaPlugin {
     getLogger().info("Режим отладки " + (debugMode ? "включён" : "отключён") + "!");
   }
 
+  public TeamService getTeamManager() {
+    return teamManager;
+  }
+
+  public TeamChatListener getTeamChatListener() {
+    return teamChatListener;
+  }
+
   @Override
   public void onDisable() {
     if (teamManager != null) {
       teamManager.shutdown();
+    }
+    if (teamChatListener != null) {
+      teamChatListener.clearCachedPrefixes();
     }
   }
 }

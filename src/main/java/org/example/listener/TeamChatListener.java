@@ -112,6 +112,11 @@ public class TeamChatListener implements Listener {
     }
   }
 
+  /** Clears cached prefix information for all tracked players. */
+  public void clearCachedPrefixes() {
+    lastPlayerPrefixes.clear();
+  }
+
   private void updatePlayerPrefix(@NotNull Player player) {
     String teamName = teamManager.getPlayerTeam(player);
     UUID playerId = player.getUniqueId();
