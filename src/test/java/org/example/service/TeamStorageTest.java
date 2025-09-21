@@ -118,4 +118,32 @@ class TeamStorageTest {
     assertEquals("ValidTeam", loadedTeam.getName());
     assertTrue(reloadedDeadlines.isEmpty(), "Invalid entries should not add deadlines");
   }
+
+  @Test
+  void autoSaveContinuesAsynchronouslyAndFlushesOnShutdown() throws IOException {
+    TeamStorage storage = new TeamStorage(plugin, null);
+    Map<UUID, Long> deadlines = new HashMap<>();
+    storage.loadTeams(deadlines);
+
+    PlayerMock leader = server.addPlayer("AsyncLeader");
+    Team team = new Team(UUID.randomUUID(), "AsyncTeam", leader.getUniqueId(), "[A]", "green");
+    storage.addTeam(team);
+
+    storage.startAutoSave(1L, deadlines);
+    server.getScheduler().performTicks(40L);
+    server.getScheduler().waitAsyncTasksFinished();
+
+    File teamsFile = new File(plugin.getDataFolder(), "teams.yml");
+    assertTrue(teamsFile.exists(), "Auto-save should create the teams.yml file");
+    YamlConfiguration config = YamlConfiguration.loadConfiguration(teamsFile);
+    assertEquals("AsyncTeam", config.getString("teams." + team.getId() + ".name"));
+
+    storage.removeTeam(team);
+    storage.stopAutoSave();
+    server.getScheduler().waitAsyncTasksFinished();
+    storage.flushNow();
+
+    YamlConfiguration afterShutdown = YamlConfiguration.loadConfiguration(teamsFile);
+    assertNull(afterShutdown.getString("teams." + team.getId() + ".name"));
+  }
 }

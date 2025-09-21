@@ -43,144 +43,148 @@ public class TeamStorage {
 
   /** Loads team information from teams.yml and fills provided deadlines map. */
   public void loadTeams(Map<UUID, Long> deadlines) {
-    deadlinesReference = deadlines;
-    teamsFile = new File(plugin.getDataFolder(), "teams.yml");
-    if (!teamsFile.exists()) {
-      try {
-        teamsFile.getParentFile().mkdirs();
-        teamsFile.createNewFile();
-      } catch (IOException e) {
-        plugin.getLogger().severe("Failed to create teams.yml: " + e.getMessage());
-      }
-    }
-    teamsConfig = YamlConfiguration.loadConfiguration(teamsFile);
-    teams.clear();
-    teamIdsByName.clear();
-    playerTeams.clear();
-    deadlines.clear();
-    var section = teamsConfig.getConfigurationSection("teams");
-    boolean legacyDataUpdated = false;
-    if (section != null) {
-      for (String teamIdStr : section.getKeys(false)) {
-        UUID teamId;
+    synchronized (saveLock) {
+      deadlinesReference = deadlines;
+      teamsFile = new File(plugin.getDataFolder(), "teams.yml");
+      if (!teamsFile.exists()) {
         try {
-          teamId = UUID.fromString(teamIdStr);
-        } catch (IllegalArgumentException ex) {
-          plugin
-              .getLogger()
-              .warning("Skipping team entry with invalid UUID '" + teamIdStr + "'.");
-          continue;
+          teamsFile.getParentFile().mkdirs();
+          teamsFile.createNewFile();
+        } catch (IOException e) {
+          plugin.getLogger().severe("Failed to create teams.yml: " + e.getMessage());
         }
-        String name = teamsConfig.getString("teams." + teamIdStr + ".name", "");
-        if (name == null || name.isBlank()) {
-          plugin
-              .getLogger()
-              .warning(
-                  "Skipping team entry " + teamId + " because it does not define a name.");
-          continue;
-        }
-        String leaderRaw = teamsConfig.getString("teams." + teamIdStr + ".leader", "");
-        UUID leaderId = parseUuid(leaderRaw);
-        boolean leaderFromName = false;
-        if (leaderId == null) {
-          leaderId = resolvePlayerUuid(leaderRaw);
-          leaderFromName = leaderId != null;
-        }
-        if (leaderId == null) {
-          plugin
-              .getLogger()
-              .warning(
-                  "Skipping team entry " + teamId + " because it does not define a leader.");
-          continue;
-        }
-        String prefix = teamsConfig.getString("teams." + teamIdStr + ".prefix", "");
-        String color =
-            normalizeColorKey(teamsConfig.getString("teams." + teamIdStr + ".color", "WHITE"));
-        List<String> rawMembers = teamsConfig.getStringList("teams." + teamIdStr + ".members");
-        List<UUID> memberIds = new ArrayList<>();
-        boolean convertedMembers = false;
-        for (String rawMember : rawMembers) {
-          UUID memberId = parseUuid(rawMember);
-          boolean convertedFromName = false;
-          if (memberId == null) {
-            memberId = resolvePlayerUuid(rawMember);
-            convertedFromName = memberId != null;
+      }
+      teamsConfig = YamlConfiguration.loadConfiguration(teamsFile);
+      teams.clear();
+      teamIdsByName.clear();
+      playerTeams.clear();
+      deadlines.clear();
+      var section = teamsConfig.getConfigurationSection("teams");
+      boolean legacyDataUpdated = false;
+      if (section != null) {
+        for (String teamIdStr : section.getKeys(false)) {
+          UUID teamId;
+          try {
+            teamId = UUID.fromString(teamIdStr);
+          } catch (IllegalArgumentException ex) {
+            plugin
+                .getLogger()
+                .warning("Skipping team entry with invalid UUID '" + teamIdStr + "'.");
+            continue;
           }
-          if (memberId == null) {
+          String name = teamsConfig.getString("teams." + teamIdStr + ".name", "");
+          if (name == null || name.isBlank()) {
             plugin
                 .getLogger()
                 .warning(
-                    "Skipping member entry '"
-                        + rawMember
-                        + "' for team "
-                        + teamId
-                        + " because it could not be converted to UUID.");
+                    "Skipping team entry " + teamId + " because it does not define a name.");
             continue;
           }
-          if (!memberIds.contains(memberId)) {
-            memberIds.add(memberId);
+          String leaderRaw = teamsConfig.getString("teams." + teamIdStr + ".leader", "");
+          UUID leaderId = parseUuid(leaderRaw);
+          boolean leaderFromName = false;
+          if (leaderId == null) {
+            leaderId = resolvePlayerUuid(leaderRaw);
+            leaderFromName = leaderId != null;
           }
-          if (convertedFromName) {
+          if (leaderId == null) {
+            plugin
+                .getLogger()
+                .warning(
+                    "Skipping team entry " + teamId + " because it does not define a leader.");
+            continue;
+          }
+          String prefix = teamsConfig.getString("teams." + teamIdStr + ".prefix", "");
+          String color =
+              normalizeColorKey(teamsConfig.getString("teams." + teamIdStr + ".color", "WHITE"));
+          List<String> rawMembers = teamsConfig.getStringList("teams." + teamIdStr + ".members");
+          List<UUID> memberIds = new ArrayList<>();
+          boolean convertedMembers = false;
+          for (String rawMember : rawMembers) {
+            UUID memberId = parseUuid(rawMember);
+            boolean convertedFromName = false;
+            if (memberId == null) {
+              memberId = resolvePlayerUuid(rawMember);
+              convertedFromName = memberId != null;
+            }
+            if (memberId == null) {
+              plugin
+                  .getLogger()
+                  .warning(
+                      "Skipping member entry '"
+                          + rawMember
+                          + "' for team "
+                          + teamId
+                          + " because it could not be converted to UUID.");
+              continue;
+            }
+            if (!memberIds.contains(memberId)) {
+              memberIds.add(memberId);
+            }
+            if (convertedFromName) {
+              convertedMembers = true;
+            }
+          }
+          if (!memberIds.contains(leaderId)) {
+            memberIds.add(0, leaderId);
+            convertedMembers = true;
+          } else if (!memberIds.isEmpty() && !leaderId.equals(memberIds.get(0))) {
+            memberIds.remove(leaderId);
+            memberIds.add(0, leaderId);
             convertedMembers = true;
           }
+          if (memberIds.isEmpty()) {
+            memberIds.add(leaderId);
+            convertedMembers = true;
+          }
+          Team team = new Team(teamId, name != null ? name.trim() : null, leaderId, prefix, color);
+          team.setMembers(memberIds);
+          long deadline = teamsConfig.getLong("teams." + teamIdStr + ".deadline", 0L);
+          if (deadline > 0L) {
+            deadlines.put(team.getId(), deadline);
+          }
+          addTeamInternal(team, false);
+          for (UUID member : team.getMembers()) {
+            playerTeams.put(member, team.getId());
+          }
+          legacyDataUpdated = legacyDataUpdated || leaderFromName || convertedMembers;
         }
-        if (!memberIds.contains(leaderId)) {
-          memberIds.add(0, leaderId);
-          convertedMembers = true;
-        } else if (!memberIds.isEmpty() && !leaderId.equals(memberIds.get(0))) {
-          memberIds.remove(leaderId);
-          memberIds.add(0, leaderId);
-          convertedMembers = true;
-        }
-        if (memberIds.isEmpty()) {
-          memberIds.add(leaderId);
-          convertedMembers = true;
-        }
-        Team team = new Team(teamId, name != null ? name.trim() : null, leaderId, prefix, color);
-        team.setMembers(memberIds);
-        long deadline = teamsConfig.getLong("teams." + teamIdStr + ".deadline", 0L);
-        if (deadline > 0L) {
-          deadlines.put(team.getId(), deadline);
-        }
-        addTeamInternal(team, false);
-        for (UUID member : team.getMembers()) {
-          playerTeams.put(member, team.getId());
-        }
-        legacyDataUpdated = legacyDataUpdated || leaderFromName || convertedMembers;
       }
-    }
-    dirtyTeams.clear();
-    deadlinesDirty = false;
-    if (legacyDataUpdated) {
-      saveTeams(deadlines);
+      dirtyTeams.clear();
+      deadlinesDirty = false;
+      if (legacyDataUpdated) {
+        saveTeams(deadlines);
+      }
     }
   }
 
   /** Saves teams and deadlines back to teams.yml. */
   public void saveTeams(Map<UUID, Long> deadlines) {
-    if (teamsConfig == null || teamsFile == null) return;
-    teamsConfig.set("teams", null);
-    for (Map.Entry<UUID, Team> entry : teams.entrySet()) {
-      UUID teamId = entry.getKey();
-      Team team = entry.getValue();
-      String path = "teams." + teamId;
-      teamsConfig.set(path + ".name", team.getName());
-      UUID leaderId = team.getLeaderId();
-      teamsConfig.set(path + ".leader", leaderId != null ? leaderId.toString() : null);
-      teamsConfig.set(
-          path + ".members",
-          team.getMembers().stream().map(UUID::toString).collect(Collectors.toList()));
-      teamsConfig.set(path + ".prefix", team.getPrefix());
-      teamsConfig.set(path + ".color", colorKeyFor(team.getColor()));
-      Long deadline = deadlines.get(teamId);
-      if (deadline != null) {
-        teamsConfig.set(path + ".deadline", deadline);
+    synchronized (saveLock) {
+      if (teamsConfig == null || teamsFile == null) return;
+      teamsConfig.set("teams", null);
+      for (Map.Entry<UUID, Team> entry : teams.entrySet()) {
+        UUID teamId = entry.getKey();
+        Team team = entry.getValue();
+        String path = "teams." + teamId;
+        teamsConfig.set(path + ".name", team.getName());
+        UUID leaderId = team.getLeaderId();
+        teamsConfig.set(path + ".leader", leaderId != null ? leaderId.toString() : null);
+        teamsConfig.set(
+            path + ".members",
+            team.getMembers().stream().map(UUID::toString).collect(Collectors.toList()));
+        teamsConfig.set(path + ".prefix", team.getPrefix());
+        teamsConfig.set(path + ".color", colorKeyFor(team.getColor()));
+        Long deadline = deadlines.get(teamId);
+        if (deadline != null) {
+          teamsConfig.set(path + ".deadline", deadline);
+        }
       }
-    }
-    try {
-      teamsConfig.save(teamsFile);
-    } catch (IOException e) {
-      plugin.getLogger().warning("Failed to save teams.yml: " + e.getMessage());
+      try {
+        teamsConfig.save(teamsFile);
+      } catch (IOException e) {
+        plugin.getLogger().warning("Failed to save teams.yml: " + e.getMessage());
+      }
     }
   }
 
@@ -320,7 +324,10 @@ public class TeamStorage {
     }
     long ticks = Math.max(1L, intervalSeconds) * 20L;
     autoSaveTask =
-        plugin.getServer().getScheduler().runTaskTimer(plugin, this::flushNow, ticks, ticks);
+        plugin
+            .getServer()
+            .getScheduler()
+            .runTaskTimerAsynchronously(plugin, this::flushNow, ticks, ticks);
   }
 
   public synchronized void stopAutoSave() {
