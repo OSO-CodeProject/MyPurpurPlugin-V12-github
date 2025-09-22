@@ -279,6 +279,31 @@ class TeamChatListenerTest extends MockBukkitTestBase {
         "[R] Reloaded: Hi", PlainTextComponentSerializer.plainText().serialize(rendered));
   }
 
+  @Test
+  void warmCachePreservesExistingCustomTabNames() {
+    HandlerList.unregisterAll(listener);
+    listener.clearCachedPrefixes();
+
+    PlayerMock player = server.addPlayer("Styled");
+    Component customTabName =
+        Component.text("Fancy ", NamedTextColor.GOLD)
+            .append(Component.text("Styled", NamedTextColor.DARK_GREEN));
+    player.playerListName(customTabName);
+    teamService.assignPlayer(player, "Stylists", "S", NamedTextColor.DARK_GREEN);
+
+    listener = new TeamChatListener(teamService);
+    server.getPluginManager().registerEvents(listener, plugin);
+
+    Component prefix = Component.text("[S] ", NamedTextColor.DARK_GREEN);
+    assertEquals(prefix.append(customTabName), player.playerListName());
+
+    server
+        .getPluginManager()
+        .callEvent(new TeamChatListener.PlayerPrefixUpdateEvent(player, null));
+
+    assertEquals(customTabName, player.playerListName());
+  }
+
   private static class StubTeamService implements TeamService {
     private final org.bukkit.plugin.java.JavaPlugin plugin;
     private final PluginConfig config;
