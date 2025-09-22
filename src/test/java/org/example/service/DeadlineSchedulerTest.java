@@ -94,11 +94,14 @@ class DeadlineSchedulerTest {
     File configFile = new File(dataFolder, "config.yml");
     String contents =
         "team:\n"
-            + "  max-members: 2\n"
-            + "  enforce-max-members-on-reload: false\n"
-            + "  grace-period-enabled: true\n"
-            + "  grace-period-minutes: 5\n"
-            + "  deadline-display-mode: SCOREBOARD\n";
+            + "  membership:\n"
+            + "    max-members: 2\n"
+            + "    enforce-max-members-on-reload: false\n"
+            + "    grace-period:\n"
+            + "      enabled: true\n"
+            + "      minutes: 5\n"
+            + "  deadlines:\n"
+            + "    display-mode: SCOREBOARD\n";
     Files.writeString(configFile.toPath(), contents, StandardCharsets.UTF_8);
   }
 }

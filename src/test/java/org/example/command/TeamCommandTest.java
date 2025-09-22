@@ -48,6 +48,16 @@ class TeamCommandTest {
   private FileConfiguration config;
   private DeadlineScheduler scheduler;
 
+  private static final String MAX_MEMBERS_PATH = PluginConfig.Keys.Team.Membership.MAX_MEMBERS;
+  private static final String ENFORCE_MAX_ON_RELOAD_PATH =
+      PluginConfig.Keys.Team.Membership.ENFORCE_MAX_ON_RELOAD;
+  private static final String GRACE_ENABLED_PATH =
+      PluginConfig.Keys.Team.Membership.GracePeriod.ENABLED;
+  private static final String GRACE_MINUTES_PATH =
+      PluginConfig.Keys.Team.Membership.GracePeriod.MINUTES;
+  private static final String DEADLINE_DISPLAY_MODE_PATH =
+      PluginConfig.Keys.Team.Deadlines.DISPLAY_MODE;
+
   @BeforeAll
   static void initServer() {
     server = MockBukkit.mock();
@@ -211,10 +221,10 @@ class TeamCommandTest {
 
   @Test
   void transfersLeadershipRestoresScoreboardForPreviousLeader() {
-    config.set("team.deadline-display-mode", "SCOREBOARD");
-    config.set("team.max-members", 0);
-    config.set("team.grace-period-enabled", true);
-    config.set("team.grace-period-minutes", 5);
+    config.set(DEADLINE_DISPLAY_MODE_PATH, "SCOREBOARD");
+    config.set(MAX_MEMBERS_PATH, 0);
+    config.set(GRACE_ENABLED_PATH, true);
+    config.set(GRACE_MINUTES_PATH, 5);
 
     PlayerMock oldLeader = server.addPlayer("OldLeader");
     PlayerMock newLeader = server.addPlayer("NewLeader");
@@ -225,7 +235,7 @@ class TeamCommandTest {
     Scoreboard oldLeaderOriginal = oldLeader.getScoreboard();
     Scoreboard newLeaderOriginal = newLeader.getScoreboard();
 
-    config.set("team.max-members", 1);
+    config.set(MAX_MEMBERS_PATH, 1);
     scheduler.enforceTeamSizes();
 
     Scoreboard warnedOldLeaderBoard = oldLeader.getScoreboard();
@@ -247,7 +257,7 @@ class TeamCommandTest {
 
   @Test
   void preventsJoinWhenTeamFull() {
-    config.set("team.max-members", 1);
+    config.set(MAX_MEMBERS_PATH, 1);
     CommandMap commandMap = server.getCommandMap();
 
     PlayerMock leader = server.addPlayer("Leader");
@@ -266,10 +276,10 @@ class TeamCommandTest {
 
   @Test
   void keepsBlockingJoinsAfterReloadWhenEnforcementDisabled() {
-    config.set("team.max-members", 0);
-    config.set("team.grace-period-enabled", true);
-    config.set("team.grace-period-minutes", 5);
-    config.set("team.enforce-max-members-on-reload", false);
+    config.set(MAX_MEMBERS_PATH, 0);
+    config.set(GRACE_ENABLED_PATH, true);
+    config.set(GRACE_MINUTES_PATH, 5);
+    config.set(ENFORCE_MAX_ON_RELOAD_PATH, false);
 
     PlayerMock leader = server.addPlayer("ReloadLeader");
     PlayerMock memberOne = server.addPlayer("ReloadMemberOne");
@@ -281,7 +291,7 @@ class TeamCommandTest {
 
     assertEquals(3, teamManager.getTeamMembers("Reloaded").size());
 
-    config.set("team.max-members", 1);
+    config.set(MAX_MEMBERS_PATH, 1);
 
     scheduler.enforceTeamSizes(true);
     assertTrue(scheduler.getDeadlines().isEmpty());
@@ -465,7 +475,7 @@ class TeamCommandTest {
   @Test
   void playerQuitRemovesDeadlineAfterLeaving() {
     // Allow two players initially
-    config.set("team.max-members", 2);
+    config.set(MAX_MEMBERS_PATH, 2);
     CommandMap commandMap = server.getCommandMap();
 
     PlayerMock leader = server.addPlayer("Leader");
@@ -477,7 +487,7 @@ class TeamCommandTest {
     commandMap.dispatch(member, "team join Beta");
 
     // Reduce max members and enforce deadlines
-    config.set("team.max-members", 1);
+    config.set(MAX_MEMBERS_PATH, 1);
     scheduler.enforceTeamSizes();
     assertNotNull(teamManager.getTeamDeadline("Beta"));
 
@@ -501,8 +511,8 @@ class TeamCommandTest {
     member.addAttachment(plugin, "mypurpurplugin.team", true);
     assertTrue(commandMap.dispatch(member, "team join Beta"));
 
-    config.set("team.max-members", 1);
-    config.set("team.grace-period-minutes", 5);
+    config.set(MAX_MEMBERS_PATH, 1);
+    config.set(GRACE_MINUTES_PATH, 5);
     assertEquals(2, teamManager.getTeamMembers("Beta").size());
     assertEquals(1, pluginConfig.getMaxMembers());
 
@@ -533,8 +543,8 @@ class TeamCommandTest {
     member.addAttachment(plugin, "mypurpurplugin.team", true);
     assertTrue(commandMap.dispatch(member, "team join Beta"));
 
-    config.set("team.max-members", 1);
-    config.set("team.grace-period-minutes", 5);
+    config.set(MAX_MEMBERS_PATH, 1);
+    config.set(GRACE_MINUTES_PATH, 5);
     assertEquals(2, teamManager.getTeamMembers("Beta").size());
     assertEquals(1, pluginConfig.getMaxMembers());
     config.save(new File(plugin.getDataFolder(), "config.yml"));
@@ -571,8 +581,8 @@ class TeamCommandTest {
     extra.addAttachment(plugin, "mypurpurplugin.team", true);
     assertTrue(commandMap.dispatch(extra, "team join Beta"));
 
-    config.set("team.max-members", 1);
-    config.set("team.grace-period-minutes", 5);
+    config.set(MAX_MEMBERS_PATH, 1);
+    config.set(GRACE_MINUTES_PATH, 5);
 
     while (leader.nextComponentMessage() != null) {}
 
