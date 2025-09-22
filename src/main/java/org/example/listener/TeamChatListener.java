@@ -30,12 +30,17 @@ public class TeamChatListener implements Listener {
 
   public TeamChatListener(@NotNull TeamService teamManager) {
     this.teamManager = teamManager;
-    Bukkit.getOnlinePlayers().forEach(this::updatePlayerPrefix);
+    Bukkit.getOnlinePlayers().forEach(
+        player -> {
+          cacheOriginalPlayerListName(player);
+          updatePlayerPrefix(player);
+        });
   }
 
   @EventHandler
   public void onPlayerJoin(@NotNull PlayerJoinEvent event) {
     Player player = event.getPlayer();
+    cacheOriginalPlayerListName(player);
     updatePlayerPrefix(player);
     String teamName = teamManager.getPlayerTeam(player);
     if (teamName != null && teamManager.getTeamIdByName(teamName) != null) {
@@ -109,7 +114,7 @@ public class TeamChatListener implements Listener {
       }
       ((MyPurpurPlugin) teamManager.getPlugin())
           .debug("Устанавливаем префикс для игрока " + player.getName() + ": " + prefix);
-      Component originalName = getOrStoreOriginalPlayerListName(player, prefix);
+      Component originalName = cacheOriginalPlayerListName(player, prefix);
       Component originalDisplayName = getOrStoreOriginalPlayerDisplayName(player, prefix);
       lastPlayerPrefixes.put(playerId, prefix);
       player.playerListName(prefix.append(originalName));
@@ -155,7 +160,7 @@ public class TeamChatListener implements Listener {
       NamedTextColor teamColor = teamManager.getTeamColor(teamName);
       Component prefixComponent = TeamUtils.createPrefixComponent(prefix, teamColor);
       Component cachedPrefix = lastPlayerPrefixes.get(playerId);
-      Component originalName = getOrStoreOriginalPlayerListName(player, prefixComponent);
+      Component originalName = cacheOriginalPlayerListName(player, prefixComponent);
       Component originalDisplayName = getOrStoreOriginalPlayerDisplayName(player, prefixComponent);
       lastPlayerPrefixes.put(playerId, prefixComponent);
       player.playerListName(prefixComponent.append(originalName));
@@ -167,7 +172,7 @@ public class TeamChatListener implements Listener {
     }
   }
 
-  private @NotNull Component getOrStoreOriginalPlayerListName(
+  private @NotNull Component cacheOriginalPlayerListName(
       @NotNull Player player, Component applyingPrefix) {
     UUID playerId = player.getUniqueId();
     Component existing = originalPlayerListNames.get(playerId);
@@ -180,6 +185,10 @@ public class TeamChatListener implements Listener {
     Component toStore = sanitized != null ? sanitized : current;
     originalPlayerListNames.put(playerId, toStore);
     return toStore;
+  }
+
+  private @NotNull Component cacheOriginalPlayerListName(@NotNull Player player) {
+    return cacheOriginalPlayerListName(player, null);
   }
 
   private @NotNull Component getCurrentPlayerListName(@NotNull Player player) {
