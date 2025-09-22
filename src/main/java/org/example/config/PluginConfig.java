@@ -6,6 +6,7 @@ import java.util.Locale;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.NotNull;
 
 /** Класс для управления конфигурацией плагина. */
@@ -99,6 +100,9 @@ public class PluginConfig {
   private final JavaPlugin plugin;
   private FileConfiguration config;
   private File configFile;
+  private final Object saveLock = new Object();
+  private volatile boolean dirty;
+  private BukkitTask autoSaveTask;
 
   public PluginConfig(@NotNull JavaPlugin plugin) {
     this.plugin = plugin;
@@ -125,75 +129,71 @@ public class PluginConfig {
     }
 
     config = YamlConfiguration.loadConfiguration(configFile);
+    dirty = false;
     setDefaults(true);
   }
 
   /** Устанавливает значения по умолчанию для конфигурации. */
   private void setDefaults(boolean persistChanges) {
-    boolean newKeysAdded = false;
+    boolean changed = false;
 
     // Миграция старых ключей
-    newKeysAdded |= migrateLegacyKey("debug-mode", Keys.DEBUG_MODE);
-    newKeysAdded |= migrateLegacyKey("force-white-chat", Keys.CHAT_FORCE_WHITE);
-    newKeysAdded |= migrateLegacyKey("team.requires-op", Keys.Team.Commands.REQUIRES_OP);
-    newKeysAdded |= migrateLegacyKey("team.notify-admins", Keys.Team.Notifications.NOTIFY_ADMINS);
-    newKeysAdded |= migrateLegacyKey("team.max-members", Keys.Team.Membership.MAX_MEMBERS);
-    newKeysAdded |=
+    changed |= migrateLegacyKey("debug-mode", Keys.DEBUG_MODE);
+    changed |= migrateLegacyKey("force-white-chat", Keys.CHAT_FORCE_WHITE);
+    changed |= migrateLegacyKey("team.requires-op", Keys.Team.Commands.REQUIRES_OP);
+    changed |= migrateLegacyKey("team.notify-admins", Keys.Team.Notifications.NOTIFY_ADMINS);
+    changed |= migrateLegacyKey("team.max-members", Keys.Team.Membership.MAX_MEMBERS);
+    changed |=
         migrateLegacyKey(
             "team.enforce-max-members-on-reload", Keys.Team.Membership.ENFORCE_MAX_ON_RELOAD);
-    newKeysAdded |=
+    changed |=
         migrateLegacyKey("team.grace-period-enabled", Keys.Team.Membership.GracePeriod.ENABLED);
-    newKeysAdded |=
+    changed |=
         migrateLegacyKey("team.grace-period-minutes", Keys.Team.Membership.GracePeriod.MINUTES);
-    newKeysAdded |= migrateLegacyKey("team.min-prefix-length", Keys.Team.Naming.Prefix.MIN_LENGTH);
-    newKeysAdded |= migrateLegacyKey("team.max-prefix-length", Keys.Team.Naming.Prefix.MAX_LENGTH);
-    newKeysAdded |=
-        migrateLegacyKey("team.min-team-name-length", Keys.Team.Naming.TeamName.MIN_LENGTH);
-    newKeysAdded |=
-        migrateLegacyKey("team.max-team-name-length", Keys.Team.Naming.TeamName.MAX_LENGTH);
-    newKeysAdded |=
+    changed |= migrateLegacyKey("team.min-prefix-length", Keys.Team.Naming.Prefix.MIN_LENGTH);
+    changed |= migrateLegacyKey("team.max-prefix-length", Keys.Team.Naming.Prefix.MAX_LENGTH);
+    changed |= migrateLegacyKey("team.min-team-name-length", Keys.Team.Naming.TeamName.MIN_LENGTH);
+    changed |= migrateLegacyKey("team.max-team-name-length", Keys.Team.Naming.TeamName.MAX_LENGTH);
+    changed |=
         migrateLegacyKey(
             "team.deadline-notify-period-seconds", Keys.Team.Deadlines.NOTIFY_PERIOD_SECONDS);
-    newKeysAdded |=
-        migrateLegacyKey("team.deadline-display-mode", Keys.Team.Deadlines.DISPLAY_MODE);
-    newKeysAdded |=
-        migrateLegacyKey("team.deadline-removal-policy", Keys.Team.Deadlines.REMOVAL_POLICY);
-    newKeysAdded |=
-        migrateLegacyKey("team.save-interval-seconds", Keys.Team.Storage.SAVE_INTERVAL_SECONDS);
-    newKeysAdded |= migrateLegacyKey("menu.open-sound", Keys.Menu.Sound.OPEN);
-    newKeysAdded |= migrateLegacyKey("menu.sound-volume", Keys.Menu.Sound.VOLUME);
-    newKeysAdded |= migrateLegacyKey("menu.sound-pitch", Keys.Menu.Sound.PITCH);
+    changed |= migrateLegacyKey("team.deadline-display-mode", Keys.Team.Deadlines.DISPLAY_MODE);
+    changed |= migrateLegacyKey("team.deadline-removal-policy", Keys.Team.Deadlines.REMOVAL_POLICY);
+    changed |= migrateLegacyKey("team.save-interval-seconds", Keys.Team.Storage.SAVE_INTERVAL_SECONDS);
+    changed |= migrateLegacyKey("menu.open-sound", Keys.Menu.Sound.OPEN);
+    changed |= migrateLegacyKey("menu.sound-volume", Keys.Menu.Sound.VOLUME);
+    changed |= migrateLegacyKey("menu.sound-pitch", Keys.Menu.Sound.PITCH);
 
     // Глобальные настройки
-    newKeysAdded |= addDefaultIfMissing(Keys.DEBUG_MODE, true);
-    newKeysAdded |= addDefaultIfMissing(Keys.CHAT_FORCE_WHITE, false);
+    changed |= addDefaultIfMissing(Keys.DEBUG_MODE, true);
+    changed |= addDefaultIfMissing(Keys.CHAT_FORCE_WHITE, false);
 
     // Основные настройки
-    newKeysAdded |= addDefaultIfMissing(Keys.Team.Commands.REQUIRES_OP, false);
-    newKeysAdded |= addDefaultIfMissing(Keys.Team.Notifications.NOTIFY_ADMINS, true);
-    newKeysAdded |= addDefaultIfMissing(Keys.Team.Membership.MAX_MEMBERS, 0);
-    newKeysAdded |= addDefaultIfMissing(Keys.Team.Naming.Prefix.MIN_LENGTH, 1);
-    newKeysAdded |= addDefaultIfMissing(Keys.Team.Naming.Prefix.MAX_LENGTH, 16);
-    newKeysAdded |= addDefaultIfMissing(Keys.Team.Naming.TeamName.MIN_LENGTH, 3);
-    newKeysAdded |= addDefaultIfMissing(Keys.Team.Naming.TeamName.MAX_LENGTH, 32);
-    newKeysAdded |= addDefaultIfMissing(Keys.Team.Membership.ENFORCE_MAX_ON_RELOAD, true);
-    newKeysAdded |= addDefaultIfMissing(Keys.Team.Membership.GracePeriod.ENABLED, true);
-    newKeysAdded |= addDefaultIfMissing(Keys.Team.Membership.GracePeriod.MINUTES, 10);
-    newKeysAdded |= addDefaultIfMissing(Keys.Team.Deadlines.NOTIFY_PERIOD_SECONDS, 300L);
-    newKeysAdded |= addDefaultIfMissing(Keys.Team.Storage.SAVE_INTERVAL_SECONDS, 60L);
-    newKeysAdded |= addDefaultIfMissing(Keys.Team.Deadlines.DISPLAY_MODE, "CHAT");
-    newKeysAdded |= addDefaultIfMissing(Keys.Team.Deadlines.REMOVAL_POLICY, "last-joined");
+    changed |= addDefaultIfMissing(Keys.Team.Commands.REQUIRES_OP, false);
+    changed |= addDefaultIfMissing(Keys.Team.Notifications.NOTIFY_ADMINS, true);
+    changed |= addDefaultIfMissing(Keys.Team.Membership.MAX_MEMBERS, 0);
+    changed |= addDefaultIfMissing(Keys.Team.Naming.Prefix.MIN_LENGTH, 1);
+    changed |= addDefaultIfMissing(Keys.Team.Naming.Prefix.MAX_LENGTH, 16);
+    changed |= addDefaultIfMissing(Keys.Team.Naming.TeamName.MIN_LENGTH, 3);
+    changed |= addDefaultIfMissing(Keys.Team.Naming.TeamName.MAX_LENGTH, 32);
+    changed |= addDefaultIfMissing(Keys.Team.Membership.ENFORCE_MAX_ON_RELOAD, true);
+    changed |= addDefaultIfMissing(Keys.Team.Membership.GracePeriod.ENABLED, true);
+    changed |= addDefaultIfMissing(Keys.Team.Membership.GracePeriod.MINUTES, 10);
+    changed |= addDefaultIfMissing(Keys.Team.Deadlines.NOTIFY_PERIOD_SECONDS, 300L);
+    changed |= addDefaultIfMissing(Keys.Team.Storage.SAVE_INTERVAL_SECONDS, 60L);
+    changed |= addDefaultIfMissing(Keys.Team.Deadlines.DISPLAY_MODE, "CHAT");
+    changed |= addDefaultIfMissing(Keys.Team.Deadlines.REMOVAL_POLICY, "last-joined");
 
     // Настройки меню
-    newKeysAdded |= addDefaultIfMissing(Keys.Menu.Sound.OPEN, "BLOCK_NOTE_BLOCK_PLING");
-    newKeysAdded |= addDefaultIfMissing(Keys.Menu.PARTICLE_EFFECT, "FIREWORK");
-    newKeysAdded |= addDefaultIfMissing(Keys.Menu.Sound.VOLUME, 1.0);
-    newKeysAdded |= addDefaultIfMissing(Keys.Menu.Sound.PITCH, 1.0);
+    changed |= addDefaultIfMissing(Keys.Menu.Sound.OPEN, "BLOCK_NOTE_BLOCK_PLING");
+    changed |= addDefaultIfMissing(Keys.Menu.PARTICLE_EFFECT, "FIREWORK");
+    changed |= addDefaultIfMissing(Keys.Menu.Sound.VOLUME, 1.0);
+    changed |= addDefaultIfMissing(Keys.Menu.Sound.PITCH, 1.0);
 
     config.options().copyDefaults(true);
 
-    if (persistChanges && newKeysAdded) {
-      saveConfig();
+    if (persistChanges && changed) {
+      markDirty();
     }
   }
 
@@ -281,17 +281,77 @@ public class PluginConfig {
 
   /** Сохраняет файл конфигурации. */
   private void saveConfig() {
-    try {
-      config.save(configFile);
-    } catch (IOException e) {
-      plugin.getLogger().severe("Ошибка при сохранении config.yml: " + e.getMessage());
+    synchronized (saveLock) {
+      try {
+        config.save(configFile);
+      } catch (IOException e) {
+        plugin.getLogger().severe("Ошибка при сохранении config.yml: " + e.getMessage());
+      }
     }
   }
 
   /** Перезагружает конфигурацию из файла. */
   public void reloadConfig() {
+    flushIfDirty();
     config = YamlConfiguration.loadConfiguration(configFile);
-    setDefaults(false);
+    dirty = false;
+    setDefaults(true);
+  }
+
+  /** Обновляет состояние флага debug.mode и помечает конфигурацию как изменённую. */
+  public void updateDebugMode(boolean enabled) {
+    boolean current = config.getBoolean(Keys.DEBUG_MODE, true);
+    if (current == enabled) {
+      return;
+    }
+    config.set(Keys.DEBUG_MODE, enabled);
+    markDirty();
+  }
+
+  private void markDirty() {
+    dirty = true;
+  }
+
+  /** Запускает периодическое сохранение конфигурации. */
+  public void startAutoSave(long intervalSeconds) {
+    stopAutoSave();
+    if (intervalSeconds <= 0) {
+      return;
+    }
+    long ticks = Math.max(1L, intervalSeconds) * 20L;
+    autoSaveTask =
+        plugin
+            .getServer()
+            .getScheduler()
+            .runTaskTimerAsynchronously(plugin, this::flushIfDirty, ticks, ticks);
+  }
+
+  /** Останавливает периодическое сохранение конфигурации. */
+  public void stopAutoSave() {
+    if (autoSaveTask != null) {
+      autoSaveTask.cancel();
+      autoSaveTask = null;
+    }
+  }
+
+  /** Сохраняет конфигурацию, если с момента последнего сохранения были изменения. */
+  public void flushIfDirty() {
+    if (!dirty) {
+      return;
+    }
+    synchronized (saveLock) {
+      if (!dirty) {
+        return;
+      }
+      saveConfig();
+      dirty = false;
+    }
+  }
+
+  /** Останавливает автосохранение и гарантирует запись несохранённых изменений на диск. */
+  public void shutdown() {
+    stopAutoSave();
+    flushIfDirty();
   }
 
   /**

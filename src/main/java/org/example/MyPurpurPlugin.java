@@ -27,11 +27,13 @@ public class MyPurpurPlugin extends JavaPlugin {
   private TeamChatListener teamChatListener;
 
   private boolean debugMode = true;
+  private static final long CONFIG_AUTO_SAVE_INTERVAL_SECONDS = 60L;
 
   @Override
   public void onEnable() {
     // Инициализация конфигурации
     pluginConfig = new PluginConfig(this);
+    pluginConfig.startAutoSave(CONFIG_AUTO_SAVE_INTERVAL_SECONDS);
     applyDebugModeFromConfig();
     // Инициализация менеджера команд
     teamManager = new TeamManager(this, pluginConfig);
@@ -133,6 +135,9 @@ public class MyPurpurPlugin extends JavaPlugin {
       return;
     }
     this.debugMode = enabled;
+    if (pluginConfig != null) {
+      pluginConfig.updateDebugMode(enabled);
+    }
     getLogger().info("Режим отладки " + (debugMode ? "включён" : "отключён") + "!");
   }
 
@@ -151,6 +156,9 @@ public class MyPurpurPlugin extends JavaPlugin {
     }
     if (teamChatListener != null) {
       teamChatListener.clearCachedPrefixes();
+    }
+    if (pluginConfig != null) {
+      pluginConfig.shutdown();
     }
   }
 }

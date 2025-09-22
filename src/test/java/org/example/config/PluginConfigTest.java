@@ -195,4 +195,35 @@ class PluginConfigTest {
         initialHash, secondReloadHash, "Hashes should remain stable after repeated reloads");
     assertTrue(new String(afterSecondReload).contains(customComment));
   }
+
+  @Test
+  void debugTogglePersistsChangesOnShutdown() throws Exception {
+    server = MockBukkit.mock();
+    MyPurpurPlugin plugin = MockBukkit.load(MyPurpurPlugin.class);
+
+    File configFile = new File(plugin.getDataFolder(), "config.yml");
+    YamlConfiguration yaml = YamlConfiguration.loadConfiguration(configFile);
+    assertTrue(yaml.getBoolean(PluginConfig.Keys.DEBUG_MODE));
+
+    ConsoleCommandSender console = server.getConsoleSender();
+    CommandMap commandMap = server.getCommandMap();
+    assertTrue(commandMap.dispatch(console, "debugtoggle"));
+
+    // До выключения плагина файл остаётся без изменений.
+    yaml = YamlConfiguration.loadConfiguration(configFile);
+    assertTrue(yaml.getBoolean(PluginConfig.Keys.DEBUG_MODE));
+
+    server.getPluginManager().disablePlugin(plugin);
+
+    yaml = YamlConfiguration.loadConfiguration(configFile);
+    assertFalse(yaml.getBoolean(PluginConfig.Keys.DEBUG_MODE));
+
+    server.getPluginManager().enablePlugin(plugin);
+
+    Field cfgField = MyPurpurPlugin.class.getDeclaredField("pluginConfig");
+    cfgField.setAccessible(true);
+    PluginConfig pluginConfig = (PluginConfig) cfgField.get(plugin);
+
+    assertFalse(pluginConfig.isDebugModeEnabled());
+  }
 }
