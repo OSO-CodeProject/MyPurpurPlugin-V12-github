@@ -35,8 +35,7 @@ public class Team {
     this.memberLookup = new HashSet<>();
     addMember(leader);
     this.prefix = normalizePrefix(prefix);
-    this.color =
-        NamedTextColor.NAMES.valueOr(color.toLowerCase(Locale.ROOT), NamedTextColor.WHITE);
+    this.color = NamedTextColor.NAMES.valueOr(color.toLowerCase(Locale.ROOT), NamedTextColor.WHITE);
   }
 
   // Геттеры
@@ -83,8 +82,7 @@ public class Team {
   }
 
   public void setColor(String color) {
-    this.color =
-        NamedTextColor.NAMES.valueOr(color.toLowerCase(Locale.ROOT), NamedTextColor.WHITE);
+    this.color = NamedTextColor.NAMES.valueOr(color.toLowerCase(Locale.ROOT), NamedTextColor.WHITE);
   }
 
   // Методы управления участниками

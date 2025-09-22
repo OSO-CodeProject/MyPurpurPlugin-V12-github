@@ -47,8 +47,7 @@ class DeadlineSchedulerTest {
     PlayerMock memberOne = server.addPlayer("MemberOne");
     PlayerMock memberTwo = server.addPlayer("MemberTwo");
 
-    Team team =
-        new Team(UUID.randomUUID(), "Alpha", leader.getUniqueId(), "", "WHITE");
+    Team team = new Team(UUID.randomUUID(), "Alpha", leader.getUniqueId(), "", "WHITE");
     team.setMembers(
         List.of(leader.getUniqueId(), memberOne.getUniqueId(), memberTwo.getUniqueId()));
     storage.getTeams().put(team.getId(), team);
@@ -75,8 +74,7 @@ class DeadlineSchedulerTest {
     DeadlineScheduler scheduler = new DeadlineScheduler(plugin, config, storage);
 
     PlayerMock leader = server.addPlayer("Leader");
-    Team team =
-        new Team(UUID.randomUUID(), "Alpha", leader.getUniqueId(), "", "WHITE");
+    Team team = new Team(UUID.randomUUID(), "Alpha", leader.getUniqueId(), "", "WHITE");
     team.setMembers(List.of(leader.getUniqueId()));
     storage.getTeams().put(team.getId(), team);
 

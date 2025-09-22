@@ -45,8 +45,7 @@ public class MembershipService {
       return;
     }
     // Проверяем, что игрок выбрал поддерживаемый цвет для корректного отображения.
-    NamedTextColor teamColor =
-        NamedTextColor.NAMES.value(normalizedColor.toLowerCase(Locale.ROOT));
+    NamedTextColor teamColor = NamedTextColor.NAMES.value(normalizedColor.toLowerCase(Locale.ROOT));
     if (teamColor == null) {
       TeamMessageUtils.sendTeamMessage(
           leader, Component.text("❌ Неверный цвет команды", NamedTextColor.RED));
@@ -58,7 +57,8 @@ public class MembershipService {
       return;
     }
     // Создаём запись команды и связываем лидера с новой структурой.
-    Team team = new Team(normalizedTeamName, leader.getUniqueId(), normalizedPrefix, normalizedColor);
+    Team team =
+        new Team(normalizedTeamName, leader.getUniqueId(), normalizedPrefix, normalizedColor);
     storage.addTeam(team);
     updateTeamMembersPrefixes(team);
     storage.getPlayerTeams().put(leader.getUniqueId(), team.getId());
@@ -214,8 +214,7 @@ public class MembershipService {
     // Проверяем права и корректность цвета перед сохранением.
     if (team == null || !team.isLeader(leader.getUniqueId())) return;
     String normalizedColor = newColor == null ? "" : newColor.trim();
-    NamedTextColor teamColor =
-        NamedTextColor.NAMES.value(normalizedColor.toLowerCase(Locale.ROOT));
+    NamedTextColor teamColor = NamedTextColor.NAMES.value(normalizedColor.toLowerCase(Locale.ROOT));
     if (teamColor == null) {
       TeamMessageUtils.sendTeamMessage(
           leader, Component.text("❌ Неверный цвет команды", NamedTextColor.RED));

@@ -19,23 +19,26 @@ class TeamManagerTest extends MockBukkitTestBase {
     when(pluginConfig.isGracePeriodEnabled()).thenReturn(false);
 
     try (MockedConstruction<TeamStorage> storageMock =
-            mockConstruction(TeamStorage.class, (mock, context) -> {
-              when(mock.getPlayerTeam(any())).thenReturn(null);
-              when(mock.getTeamMembers(anyString())).thenReturn(java.util.List.of());
-              when(mock.getTeamNames()).thenReturn(java.util.List.of());
-              when(mock.getTeamPrefix(anyString())).thenReturn("");
-              when(mock.getTeamColor(anyString()))
-                  .thenReturn(net.kyori.adventure.text.format.NamedTextColor.WHITE);
-              when(mock.getTeamLeaderId(anyString())).thenReturn(null);
-              when(mock.getTeams()).thenReturn(new HashMap<>());
-              when(mock.getPlayerTeams()).thenReturn(new HashMap<>());
-              when(mock.getTeamIdByName(anyString())).thenReturn(null);
-            });
+            mockConstruction(
+                TeamStorage.class,
+                (mock, context) -> {
+                  when(mock.getPlayerTeam(any())).thenReturn(null);
+                  when(mock.getTeamMembers(anyString())).thenReturn(java.util.List.of());
+                  when(mock.getTeamNames()).thenReturn(java.util.List.of());
+                  when(mock.getTeamPrefix(anyString())).thenReturn("");
+                  when(mock.getTeamColor(anyString()))
+                      .thenReturn(net.kyori.adventure.text.format.NamedTextColor.WHITE);
+                  when(mock.getTeamLeaderId(anyString())).thenReturn(null);
+                  when(mock.getTeams()).thenReturn(new HashMap<>());
+                  when(mock.getPlayerTeams()).thenReturn(new HashMap<>());
+                  when(mock.getTeamIdByName(anyString())).thenReturn(null);
+                });
         MockedConstruction<DeadlineScheduler> schedulerMock =
             mockConstruction(
                 DeadlineScheduler.class,
                 (mock, context) -> when(mock.getDeadlines()).thenReturn(new HashMap<>()));
-        MockedConstruction<MembershipService> membershipMock = mockConstruction(MembershipService.class)) {
+        MockedConstruction<MembershipService> membershipMock =
+            mockConstruction(MembershipService.class)) {
 
       TeamManager manager = new TeamManager(plugin, pluginConfig);
       MembershipService membership = membershipMock.constructed().get(0);

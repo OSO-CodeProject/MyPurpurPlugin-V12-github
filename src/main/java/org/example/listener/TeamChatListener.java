@@ -30,11 +30,12 @@ public class TeamChatListener implements Listener {
 
   public TeamChatListener(@NotNull TeamService teamManager) {
     this.teamManager = teamManager;
-    Bukkit.getOnlinePlayers().forEach(
-        player -> {
-          cacheOriginalPlayerListName(player);
-          updatePlayerPrefix(player);
-        });
+    Bukkit.getOnlinePlayers()
+        .forEach(
+            player -> {
+              cacheOriginalPlayerListName(player);
+              updatePlayerPrefix(player);
+            });
   }
 
   @EventHandler
@@ -94,8 +95,11 @@ public class TeamChatListener implements Listener {
           if (latestPrefixComponent != null) {
             base = base.append(latestPrefixComponent);
           }
-          Component formattedMessage = forceWhiteChat ? message.color(NamedTextColor.WHITE) : message;
-          return base.append(sourceDisplayName).append(Component.text(": ")).append(formattedMessage);
+          Component formattedMessage =
+              forceWhiteChat ? message.color(NamedTextColor.WHITE) : message;
+          return base.append(sourceDisplayName)
+              .append(Component.text(": "))
+              .append(formattedMessage);
         });
   }
 
@@ -181,7 +185,8 @@ public class TeamChatListener implements Listener {
     }
 
     Component current = getCurrentPlayerListName(player);
-    Component sanitized = stripKnownPrefix(current, lastPlayerPrefixes.get(playerId), applyingPrefix);
+    Component sanitized =
+        stripKnownPrefix(current, lastPlayerPrefixes.get(playerId), applyingPrefix);
     Component toStore = sanitized != null ? sanitized : current;
     originalPlayerListNames.put(playerId, toStore);
     return toStore;
@@ -214,7 +219,8 @@ public class TeamChatListener implements Listener {
     }
 
     Component current = getCurrentPlayerDisplayName(player);
-    Component sanitized = stripKnownPrefix(current, lastPlayerPrefixes.get(playerId), applyingPrefix);
+    Component sanitized =
+        stripKnownPrefix(current, lastPlayerPrefixes.get(playerId), applyingPrefix);
     Component toStore = sanitized != null ? sanitized : current;
     originalPlayerDisplayNames.put(playerId, toStore);
     return toStore;
@@ -248,7 +254,8 @@ public class TeamChatListener implements Listener {
   }
 
   private Component stripPrefixIfPresent(@NotNull Component current, @NotNull Component prefix) {
-    if (!(current instanceof TextComponent currentText) || !(prefix instanceof TextComponent prefixText)) {
+    if (!(current instanceof TextComponent currentText)
+        || !(prefix instanceof TextComponent prefixText)) {
       return null;
     }
     if (!Objects.equals(currentText.content(), prefixText.content())
