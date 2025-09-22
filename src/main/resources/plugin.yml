@@ -38,9 +38,9 @@ commands:
     permission: mypurpurplugin.teamreload
     permission-message: "❌ У вас нет прав для использования этой команды!"
 
-  cfgDefault:
+  cfgdefault:
     description: Сбросить конфигурацию плагина до дефолтных настроек (только для консоли)
-    usage: /cfgDefault
+    usage: /cfgdefault
     permission: mypurpurplugin.cfgdefault
     permission-message: "❌ У вас нет прав для использования этой команды!"
 
@@ -68,7 +68,7 @@ permissions:
     description: Доступ к команде /teamreload (только для консоли)
     default: op
   mypurpurplugin.cfgdefault:
-    description: Доступ к команде /cfgDefault (только для консоли)
+    description: Доступ к команде /cfgdefault (только для консоли)
     default: op
   mypurpurplugin.debugtoggle:
     description: Доступ к команде /debugtoggle (только для консоли)

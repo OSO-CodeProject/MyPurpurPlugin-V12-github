@@ -42,7 +42,7 @@ public class MyPurpurPlugin extends JavaPlugin {
     registerCommand("getteamsuuidlist", new AdminCommands(teamManager));
     registerCommand("getteamuuid", new AdminCommands(teamManager));
     registerCommand("teamreload", new TeamReloadCommand(this, teamManager, pluginConfig));
-    registerCommand("cfgDefault", new CfgDefaultCommand(this, pluginConfig, teamManager));
+    registerCommand("cfgdefault", new CfgDefaultCommand(this, pluginConfig, teamManager));
     registerCommand("menu", new MenuCommand(this, pluginConfig));
     registerCommand("debugtoggle", new DebugToggleCommand(this));
 
