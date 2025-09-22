@@ -77,7 +77,7 @@ class TeamStorageTest {
     PlayerMock leader = server.addPlayer("Leader");
     PlayerMock member = server.addPlayer("Member");
     Team team = new Team(teamId, "DeadlineTeam", leader.getUniqueId(), "[D]", "blue");
-    team.setMembers(new ArrayList<>(List.of(leader.getUniqueId(), member.getUniqueId())));
+    team.setMembersByUuid(new ArrayList<>(List.of(leader.getUniqueId(), member.getUniqueId())));
     storage.addTeam(team);
 
     long deadline = System.currentTimeMillis() + 60000L;
@@ -89,6 +89,32 @@ class TeamStorageTest {
     reloaded.loadTeams(reloadedDeadlines);
 
     assertEquals(deadline, reloadedDeadlines.get(teamId));
+  }
+
+  @Test
+  void saveAndReloadPreservesMembers() throws IOException {
+    TeamStorage storage = new TeamStorage(plugin, null);
+    Map<UUID, Long> deadlines = new HashMap<>();
+    storage.loadTeams(deadlines);
+
+    PlayerMock leader = server.addPlayer("LeaderMember");
+    PlayerMock member = server.addPlayer("SecondMember");
+    Team team =
+        new Team(UUID.randomUUID(), "MembersTeam", leader.getUniqueId(), "[M]", "yellow");
+    team.setMembersByUuid(List.of(leader.getUniqueId(), member.getUniqueId()));
+    storage.addTeam(team);
+    storage.saveTeams(deadlines);
+
+    TeamStorage reloaded = new TeamStorage(plugin, null);
+    Map<UUID, Long> reloadedDeadlines = new HashMap<>();
+    reloaded.loadTeams(reloadedDeadlines);
+
+    Team loadedTeam = reloaded.getTeams().get(team.getId());
+    assertNotNull(loadedTeam, "Team should exist after reload");
+    assertEquals(
+        List.of(leader.getUniqueId(), member.getUniqueId()),
+        loadedTeam.getMembers(),
+        "Team members should be preserved after reload");
   }
 
   @Test

@@ -105,7 +105,26 @@ public class Team {
     }
   }
 
-  public void setMembers(List<UUID> newMembers) {
+  public void setMembers(List<String> newMembers) {
+    if (newMembers == null) {
+      setMembersByUuid(null);
+      return;
+    }
+    List<UUID> parsedMembers = new ArrayList<>(newMembers.size());
+    for (String newMember : newMembers) {
+      if (newMember == null || newMember.isBlank()) {
+        continue;
+      }
+      try {
+        parsedMembers.add(UUID.fromString(newMember.trim()));
+      } catch (IllegalArgumentException ignored) {
+        // Skip entries that are not valid UUID representations.
+      }
+    }
+    setMembersByUuid(parsedMembers);
+  }
+
+  public void setMembersByUuid(List<UUID> newMembers) {
     members.clear();
     memberLookup.clear();
     if (newMembers == null) {

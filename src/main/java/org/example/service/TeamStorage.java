@@ -432,7 +432,8 @@ public class TeamStorage {
       long deadline,
       Map<UUID, Long> deadlines) {
     Team team = new Team(teamId, name != null ? name.trim() : null, leaderId, prefix, color);
-    List<UUID> memberIds = new ArrayList<>();
+    team.setMembers(rawMembers);
+    List<UUID> memberIds = new ArrayList<>(team.getMembers());
     boolean convertedMembers = false;
     for (String rawMember : rawMembers) {
       UUID memberId = parseUuid(rawMember);
@@ -476,7 +477,7 @@ public class TeamStorage {
       memberIds.add(leaderId);
       convertedMembers = true;
     }
-    team.setMembers(memberIds);
+    team.setMembersByUuid(memberIds);
     if (deadline > 0L) {
       deadlines.put(team.getId(), deadline);
     }
@@ -630,7 +631,7 @@ public class TeamStorage {
       List<UUID> members = new ArrayList<>(team.getMembers());
       if (!members.contains(resolvedUuid)) {
         members.add(resolvedUuid);
-        team.setMembers(members);
+        team.setMembersByUuid(members);
         playerTeams.put(resolvedUuid, team.getId());
         teamsConfig.set(
             "teams." + team.getId() + ".members",
