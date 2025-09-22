@@ -48,7 +48,7 @@ class DeadlineSchedulerTest {
     PlayerMock memberTwo = server.addPlayer("MemberTwo");
 
     Team team = new Team(UUID.randomUUID(), "Alpha", leader.getUniqueId(), "", "WHITE");
-    team.setMembers(
+    team.setMembersByUuid(
         List.of(leader.getUniqueId(), memberOne.getUniqueId(), memberTwo.getUniqueId()));
     storage.getTeams().put(team.getId(), team);
     Scoreboard original = leader.getScoreboard();
@@ -59,7 +59,7 @@ class DeadlineSchedulerTest {
     scheduler.getDeadlines().clear();
     assertNotNull(leader.getScoreboard().getObjective(DisplaySlot.SIDEBAR));
 
-    team.setMembers(List.of(leader.getUniqueId(), memberOne.getUniqueId()));
+    team.setMembersByUuid(List.of(leader.getUniqueId(), memberOne.getUniqueId()));
     scheduler.enforceTeamSizes(true);
 
     assertNull(leader.getScoreboard().getObjective(DisplaySlot.SIDEBAR));
@@ -75,7 +75,7 @@ class DeadlineSchedulerTest {
 
     PlayerMock leader = server.addPlayer("Leader");
     Team team = new Team(UUID.randomUUID(), "Alpha", leader.getUniqueId(), "", "WHITE");
-    team.setMembers(List.of(leader.getUniqueId()));
+    team.setMembersByUuid(List.of(leader.getUniqueId()));
     storage.getTeams().put(team.getId(), team);
 
     Scoreboard custom = server.getScoreboardManager().getNewScoreboard();
