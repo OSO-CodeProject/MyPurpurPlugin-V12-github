@@ -66,8 +66,8 @@ public class MyPurpurPlugin extends JavaPlugin {
       return;
     }
     command.setExecutor(executor);
-    if (executor instanceof TabCompleter) {
-      command.setTabCompleter((TabCompleter) executor);
+    if (executor instanceof TabCompleter completer) {
+      command.setTabCompleter(completer);
     }
   }
 
