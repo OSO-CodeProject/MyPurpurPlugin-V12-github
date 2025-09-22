@@ -21,13 +21,13 @@ commands:
     permission-message: "❌ У вас нет прав для использования этой команды!"
 
   getteamsuuidlist:
-    description: Показывает список команд и их UUID (только для OP)
+    description: Показывает список команд и их UUID (требуется разрешение mypurpurplugin.getteamsuuidlist)
     usage: /<command>
     permission: mypurpurplugin.getteamsuuidlist
     permission-message: "❌ У вас нет прав для использования этой команды!"
 
   getteamuuid:
-    description: Показывает UUID команды по названию (только для OP)
+    description: Показывает UUID команды по названию (требуется разрешение mypurpurplugin.getteamuuid)
     usage: /<command> <название>
     permission: mypurpurplugin.getteamuuid
     permission-message: "❌ У вас нет прав для использования этой команды!"
@@ -61,6 +61,9 @@ permissions:
   mypurpurplugin.teamadmin:
     description: Доступ к команде /teamadmin (для лидеров)
     default: true
+  mypurpurplugin.team.requiresop:
+    description: Доступ к дополнительным возможностям команды /team, требующим прав администратора
+    default: op
   mypurpurplugin.admin:
     description: Получает уведомления о действиях с командами
     default: op

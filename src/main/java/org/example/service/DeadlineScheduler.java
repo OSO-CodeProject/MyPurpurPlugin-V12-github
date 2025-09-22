@@ -709,7 +709,7 @@ public class DeadlineScheduler {
       return;
     }
     plugin.getServer().getOnlinePlayers().stream()
-        .filter(player -> player.isOp() || player.hasPermission("mypurpurplugin.admin"))
+        .filter(player -> player.hasPermission("mypurpurplugin.admin"))
         .forEach(player -> TeamMessageUtils.sendTeamMessage(player, message));
   }
 
