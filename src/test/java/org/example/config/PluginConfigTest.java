@@ -57,10 +57,10 @@ class PluginConfigTest {
     assertTrue(regenerated.exists(), "Config file should be regenerated on reload");
 
     YamlConfiguration yaml = YamlConfiguration.loadConfiguration(regenerated);
-    assertEquals(1, yaml.getInt("team.min-prefix-length"));
-    assertEquals(16, yaml.getInt("team.max-prefix-length"));
-    assertEquals(32, yaml.getInt("team.max-team-name-length"));
-    assertEquals(0, yaml.getInt("team.max-members"));
+    assertEquals(1, yaml.getInt(PluginConfig.Keys.Team.Naming.Prefix.MIN_LENGTH));
+    assertEquals(16, yaml.getInt(PluginConfig.Keys.Team.Naming.Prefix.MAX_LENGTH));
+    assertEquals(32, yaml.getInt(PluginConfig.Keys.Team.Naming.TeamName.MAX_LENGTH));
+    assertEquals(0, yaml.getInt(PluginConfig.Keys.Team.Membership.MAX_MEMBERS));
 
     PlayerMock leader = server.addPlayer("Leader");
     leader.addAttachment(plugin, "mypurpurplugin.team", true);
@@ -91,7 +91,7 @@ class PluginConfigTest {
     fileField.setAccessible(true);
     File configFile = (File) fileField.get(pluginConfig);
 
-    configuration.set("team.max-team-name-length", null);
+    configuration.set(PluginConfig.Keys.Team.Naming.TeamName.MAX_LENGTH, null);
     configuration.save(configFile);
 
     pluginConfig.reloadConfig();
@@ -113,7 +113,7 @@ class PluginConfigTest {
     File configFile = (File) fileField.get(pluginConfig);
 
     YamlConfiguration yaml = YamlConfiguration.loadConfiguration(configFile);
-    yaml.set("menu.open-sound", null);
+    yaml.set(PluginConfig.Keys.Menu.Sound.OPEN, null);
     yaml.save(configFile);
 
     pluginConfig.reloadConfig();
@@ -122,7 +122,9 @@ class PluginConfigTest {
     configField.setAccessible(true);
     FileConfiguration configuration = (FileConfiguration) configField.get(pluginConfig);
 
-    assertEquals("BLOCK_NOTE_BLOCK_PLING", configuration.getString("menu.open-sound"));
+    assertEquals(
+        "BLOCK_NOTE_BLOCK_PLING",
+        configuration.getString(PluginConfig.Keys.Menu.Sound.OPEN));
   }
 
   @Test
@@ -139,8 +141,8 @@ class PluginConfigTest {
     File configFile = (File) fileField.get(pluginConfig);
 
     YamlConfiguration yaml = YamlConfiguration.loadConfiguration(configFile);
-    yaml.set("menu.particle-effect", null);
-    yaml.set("team.max-members", 7);
+    yaml.set(PluginConfig.Keys.Menu.PARTICLE_EFFECT, null);
+    yaml.set(PluginConfig.Keys.Team.Membership.MAX_MEMBERS, 7);
     yaml.save(configFile);
 
     ConsoleCommandSender console = server.getConsoleSender();
@@ -151,8 +153,10 @@ class PluginConfigTest {
     configField.setAccessible(true);
     FileConfiguration configuration = (FileConfiguration) configField.get(pluginConfig);
 
-    assertEquals("FIREWORK", configuration.getString("menu.particle-effect"));
-    assertEquals(7, configuration.getInt("team.max-members"));
+    assertEquals(
+        "FIREWORK",
+        configuration.getString(PluginConfig.Keys.Menu.PARTICLE_EFFECT));
+    assertEquals(7, configuration.getInt(PluginConfig.Keys.Team.Membership.MAX_MEMBERS));
   }
 
   @Test

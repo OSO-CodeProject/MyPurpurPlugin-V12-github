@@ -11,6 +11,91 @@ import org.jetbrains.annotations.NotNull;
 /** Класс для управления конфигурацией плагина. */
 public class PluginConfig {
 
+  /** Пути до ключей конфигурации. */
+  public static final class Keys {
+    private Keys() {}
+
+    public static final String DEBUG_MODE = "debug.mode";
+    public static final String CHAT_FORCE_WHITE = "chat.force-white";
+
+    public static final class Team {
+      private Team() {}
+
+      public static final class Commands {
+        private Commands() {}
+
+        public static final String REQUIRES_OP = "team.commands.requires-op";
+      }
+
+      public static final class Notifications {
+        private Notifications() {}
+
+        public static final String NOTIFY_ADMINS = "team.notifications.notify-admins";
+      }
+
+      public static final class Naming {
+        private Naming() {}
+
+        public static final class Prefix {
+          private Prefix() {}
+
+          public static final String MIN_LENGTH = "team.naming.prefix.min-length";
+          public static final String MAX_LENGTH = "team.naming.prefix.max-length";
+        }
+
+        public static final class TeamName {
+          private TeamName() {}
+
+          public static final String MIN_LENGTH = "team.naming.team.min-length";
+          public static final String MAX_LENGTH = "team.naming.team.max-length";
+        }
+      }
+
+      public static final class Membership {
+        private Membership() {}
+
+        public static final String MAX_MEMBERS = "team.membership.max-members";
+        public static final String ENFORCE_MAX_ON_RELOAD =
+            "team.membership.enforce-max-members-on-reload";
+
+        public static final class GracePeriod {
+          private GracePeriod() {}
+
+          public static final String ENABLED = "team.membership.grace-period.enabled";
+          public static final String MINUTES = "team.membership.grace-period.minutes";
+        }
+      }
+
+      public static final class Deadlines {
+        private Deadlines() {}
+
+        public static final String NOTIFY_PERIOD_SECONDS = "team.deadlines.notify-period-seconds";
+        public static final String DISPLAY_MODE = "team.deadlines.display-mode";
+        public static final String REMOVAL_POLICY = "team.deadlines.removal-policy";
+      }
+
+      public static final class Storage {
+        private Storage() {}
+
+        public static final String SAVE_INTERVAL_SECONDS = "team.storage.save-interval-seconds";
+      }
+    }
+
+    public static final class Menu {
+      private Menu() {}
+
+      public static final class Sound {
+        private Sound() {}
+
+        public static final String OPEN = "menu.sound.open";
+        public static final String VOLUME = "menu.sound.volume";
+        public static final String PITCH = "menu.sound.pitch";
+      }
+
+      public static final String PARTICLE_EFFECT = "menu.particle-effect";
+    }
+  }
+
   private final JavaPlugin plugin;
   private FileConfiguration config;
   private File configFile;
@@ -47,31 +132,67 @@ public class PluginConfig {
   private void setDefaults(boolean persistChanges) {
     boolean newKeysAdded = false;
 
+    // Миграция старых ключей
+    newKeysAdded |= migrateLegacyKey("debug-mode", Keys.DEBUG_MODE);
+    newKeysAdded |= migrateLegacyKey("force-white-chat", Keys.CHAT_FORCE_WHITE);
+    newKeysAdded |= migrateLegacyKey("team.requires-op", Keys.Team.Commands.REQUIRES_OP);
+    newKeysAdded |= migrateLegacyKey("team.notify-admins", Keys.Team.Notifications.NOTIFY_ADMINS);
+    newKeysAdded |=
+        migrateLegacyKey("team.max-members", Keys.Team.Membership.MAX_MEMBERS);
+    newKeysAdded |=
+        migrateLegacyKey(
+            "team.enforce-max-members-on-reload",
+            Keys.Team.Membership.ENFORCE_MAX_ON_RELOAD);
+    newKeysAdded |=
+        migrateLegacyKey("team.grace-period-enabled", Keys.Team.Membership.GracePeriod.ENABLED);
+    newKeysAdded |=
+        migrateLegacyKey("team.grace-period-minutes", Keys.Team.Membership.GracePeriod.MINUTES);
+    newKeysAdded |=
+        migrateLegacyKey("team.min-prefix-length", Keys.Team.Naming.Prefix.MIN_LENGTH);
+    newKeysAdded |=
+        migrateLegacyKey("team.max-prefix-length", Keys.Team.Naming.Prefix.MAX_LENGTH);
+    newKeysAdded |=
+        migrateLegacyKey("team.min-team-name-length", Keys.Team.Naming.TeamName.MIN_LENGTH);
+    newKeysAdded |=
+        migrateLegacyKey("team.max-team-name-length", Keys.Team.Naming.TeamName.MAX_LENGTH);
+    newKeysAdded |=
+        migrateLegacyKey(
+            "team.deadline-notify-period-seconds", Keys.Team.Deadlines.NOTIFY_PERIOD_SECONDS);
+    newKeysAdded |=
+        migrateLegacyKey("team.deadline-display-mode", Keys.Team.Deadlines.DISPLAY_MODE);
+    newKeysAdded |=
+        migrateLegacyKey("team.deadline-removal-policy", Keys.Team.Deadlines.REMOVAL_POLICY);
+    newKeysAdded |=
+        migrateLegacyKey("team.save-interval-seconds", Keys.Team.Storage.SAVE_INTERVAL_SECONDS);
+    newKeysAdded |= migrateLegacyKey("menu.open-sound", Keys.Menu.Sound.OPEN);
+    newKeysAdded |= migrateLegacyKey("menu.sound-volume", Keys.Menu.Sound.VOLUME);
+    newKeysAdded |= migrateLegacyKey("menu.sound-pitch", Keys.Menu.Sound.PITCH);
+
     // Глобальные настройки
-    newKeysAdded |= addDefaultIfMissing("debug-mode", true);
-    newKeysAdded |= addDefaultIfMissing("force-white-chat", false);
+    newKeysAdded |= addDefaultIfMissing(Keys.DEBUG_MODE, true);
+    newKeysAdded |= addDefaultIfMissing(Keys.CHAT_FORCE_WHITE, false);
 
     // Основные настройки
-    newKeysAdded |= addDefaultIfMissing("team.requires-op", false);
-    newKeysAdded |= addDefaultIfMissing("team.notify-admins", true);
-    newKeysAdded |= addDefaultIfMissing("team.max-members", 0);
-    newKeysAdded |= addDefaultIfMissing("team.min-prefix-length", 1);
-    newKeysAdded |= addDefaultIfMissing("team.max-prefix-length", 16);
-    newKeysAdded |= addDefaultIfMissing("team.min-team-name-length", 3);
-    newKeysAdded |= addDefaultIfMissing("team.max-team-name-length", 32);
-    newKeysAdded |= addDefaultIfMissing("team.enforce-max-members-on-reload", true);
-    newKeysAdded |= addDefaultIfMissing("team.grace-period-enabled", true);
-    newKeysAdded |= addDefaultIfMissing("team.grace-period-minutes", 10);
-    newKeysAdded |= addDefaultIfMissing("team.deadline-notify-period-seconds", 300L);
-    newKeysAdded |= addDefaultIfMissing("team.save-interval-seconds", 60L);
-    newKeysAdded |= addDefaultIfMissing("team.deadline-display-mode", "CHAT");
-    newKeysAdded |= addDefaultIfMissing("team.deadline-removal-policy", "last-joined");
+    newKeysAdded |= addDefaultIfMissing(Keys.Team.Commands.REQUIRES_OP, false);
+    newKeysAdded |= addDefaultIfMissing(Keys.Team.Notifications.NOTIFY_ADMINS, true);
+    newKeysAdded |= addDefaultIfMissing(Keys.Team.Membership.MAX_MEMBERS, 0);
+    newKeysAdded |= addDefaultIfMissing(Keys.Team.Naming.Prefix.MIN_LENGTH, 1);
+    newKeysAdded |= addDefaultIfMissing(Keys.Team.Naming.Prefix.MAX_LENGTH, 16);
+    newKeysAdded |= addDefaultIfMissing(Keys.Team.Naming.TeamName.MIN_LENGTH, 3);
+    newKeysAdded |= addDefaultIfMissing(Keys.Team.Naming.TeamName.MAX_LENGTH, 32);
+    newKeysAdded |= addDefaultIfMissing(Keys.Team.Membership.ENFORCE_MAX_ON_RELOAD, true);
+    newKeysAdded |= addDefaultIfMissing(Keys.Team.Membership.GracePeriod.ENABLED, true);
+    newKeysAdded |= addDefaultIfMissing(Keys.Team.Membership.GracePeriod.MINUTES, 10);
+    newKeysAdded |= addDefaultIfMissing(Keys.Team.Deadlines.NOTIFY_PERIOD_SECONDS, 300L);
+    newKeysAdded |= addDefaultIfMissing(Keys.Team.Storage.SAVE_INTERVAL_SECONDS, 60L);
+    newKeysAdded |= addDefaultIfMissing(Keys.Team.Deadlines.DISPLAY_MODE, "CHAT");
+    newKeysAdded |= addDefaultIfMissing(Keys.Team.Deadlines.REMOVAL_POLICY, "last-joined");
 
     // Настройки меню
-    newKeysAdded |= addDefaultIfMissing("menu.open-sound", "BLOCK_NOTE_BLOCK_PLING");
-    newKeysAdded |= addDefaultIfMissing("menu.particle-effect", "FIREWORK");
-    newKeysAdded |= addDefaultIfMissing("menu.sound-volume", 1.0);
-    newKeysAdded |= addDefaultIfMissing("menu.sound-pitch", 1.0);
+    newKeysAdded |= addDefaultIfMissing(Keys.Menu.Sound.OPEN, "BLOCK_NOTE_BLOCK_PLING");
+    newKeysAdded |= addDefaultIfMissing(Keys.Menu.PARTICLE_EFFECT, "FIREWORK");
+    newKeysAdded |= addDefaultIfMissing(Keys.Menu.Sound.VOLUME, 1.0);
+    newKeysAdded |= addDefaultIfMissing(Keys.Menu.Sound.PITCH, 1.0);
 
     config.options().copyDefaults(true);
 
@@ -84,6 +205,81 @@ public class PluginConfig {
     boolean missing = !config.contains(path);
     config.addDefault(path, value);
     return missing;
+  }
+
+  private boolean migrateLegacyKey(@NotNull String legacyPath, @NotNull String newPath) {
+    if (config.contains(legacyPath) && !config.contains(newPath)) {
+      Object value = config.get(legacyPath);
+      config.set(newPath, value);
+      config.set(legacyPath, null);
+      return true;
+    }
+    return false;
+  }
+
+  private boolean getBooleanWithLegacyFallback(
+      @NotNull String path, boolean defaultValue, String... legacyPaths) {
+    if (config.contains(path)) {
+      return config.getBoolean(path, defaultValue);
+    }
+    for (String legacyPath : legacyPaths) {
+      if (config.contains(legacyPath)) {
+        return config.getBoolean(legacyPath, defaultValue);
+      }
+    }
+    return defaultValue;
+  }
+
+  private int getIntWithLegacyFallback(@NotNull String path, int defaultValue, String... legacyPaths) {
+    if (config.contains(path)) {
+      return config.getInt(path, defaultValue);
+    }
+    for (String legacyPath : legacyPaths) {
+      if (config.contains(legacyPath)) {
+        return config.getInt(legacyPath, defaultValue);
+      }
+    }
+    return defaultValue;
+  }
+
+  private long getLongWithLegacyFallback(
+      @NotNull String path, long defaultValue, String... legacyPaths) {
+    if (config.contains(path)) {
+      return config.getLong(path, defaultValue);
+    }
+    for (String legacyPath : legacyPaths) {
+      if (config.contains(legacyPath)) {
+        return config.getLong(legacyPath, defaultValue);
+      }
+    }
+    return defaultValue;
+  }
+
+  private double getDoubleWithLegacyFallback(
+      @NotNull String path, double defaultValue, String... legacyPaths) {
+    if (config.contains(path)) {
+      return config.getDouble(path, defaultValue);
+    }
+    for (String legacyPath : legacyPaths) {
+      if (config.contains(legacyPath)) {
+        return config.getDouble(legacyPath, defaultValue);
+      }
+    }
+    return defaultValue;
+  }
+
+  private String getStringWithLegacyFallback(
+      @NotNull String path, String defaultValue, String... legacyPaths) {
+    if (config.contains(path)) {
+      return config.getString(path, defaultValue);
+    }
+    for (String legacyPath : legacyPaths) {
+      if (config.contains(legacyPath)) {
+        String value = config.getString(legacyPath, defaultValue);
+        return value != null ? value : defaultValue;
+      }
+    }
+    return defaultValue;
   }
 
   /** Сохраняет файл конфигурации. */
@@ -107,7 +303,7 @@ public class PluginConfig {
    * @return true, если режим отладки активен, иначе false
    */
   public boolean isDebugModeEnabled() {
-    return config.getBoolean("debug-mode", true);
+    return getBooleanWithLegacyFallback(Keys.DEBUG_MODE, true, "debug-mode");
   }
 
   /**
@@ -116,7 +312,7 @@ public class PluginConfig {
    * @return true, если сообщения должны быть перекрашены в белый цвет
    */
   public boolean isForceWhiteChat() {
-    return config.getBoolean("force-white-chat", false);
+    return getBooleanWithLegacyFallback(Keys.CHAT_FORCE_WHITE, false, "force-white-chat");
   }
 
   /**
@@ -125,7 +321,8 @@ public class PluginConfig {
    * @return true, если требуется OP, иначе false
    */
   public boolean isTeamCommandRequiresOp() {
-    return config.getBoolean("team.requires-op", false);
+    return getBooleanWithLegacyFallback(
+        Keys.Team.Commands.REQUIRES_OP, false, "team.requires-op");
   }
 
   /**
@@ -134,7 +331,8 @@ public class PluginConfig {
    * @return true, если уведомления включены, иначе false
    */
   public boolean shouldNotifyAdmins() {
-    return config.getBoolean("team.notify-admins", true);
+    return getBooleanWithLegacyFallback(
+        Keys.Team.Notifications.NOTIFY_ADMINS, true, "team.notify-admins");
   }
 
   /**
@@ -143,7 +341,7 @@ public class PluginConfig {
    * @return Максимальное количество участников (0 — без ограничений)
    */
   public int getMaxMembers() {
-    return config.getInt("team.max-members", 0);
+    return getIntWithLegacyFallback(Keys.Team.Membership.MAX_MEMBERS, 0, "team.max-members");
   }
 
   /**
@@ -152,7 +350,10 @@ public class PluginConfig {
    * @return true, если ограничение должно применяться
    */
   public boolean isEnforceMaxMembersOnReload() {
-    return config.getBoolean("team.enforce-max-members-on-reload", true);
+    return getBooleanWithLegacyFallback(
+        Keys.Team.Membership.ENFORCE_MAX_ON_RELOAD,
+        true,
+        "team.enforce-max-members-on-reload");
   }
 
   /**
@@ -161,7 +362,8 @@ public class PluginConfig {
    * @return true, если льготный период активен
    */
   public boolean isGracePeriodEnabled() {
-    return config.getBoolean("team.grace-period-enabled", true);
+    return getBooleanWithLegacyFallback(
+        Keys.Team.Membership.GracePeriod.ENABLED, true, "team.grace-period-enabled");
   }
 
   /**
@@ -170,7 +372,8 @@ public class PluginConfig {
    * @return длительность периода в минутах
    */
   public int getGracePeriodMinutes() {
-    return config.getInt("team.grace-period-minutes", 10);
+    return getIntWithLegacyFallback(
+        Keys.Team.Membership.GracePeriod.MINUTES, 10, "team.grace-period-minutes");
   }
 
   /**
@@ -179,7 +382,10 @@ public class PluginConfig {
    * @return период проверки в секундах
    */
   public long getDeadlineNotifyPeriodSeconds() {
-    return config.getLong("team.deadline-notify-period-seconds", 300L);
+    return getLongWithLegacyFallback(
+        Keys.Team.Deadlines.NOTIFY_PERIOD_SECONDS,
+        300L,
+        "team.deadline-notify-period-seconds");
   }
 
   /**
@@ -188,7 +394,8 @@ public class PluginConfig {
    * @return интервал автосохранения
    */
   public long getSaveIntervalSeconds() {
-    return config.getLong("team.save-interval-seconds", 60L);
+    return getLongWithLegacyFallback(
+        Keys.Team.Storage.SAVE_INTERVAL_SECONDS, 60L, "team.save-interval-seconds");
   }
 
   /**
@@ -197,7 +404,8 @@ public class PluginConfig {
    * @return режим отображения
    */
   public String getDeadlineDisplayMode() {
-    return config.getString("team.deadline-display-mode", "CHAT");
+    return getStringWithLegacyFallback(
+        Keys.Team.Deadlines.DISPLAY_MODE, "CHAT", "team.deadline-display-mode");
   }
 
   /**
@@ -206,7 +414,9 @@ public class PluginConfig {
    * @return стратегия удаления игроков
    */
   public @NotNull RemovalPolicy getExcessPlayerRemovalPolicy() {
-    String rawValue = config.getString("team.deadline-removal-policy", "last-joined");
+    String rawValue =
+        getStringWithLegacyFallback(
+            Keys.Team.Deadlines.REMOVAL_POLICY, "last-joined", "team.deadline-removal-policy");
     String normalized = rawValue.trim().replace('-', '_').toUpperCase(Locale.ROOT);
     try {
       return RemovalPolicy.valueOf(normalized);
@@ -214,7 +424,9 @@ public class PluginConfig {
       plugin
           .getLogger()
           .warning(
-              "Некорректное значение team.deadline-removal-policy: "
+              "Некорректное значение "
+                  + Keys.Team.Deadlines.REMOVAL_POLICY
+                  + ": "
                   + rawValue
                   + ". Используем LAST_JOINED.");
       return RemovalPolicy.LAST_JOINED;
@@ -227,7 +439,8 @@ public class PluginConfig {
    * @return Минимальная длина префикса
    */
   public int getMinPrefixLength() {
-    return config.getInt("team.min-prefix-length", 1);
+    return getIntWithLegacyFallback(
+        Keys.Team.Naming.Prefix.MIN_LENGTH, 1, "team.min-prefix-length");
   }
 
   /**
@@ -236,7 +449,8 @@ public class PluginConfig {
    * @return Максимальная длина префикса
    */
   public int getMaxPrefixLength() {
-    return config.getInt("team.max-prefix-length", 16);
+    return getIntWithLegacyFallback(
+        Keys.Team.Naming.Prefix.MAX_LENGTH, 16, "team.max-prefix-length");
   }
 
   /**
@@ -245,7 +459,8 @@ public class PluginConfig {
    * @return Минимальная длина названия команды
    */
   public int getMinTeamNameLength() {
-    return config.getInt("team.min-team-name-length", 3);
+    return getIntWithLegacyFallback(
+        Keys.Team.Naming.TeamName.MIN_LENGTH, 3, "team.min-team-name-length");
   }
 
   /**
@@ -254,7 +469,8 @@ public class PluginConfig {
    * @return Максимальная длина названия команды
    */
   public int getMaxTeamNameLength() {
-    return config.getInt("team.max-team-name-length", 32);
+    return getIntWithLegacyFallback(
+        Keys.Team.Naming.TeamName.MAX_LENGTH, 32, "team.max-team-name-length");
   }
 
   /**
@@ -263,7 +479,8 @@ public class PluginConfig {
    * @return Название звука
    */
   public String getMenuOpenSound() {
-    return config.getString("menu.open-sound", "BLOCK_NOTE_BLOCK_PLING");
+    return getStringWithLegacyFallback(
+        Keys.Menu.Sound.OPEN, "BLOCK_NOTE_BLOCK_PLING", "menu.open-sound");
   }
 
   /**
@@ -272,7 +489,8 @@ public class PluginConfig {
    * @return Название эффекта частиц
    */
   public String getMenuParticleEffect() {
-    return config.getString("menu.particle-effect", "FIREWORK");
+    return getStringWithLegacyFallback(
+        Keys.Menu.PARTICLE_EFFECT, "FIREWORK", "menu.particle-effect");
   }
 
   /**
@@ -281,7 +499,7 @@ public class PluginConfig {
    * @return Громкость звука
    */
   public double getMenuSoundVolume() {
-    return config.getDouble("menu.sound-volume", 1.0);
+    return getDoubleWithLegacyFallback(Keys.Menu.Sound.VOLUME, 1.0, "menu.sound-volume");
   }
 
   /**
@@ -290,6 +508,6 @@ public class PluginConfig {
    * @return Высота звука
    */
   public double getMenuSoundPitch() {
-    return config.getDouble("menu.sound-pitch", 1.0);
+    return getDoubleWithLegacyFallback(Keys.Menu.Sound.PITCH, 1.0, "menu.sound-pitch");
   }
 }

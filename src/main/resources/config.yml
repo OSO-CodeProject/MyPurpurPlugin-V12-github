@@ -6,32 +6,42 @@
 # Список всех частиц: https://jd.papermc.io/paper/1.21/org/bukkit/Particle.html
 
 # Общие настройки
-debug-mode: true # Включает подробное логирование действий плагина
-force-white-chat: false # Принудительно перекрашивать сообщения чата в белый цвет
+debug:
+  mode: true # Включает подробное логирование действий плагина
+chat:
+  force-white: false # Принудительно перекрашивать сообщения чата в белый цвет
 
 # Настройки команды /team
 team:
-  requires-op: false # Если true, команды /team доступны только OP; если false — всем игрокам
-  min-prefix-length: 1 # Минимальная длина префикса команды
-  max-prefix-length: 16 # Максимальная длина префикса команды
-  min-team-name-length: 3 # Минимальная длина названия команды
-  max-team-name-length: 32 # Максимальная длина названия команды
-  max-members: 0 # Максимальное количество участников в команде (0 — безлимит)
-  notify-admins: true # Уведомлять ли администраторов о создании/роспуске команд
-  enforce-max-members-on-reload: true # Применять ограничение при перезагрузке
-
-  grace-period-enabled: true # Давать время на удаление лишних участников
-  deadline-notify-period-seconds: 300 # Период проверки дедлайнов и оповещения (в секундах)
-  save-interval-seconds: 60 # Интервал автосохранения команд (в секундах, 0 — мгновенное сохранение)
-  deadline-display-mode: CHAT # CHAT, ACTION_BAR или SCOREBOARD
-  grace-period-minutes: 10 # Длительность периода (в минутах, 0 — отключено)
-  deadline-removal-policy: last-joined # Способ удаления лишних игроков: offline-first или last-joined
-
+  commands:
+    requires-op: false # Если true, команды /team доступны только OP; если false — всем игрокам
+  notifications:
+    notify-admins: true # Уведомлять ли администраторов о создании/роспуске команд
+  naming:
+    prefix:
+      min-length: 1 # Минимальная длина префикса команды
+      max-length: 16 # Максимальная длина префикса команды
+    team:
+      min-length: 3 # Минимальная длина названия команды
+      max-length: 32 # Максимальная длина названия команды
+  membership:
+    max-members: 0 # Максимальное количество участников в команде (0 — безлимит)
+    enforce-max-members-on-reload: true # Применять ограничение при перезагрузке
+    grace-period:
+      enabled: true # Давать время на удаление лишних участников
+      minutes: 10 # Длительность периода (в минутах, 0 — отключено)
+  deadlines:
+    notify-period-seconds: 300 # Период проверки дедлайнов и оповещения (в секундах)
+    display-mode: CHAT # CHAT, ACTION_BAR или SCOREBOARD
+    removal-policy: last-joined # Способ удаления лишних игроков: offline-first или last-joined
+  storage:
+    save-interval-seconds: 60 # Интервал автосохранения команд (в секундах, 0 — мгновенное сохранение)
 
 # Настройки меню
 menu:
-  open-sound: BLOCK_NOTE_BLOCK_PLING # Звуковой эффект при открытии меню
-  sound-volume: 1.0 # Громкость звука (0.0–1.0)
-  sound-pitch: 1.0 # Высота тона звука (0.5–2.0)
+  sound:
+    open: BLOCK_NOTE_BLOCK_PLING # Звуковой эффект при открытии меню
+    volume: 1.0 # Громкость звука (0.0–1.0)
+    pitch: 1.0 # Высота тона звука (0.5–2.0)
   particle-effect: FIREWORK # Эффект частиц при открытии меню (примеры: SMOKE, HEART, FIREWORK, EXPLOSION)
 
