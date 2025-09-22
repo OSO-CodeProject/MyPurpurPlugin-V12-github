@@ -207,9 +207,6 @@ public class PluginConfig {
    */
   public @NotNull RemovalPolicy getExcessPlayerRemovalPolicy() {
     String rawValue = config.getString("team.deadline-removal-policy", "last-joined");
-    if (rawValue == null) {
-      return RemovalPolicy.LAST_JOINED;
-    }
     String normalized = rawValue.trim().replace('-', '_').toUpperCase(Locale.ROOT);
     try {
       return RemovalPolicy.valueOf(normalized);
