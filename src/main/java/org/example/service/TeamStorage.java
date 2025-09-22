@@ -34,7 +34,7 @@ public class TeamStorage {
   private BukkitTask autoSaveTask;
   private final Object saveLock = new Object();
   private Map<UUID, Long> deadlinesReference = Collections.emptyMap();
-  private boolean autoSaveEnabled;
+  private volatile boolean autoSaveEnabled;
 
   public TeamStorage(@NotNull JavaPlugin plugin, @NotNull PluginConfig pluginConfig) {
     this.plugin = plugin;
@@ -193,7 +193,9 @@ public class TeamStorage {
   }
 
   public void addTeam(@NotNull Team team) {
-    addTeamInternal(team, true);
+    synchronized (saveLock) {
+      addTeamInternal(team, true);
+    }
   }
 
   private void addTeamInternal(@NotNull Team team, boolean markDirty) {
@@ -208,36 +210,40 @@ public class TeamStorage {
   }
 
   public void removeTeam(@NotNull Team team) {
-    teams.remove(team.getId());
-    String normalizedName = normalizeTeamKey(team.getName());
-    if (normalizedName != null) {
-      teamIdsByName.remove(normalizedName);
+    synchronized (saveLock) {
+      teams.remove(team.getId());
+      String normalizedName = normalizeTeamKey(team.getName());
+      if (normalizedName != null) {
+        teamIdsByName.remove(normalizedName);
+      }
+      markTeamDirty(team);
     }
-    markTeamDirty(team);
   }
 
   public void updateTeamName(@NotNull Team team, @NotNull String newName) {
-    String normalizedNewNameValue = newName.trim();
-    String currentName = team.getName();
-    if (Objects.equals(currentName, normalizedNewNameValue)) {
-      return;
-    }
-    String normalizedNewName = normalizeTeamKey(normalizedNewNameValue);
-    if (normalizedNewName != null) {
-      UUID existingId = teamIdsByName.get(normalizedNewName);
-      if (existingId != null && !existingId.equals(team.getId())) {
+    synchronized (saveLock) {
+      String normalizedNewNameValue = newName.trim();
+      String currentName = team.getName();
+      if (Objects.equals(currentName, normalizedNewNameValue)) {
         return;
       }
+      String normalizedNewName = normalizeTeamKey(normalizedNewNameValue);
+      if (normalizedNewName != null) {
+        UUID existingId = teamIdsByName.get(normalizedNewName);
+        if (existingId != null && !existingId.equals(team.getId())) {
+          return;
+        }
+      }
+      String normalizedCurrentName = normalizeTeamKey(currentName);
+      if (normalizedCurrentName != null) {
+        teamIdsByName.remove(normalizedCurrentName);
+      }
+      team.setName(normalizedNewNameValue);
+      if (normalizedNewName != null) {
+        teamIdsByName.put(normalizedNewName, team.getId());
+      }
+      markTeamDirty(team);
     }
-    String normalizedCurrentName = normalizeTeamKey(currentName);
-    if (normalizedCurrentName != null) {
-      teamIdsByName.remove(normalizedCurrentName);
-    }
-    team.setName(normalizedNewNameValue);
-    if (normalizedNewName != null) {
-      teamIdsByName.put(normalizedNewName, team.getId());
-    }
-    markTeamDirty(team);
   }
 
   public Map<UUID, UUID> getPlayerTeams() {
@@ -307,19 +313,21 @@ public class TeamStorage {
 
   private void scheduleImmediateSaveIfDisabled() {
     if (!autoSaveEnabled) {
-      flushIfDirty(deadlinesReference);
+      flushIfDirty(null);
     }
   }
 
   public synchronized void startAutoSave(long intervalSeconds, @NotNull Map<UUID, Long> deadlines) {
-    deadlinesReference = deadlines;
+    synchronized (saveLock) {
+      deadlinesReference = deadlines;
+    }
     if (autoSaveTask != null) {
       autoSaveTask.cancel();
       autoSaveTask = null;
     }
     autoSaveEnabled = intervalSeconds > 0;
     if (!autoSaveEnabled) {
-      flushIfDirty(deadlinesReference);
+      flushIfDirty(null);
       return;
     }
     long ticks = Math.max(1L, intervalSeconds) * 20L;
@@ -339,7 +347,7 @@ public class TeamStorage {
   }
 
   public void flushNow() {
-    flushIfDirty(deadlinesReference);
+    flushIfDirty(null);
   }
 
   public void flushIfDirty(Map<UUID, Long> deadlines) {
