@@ -17,6 +17,7 @@ import org.bukkit.scheduler.BukkitTask;
 import org.example.config.PluginConfig;
 import org.example.model.Team;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /** Handles persistence of team data and keeps track of player memberships. */
 public class TeamStorage {
@@ -55,7 +56,13 @@ public class TeamStorage {
       teamsFile = new File(plugin.getDataFolder(), "teams.yml");
       if (!teamsFile.exists()) {
         try {
-          teamsFile.getParentFile().mkdirs();
+          File parent = teamsFile.getParentFile();
+          if (parent != null && !parent.exists() && !parent.mkdirs()) {
+            plugin
+                .getLogger()
+                .severe("Failed to create directory for teams.yml at " + parent.getAbsolutePath());
+            return;
+          }
           teamsFile.createNewFile();
         } catch (IOException e) {
           plugin.getLogger().severe("Failed to create teams.yml: " + e.getMessage());
@@ -191,7 +198,7 @@ public class TeamStorage {
     }
   }
 
-  public Map<UUID, Team> getTeams() {
+  public @NotNull Map<UUID, Team> getTeams() {
     return teams;
   }
 
@@ -256,11 +263,11 @@ public class TeamStorage {
     }
   }
 
-  public Map<UUID, UUID> getPlayerTeams() {
+  public @NotNull Map<UUID, UUID> getPlayerTeams() {
     return playerTeams;
   }
 
-  public Team getTeamByName(String teamName) {
+  public @Nullable Team getTeamByName(@Nullable String teamName) {
     String normalizedName = normalizeTeamKey(teamName);
     if (normalizedName == null) {
       return null;
@@ -269,12 +276,12 @@ public class TeamStorage {
     return teamId != null ? teams.get(teamId) : null;
   }
 
-  public UUID getTeamIdByName(String teamName) {
+  public @Nullable UUID getTeamIdByName(@Nullable String teamName) {
     String normalizedName = normalizeTeamKey(teamName);
     return normalizedName != null ? teamIdsByName.get(normalizedName) : null;
   }
 
-  public String getPlayerTeam(@NotNull Player player) {
+  public @Nullable String getPlayerTeam(@NotNull Player player) {
     Team team = playerTeamCache.get(player.getUniqueId());
     return team != null ? team.getName() : null;
   }
@@ -304,18 +311,17 @@ public class TeamStorage {
     return teams.values().stream().map(Team::getName).collect(Collectors.toList());
   }
 
-  public String getTeamPrefix(String teamName) {
+  public @NotNull String getTeamPrefix(@Nullable String teamName) {
     Team team = getTeamByName(teamName);
     return team != null ? team.getPrefix() : "";
   }
 
-  @NotNull
-  public NamedTextColor getTeamColor(String teamName) {
+  public @NotNull NamedTextColor getTeamColor(@Nullable String teamName) {
     Team team = getTeamByName(teamName);
     return team != null ? team.getColor() : NamedTextColor.WHITE;
   }
 
-  public UUID getTeamLeaderId(String teamName) {
+  public @Nullable UUID getTeamLeaderId(@Nullable String teamName) {
     Team team = getTeamByName(teamName);
     return team != null ? team.getLeaderId() : null;
   }
@@ -490,7 +496,7 @@ public class TeamStorage {
     if (!memberIds.contains(leaderId)) {
       memberIds.add(0, leaderId);
       convertedMembers = true;
-    } else if (!memberIds.isEmpty() && !leaderId.equals(memberIds.get(0))) {
+    } else if (!memberIds.isEmpty() && !leaderId.equals(memberIds.getFirst())) {
       memberIds.remove(leaderId);
       memberIds.add(0, leaderId);
       convertedMembers = true;

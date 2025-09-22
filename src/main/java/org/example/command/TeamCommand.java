@@ -46,7 +46,6 @@ public class TeamCommand implements org.bukkit.command.CommandExecutor, TabCompl
   }
 
   @Override
-  @SuppressWarnings("unused")
   public boolean onCommand(
       @NotNull CommandSender sender,
       @NotNull Command command,
@@ -119,7 +118,6 @@ public class TeamCommand implements org.bukkit.command.CommandExecutor, TabCompl
   }
 
   @Override
-  @SuppressWarnings("unused")
   public List<String> onTabComplete(
       @NotNull CommandSender sender,
       @NotNull Command command,

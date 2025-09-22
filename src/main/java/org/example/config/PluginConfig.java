@@ -159,7 +159,8 @@ public class PluginConfig {
             "team.deadline-notify-period-seconds", Keys.Team.Deadlines.NOTIFY_PERIOD_SECONDS);
     changed |= migrateLegacyKey("team.deadline-display-mode", Keys.Team.Deadlines.DISPLAY_MODE);
     changed |= migrateLegacyKey("team.deadline-removal-policy", Keys.Team.Deadlines.REMOVAL_POLICY);
-    changed |= migrateLegacyKey("team.save-interval-seconds", Keys.Team.Storage.SAVE_INTERVAL_SECONDS);
+    changed |=
+        migrateLegacyKey("team.save-interval-seconds", Keys.Team.Storage.SAVE_INTERVAL_SECONDS);
     changed |= migrateLegacyKey("menu.open-sound", Keys.Menu.Sound.OPEN);
     changed |= migrateLegacyKey("menu.sound-volume", Keys.Menu.Sound.VOLUME);
     changed |= migrateLegacyKey("menu.sound-pitch", Keys.Menu.Sound.PITCH);

@@ -79,7 +79,7 @@ public class MyPurpurPlugin extends JavaPlugin {
    * @param message Сообщение для логирования
    */
   public void debug(String message) {
-    if (debugMode) {
+    if (isDebugMode()) {
       getLogger().info("[DEBUG] " + message);
     }
   }
@@ -108,7 +108,6 @@ public class MyPurpurPlugin extends JavaPlugin {
    *
    * @return true, если режим отладки включён, иначе false
    */
-  @SuppressWarnings("unused")
   public boolean isDebugMode() {
     return debugMode;
   }

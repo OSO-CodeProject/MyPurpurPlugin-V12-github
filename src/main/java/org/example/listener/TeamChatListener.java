@@ -19,6 +19,7 @@ import org.example.service.TeamService;
 import org.example.util.TeamMessageUtils;
 import org.example.util.TeamUtils;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /** Слушатель событий, связанных с командами и чатом игроков. */
 public class TeamChatListener implements Listener {
@@ -247,7 +248,7 @@ public class TeamChatListener implements Listener {
   }
 
   private @NotNull Component cacheOriginalPlayerListName(
-      @NotNull Player player, Component applyingPrefix) {
+      @NotNull Player player, @Nullable Component applyingPrefix) {
     UUID playerId = player.getUniqueId();
     Component existing = originalPlayerListNames.get(playerId);
     if (existing != null) {
@@ -281,7 +282,7 @@ public class TeamChatListener implements Listener {
   }
 
   private @NotNull Component getOrStoreOriginalPlayerDisplayName(
-      @NotNull Player player, Component applyingPrefix) {
+      @NotNull Player player, @Nullable Component applyingPrefix) {
     UUID playerId = player.getUniqueId();
     Component existing = originalPlayerDisplayNames.get(playerId);
     if (existing != null) {
@@ -314,8 +315,10 @@ public class TeamChatListener implements Listener {
     return Component.text(player.getName());
   }
 
-  private Component stripKnownPrefix(
-      @NotNull Component current, Component activePrefix, Component applyingPrefix) {
+  private @Nullable Component stripKnownPrefix(
+      @NotNull Component current,
+      @Nullable Component activePrefix,
+      @Nullable Component applyingPrefix) {
     Component prefixToStrip = activePrefix != null ? activePrefix : applyingPrefix;
     if (prefixToStrip == null) {
       return null;
@@ -323,7 +326,8 @@ public class TeamChatListener implements Listener {
     return stripPrefixIfPresent(current, prefixToStrip);
   }
 
-  private Component stripPrefixIfPresent(@NotNull Component current, @NotNull Component prefix) {
+  private @Nullable Component stripPrefixIfPresent(
+      @NotNull Component current, @NotNull Component prefix) {
     if (!(current instanceof TextComponent currentText)
         || !(prefix instanceof TextComponent prefixText)) {
       return null;
@@ -336,7 +340,7 @@ public class TeamChatListener implements Listener {
       return Component.empty();
     }
     if (current.children().size() == 1) {
-      return current.children().get(0);
+      return current.children().getFirst();
     }
     Component remainder = Component.empty();
     for (Component child : current.children()) {
@@ -374,7 +378,7 @@ public class TeamChatListener implements Listener {
     private final Player player;
     private final Component prefix;
 
-    public PlayerPrefixUpdateEvent(@NotNull Player player, Component prefix) {
+    public PlayerPrefixUpdateEvent(@NotNull Player player, @Nullable Component prefix) {
       this.player = player;
       this.prefix = prefix;
     }
@@ -383,8 +387,7 @@ public class TeamChatListener implements Listener {
       return player;
     }
 
-    @SuppressWarnings("unused")
-    public Component getPrefix() {
+    public @Nullable Component getPrefix() {
       return prefix;
     }
 
@@ -393,7 +396,6 @@ public class TeamChatListener implements Listener {
       return HANDLERS;
     }
 
-    @SuppressWarnings("unused")
     public static @NotNull org.bukkit.event.HandlerList getHandlerList() {
       return HANDLERS;
     }
