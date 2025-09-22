@@ -61,7 +61,7 @@ public class MembershipService {
         new Team(normalizedTeamName, leader.getUniqueId(), normalizedPrefix, normalizedColor);
     storage.addTeam(team);
     updateTeamMembersPrefixes(team);
-    storage.getPlayerTeams().put(leader.getUniqueId(), team.getId());
+    storage.assignPlayerToTeam(leader.getUniqueId(), team);
     TeamMessageUtils.sendTeamMessage(
         leader, Component.text("✅ Команда создана", NamedTextColor.GREEN));
     scheduler.evaluateTeam(team);
@@ -91,7 +91,7 @@ public class MembershipService {
     }
     // Добавляем игрока и фиксируем изменения в хранилище.
     team.addMember(player.getUniqueId());
-    storage.getPlayerTeams().put(player.getUniqueId(), team.getId());
+    storage.assignPlayerToTeam(player.getUniqueId(), team);
     storage.markTeamDirty(team);
     TeamMessageUtils.sendTeamMessage(
         player, Component.text("✅ Вы вступили в команду", NamedTextColor.GREEN));
@@ -107,7 +107,7 @@ public class MembershipService {
     if (!team.hasMember(playerId) && !team.isLeader(playerId)) return;
     // Удаляем игрока и очищаем обратные ссылки.
     team.removeMember(playerId);
-    storage.getPlayerTeams().remove(playerId);
+    storage.clearPlayerTeam(playerId);
     boolean removedTeam = false;
     // Если ушедший игрок был лидером, либо закрываем команду, либо назначаем нового.
     if (team.isLeader(playerId)) {
@@ -150,7 +150,7 @@ public class MembershipService {
     // Удаляем участника и фиксируем изменения.
 
     team.removeMember(targetId);
-    storage.getPlayerTeams().remove(targetId);
+    storage.clearPlayerTeam(targetId);
     storage.markTeamDirty(team);
     scheduler.evaluateTeam(team);
     notifyPrefixUpdate(targetId, null);
@@ -185,7 +185,7 @@ public class MembershipService {
     }
     // После уведомления очищаем соответствия игроков и команд.
     for (UUID memberId : members) {
-      storage.getPlayerTeams().remove(memberId);
+      storage.clearPlayerTeam(memberId);
     }
   }
 

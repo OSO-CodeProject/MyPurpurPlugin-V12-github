@@ -512,7 +512,7 @@ public class DeadlineScheduler {
         break;
       }
       team.removeMember(removed);
-      storage.getPlayerTeams().remove(removed);
+      storage.clearPlayerTeam(removed);
       removedCount++;
       changed = true;
       Player player = plugin.getServer().getPlayer(removed);
