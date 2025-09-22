@@ -27,6 +27,8 @@ public class TeamChatListener implements Listener {
   private final Map<UUID, Component> lastPlayerPrefixes = new ConcurrentHashMap<>();
   private final Map<UUID, Component> originalPlayerListNames = new ConcurrentHashMap<>();
   private final Map<UUID, Component> originalPlayerDisplayNames = new ConcurrentHashMap<>();
+  private final Map<UUID, Component> cachedTeamPrefixes = new ConcurrentHashMap<>();
+  private final Map<UUID, UUID> playerTeamIds = new ConcurrentHashMap<>();
 
   public TeamChatListener(@NotNull TeamService teamManager) {
     this.teamManager = teamManager;
@@ -67,9 +69,11 @@ public class TeamChatListener implements Listener {
   @EventHandler
   public void onPlayerQuit(@NotNull PlayerQuitEvent event) {
     Player player = event.getPlayer();
-    lastPlayerPrefixes.remove(player.getUniqueId());
-    originalPlayerListNames.remove(player.getUniqueId());
-    originalPlayerDisplayNames.remove(player.getUniqueId());
+    UUID playerId = player.getUniqueId();
+    lastPlayerPrefixes.remove(playerId);
+    originalPlayerListNames.remove(playerId);
+    originalPlayerDisplayNames.remove(playerId);
+    removeCachedTeamFor(playerId);
     ((MyPurpurPlugin) teamManager.getPlugin())
         .debugTeamAction("Игрок вышел", player.getName(), null);
   }
@@ -85,6 +89,10 @@ public class TeamChatListener implements Listener {
     Component prefixComponent = lastPlayerPrefixes.get(playerId);
 
     if (prefixComponent == null) {
+      Component resolvedPrefix = computePrefixForAsyncContext(player);
+      if (resolvedPrefix != null) {
+        lastPlayerPrefixes.put(playerId, resolvedPrefix);
+      }
       Bukkit.getScheduler().runTask(teamManager.getPlugin(), () -> updatePlayerPrefix(player));
     }
 
@@ -116,6 +124,7 @@ public class TeamChatListener implements Listener {
       if (Objects.equals(cachedPrefix, prefix)) {
         return;
       }
+      trackTeamPrefix(player, prefix);
       ((MyPurpurPlugin) teamManager.getPlugin())
           .debug("Устанавливаем префикс для игрока " + player.getName() + ": " + prefix);
       Component originalName = cacheOriginalPlayerListName(player, prefix);
@@ -127,6 +136,7 @@ public class TeamChatListener implements Listener {
       ((MyPurpurPlugin) teamManager.getPlugin())
           .debug("Сбрасываем префикс для игрока " + player.getName());
       lastPlayerPrefixes.remove(playerId);
+      removeCachedTeamFor(playerId);
       restoreOriginalPlayerListName(player);
       restoreOriginalPlayerDisplayName(player);
     }
@@ -151,6 +161,8 @@ public class TeamChatListener implements Listener {
     lastPlayerPrefixes.clear();
     originalPlayerListNames.clear();
     originalPlayerDisplayNames.clear();
+    cachedTeamPrefixes.clear();
+    playerTeamIds.clear();
   }
 
   private void updatePlayerPrefix(@NotNull Player player) {
@@ -160,9 +172,11 @@ public class TeamChatListener implements Listener {
         .debugTeamAction("Обновление префикса для игрока", player.getName(), teamName);
 
     if (teamName != null) {
-      String prefix = teamManager.getTeamPrefix(teamName);
-      NamedTextColor teamColor = teamManager.getTeamColor(teamName);
-      Component prefixComponent = TeamUtils.createPrefixComponent(prefix, teamColor);
+      UUID teamId = teamManager.getTeamIdByName(teamName);
+      if (teamId != null) {
+        playerTeamIds.put(playerId, teamId);
+      }
+      Component prefixComponent = resolveTeamPrefix(teamName, teamId);
       Component cachedPrefix = lastPlayerPrefixes.get(playerId);
       Component originalName = cacheOriginalPlayerListName(player, prefixComponent);
       Component originalDisplayName = getOrStoreOriginalPlayerDisplayName(player, prefixComponent);
@@ -171,9 +185,65 @@ public class TeamChatListener implements Listener {
       player.displayName(prefixComponent.append(originalDisplayName));
     } else {
       lastPlayerPrefixes.remove(playerId);
+      removeCachedTeamFor(playerId);
       restoreOriginalPlayerListName(player);
       restoreOriginalPlayerDisplayName(player);
     }
+  }
+
+  private Component computePrefixForAsyncContext(@NotNull Player player) {
+    String teamName = teamManager.getPlayerTeam(player);
+    if (teamName == null) {
+      return null;
+    }
+    UUID teamId = teamManager.getTeamIdByName(teamName);
+    if (teamId != null) {
+      playerTeamIds.put(player.getUniqueId(), teamId);
+    }
+    return resolveTeamPrefix(teamName, teamId);
+  }
+
+  private void trackTeamPrefix(@NotNull Player player, @NotNull Component prefix) {
+    UUID playerId = player.getUniqueId();
+    UUID teamId = playerTeamIds.get(playerId);
+    if (teamId == null) {
+      String teamName = teamManager.getPlayerTeam(player);
+      if (teamName != null) {
+        teamId = teamManager.getTeamIdByName(teamName);
+        if (teamId != null) {
+          playerTeamIds.put(playerId, teamId);
+        }
+      }
+    }
+    if (teamId != null) {
+      cachedTeamPrefixes.put(teamId, prefix);
+    }
+  }
+
+  private void removeCachedTeamFor(@NotNull UUID playerId) {
+    UUID teamId = playerTeamIds.remove(playerId);
+    if (teamId != null) {
+      cachedTeamPrefixes.remove(teamId);
+    }
+  }
+
+  private Component resolveTeamPrefix(String teamName, UUID teamId) {
+    if (teamName == null) {
+      return Component.empty();
+    }
+    if (teamId != null) {
+      Component cached = cachedTeamPrefixes.get(teamId);
+      if (cached != null) {
+        return cached;
+      }
+    }
+    String prefix = teamManager.getTeamPrefix(teamName);
+    NamedTextColor teamColor = teamManager.getTeamColor(teamName);
+    Component resolved = TeamUtils.createPrefixComponent(prefix, teamColor);
+    if (teamId != null) {
+      cachedTeamPrefixes.put(teamId, resolved);
+    }
+    return resolved;
   }
 
   private @NotNull Component cacheOriginalPlayerListName(
