@@ -41,7 +41,7 @@ class TeamManagerTest extends MockBukkitTestBase {
             mockConstruction(MembershipService.class)) {
 
       TeamManager manager = new TeamManager(plugin, pluginConfig);
-      MembershipService membership = membershipMock.constructed().get(0);
+      MembershipService membership = membershipMock.constructed().getFirst();
 
       PlayerMock leader = server.addPlayer("Leader");
       PlayerMock member = server.addPlayer("Member");

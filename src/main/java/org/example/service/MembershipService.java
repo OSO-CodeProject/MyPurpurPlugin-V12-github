@@ -116,7 +116,10 @@ public class MembershipService {
         storage.removeTeam(team);
         removedTeam = true;
       } else {
-        team.setLeader(team.getMembers().get(0));
+        UUID newLeader = team.getFirstMember();
+        if (newLeader != null) {
+          team.setLeader(newLeader);
+        }
         scheduler.handleLeaderTransfer(team);
       }
     }

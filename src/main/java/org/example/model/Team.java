@@ -9,6 +9,7 @@ import java.util.UUID;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.example.util.TeamUtils;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /** Представляет команду с уникальным идентификатором и изменяемыми данными. */
@@ -43,27 +44,27 @@ public class Team {
     return id;
   }
 
-  public String getName() {
+  public @NotNull String getName() {
     return name;
   }
 
-  public UUID getLeaderId() {
+  public @Nullable UUID getLeaderId() {
     return leader;
   }
 
-  public List<UUID> getMembers() {
+  public @NotNull List<UUID> getMembers() {
     return new ArrayList<>(members);
   }
 
-  public UUID getFirstMember() {
-    return members.isEmpty() ? null : members.get(0);
+  public @Nullable UUID getFirstMember() {
+    return members.isEmpty() ? null : members.getFirst();
   }
 
-  public String getPrefix() {
+  public @NotNull String getPrefix() {
     return prefix;
   }
 
-  public NamedTextColor getColor() {
+  public @NotNull NamedTextColor getColor() {
     return color;
   }
 
@@ -72,7 +73,7 @@ public class Team {
     this.name = normalizeName(name);
   }
 
-  public void setLeader(UUID leader) {
+  public void setLeader(@Nullable UUID leader) {
     this.leader = leader;
     addMember(leader);
   }
@@ -141,7 +142,7 @@ public class Team {
   }
 
   // Утилитный метод для префикса
-  public Component getPrefixComponent() {
+  public @NotNull Component getPrefixComponent() {
     return TeamUtils.createPrefixComponent(prefix, color);
   }
 
