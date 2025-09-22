@@ -3,7 +3,9 @@ package org.example.service;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.OfflinePlayer;
@@ -25,6 +27,10 @@ public class TeamStorage {
   private final Map<UUID, Team> teams = new ConcurrentHashMap<>();
   private final Map<String, UUID> teamIdsByName = new ConcurrentHashMap<>();
   private final Map<UUID, UUID> playerTeams = new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, UUID> resolvedProfileCache = new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, CompletableFuture<UUID>> pendingProfileLookups =
+      new ConcurrentHashMap<>();
+  private final ConcurrentMap<UUID, PendingTeamLoad> pendingTeamLoads = new ConcurrentHashMap<>();
 
   private FileConfiguration teamsConfig;
   private File teamsFile;
@@ -58,6 +64,7 @@ public class TeamStorage {
       teams.clear();
       teamIdsByName.clear();
       playerTeams.clear();
+      pendingTeamLoads.clear();
       deadlines.clear();
       var section = teamsConfig.getConfigurationSection("teams");
       boolean legacyDataUpdated = false;
@@ -76,78 +83,72 @@ public class TeamStorage {
           if (name == null || name.isBlank()) {
             plugin
                 .getLogger()
-                .warning(
-                    "Skipping team entry " + teamId + " because it does not define a name.");
+                .warning("Skipping team entry " + teamId + " because it does not define a name.");
             continue;
           }
           String leaderRaw = teamsConfig.getString("teams." + teamIdStr + ".leader", "");
           UUID leaderId = parseUuid(leaderRaw);
           boolean leaderFromName = false;
-          if (leaderId == null) {
-            leaderId = resolvePlayerUuid(leaderRaw);
-            leaderFromName = leaderId != null;
-          }
-          if (leaderId == null) {
-            plugin
-                .getLogger()
-                .warning(
-                    "Skipping team entry " + teamId + " because it does not define a leader.");
-            continue;
-          }
           String prefix = teamsConfig.getString("teams." + teamIdStr + ".prefix", "");
           String color =
               normalizeColorKey(teamsConfig.getString("teams." + teamIdStr + ".color", "WHITE"));
           List<String> rawMembers = teamsConfig.getStringList("teams." + teamIdStr + ".members");
-          List<UUID> memberIds = new ArrayList<>();
-          boolean convertedMembers = false;
-          for (String rawMember : rawMembers) {
-            UUID memberId = parseUuid(rawMember);
-            boolean convertedFromName = false;
-            if (memberId == null) {
-              memberId = resolvePlayerUuid(rawMember);
-              convertedFromName = memberId != null;
-            }
-            if (memberId == null) {
+          long deadline = teamsConfig.getLong("teams." + teamIdStr + ".deadline", 0L);
+          if (leaderId == null) {
+            if (leaderRaw == null || leaderRaw.isBlank()) {
               plugin
                   .getLogger()
                   .warning(
-                      "Skipping member entry '"
-                          + rawMember
-                          + "' for team "
-                          + teamId
-                          + " because it could not be converted to UUID.");
+                      "Skipping team entry " + teamId + " because it does not define a leader.");
               continue;
             }
-            if (!memberIds.contains(memberId)) {
-              memberIds.add(memberId);
-            }
-            if (convertedFromName) {
-              convertedMembers = true;
-            }
+            leaderId =
+                resolvePlayerUuid(
+                    leaderRaw,
+                    resolved ->
+                        handlePendingLeaderResolution(
+                            new PendingTeamLoad(
+                                teamId,
+                                teamIdStr,
+                                name,
+                                leaderRaw,
+                                prefix,
+                                color,
+                                rawMembers,
+                                deadline),
+                            resolved));
+            leaderFromName = leaderId != null;
           }
-          if (!memberIds.contains(leaderId)) {
-            memberIds.add(0, leaderId);
-            convertedMembers = true;
-          } else if (!memberIds.isEmpty() && !leaderId.equals(memberIds.get(0))) {
-            memberIds.remove(leaderId);
-            memberIds.add(0, leaderId);
-            convertedMembers = true;
+          if (leaderId == null) {
+            PendingTeamLoad pending =
+                new PendingTeamLoad(
+                    teamId, teamIdStr, name, leaderRaw, prefix, color, rawMembers, deadline);
+            pendingTeamLoads.put(teamId, pending);
+            plugin
+                .getLogger()
+                .info(
+                    "Queued asynchronous lookup for leader '"
+                        + leaderRaw
+                        + "' while loading team "
+                        + teamId
+                        + ". Team data will be restored once the profile resolves.");
+            continue;
           }
-          if (memberIds.isEmpty()) {
-            memberIds.add(leaderId);
-            convertedMembers = true;
+          TeamLoadResult result =
+              loadTeamFromConfig(
+                  teamId,
+                  teamIdStr,
+                  name,
+                  leaderId,
+                  prefix,
+                  color,
+                  rawMembers,
+                  deadline,
+                  deadlines);
+          if (result == null) {
+            continue;
           }
-          Team team = new Team(teamId, name != null ? name.trim() : null, leaderId, prefix, color);
-          team.setMembers(memberIds);
-          long deadline = teamsConfig.getLong("teams." + teamIdStr + ".deadline", 0L);
-          if (deadline > 0L) {
-            deadlines.put(team.getId(), deadline);
-          }
-          addTeamInternal(team, false);
-          for (UUID member : team.getMembers()) {
-            playerTeams.put(member, team.getId());
-          }
-          legacyDataUpdated = legacyDataUpdated || leaderFromName || convertedMembers;
+          legacyDataUpdated = legacyDataUpdated || leaderFromName || result.convertedFromName();
         }
       }
       dirtyTeams.clear();
@@ -420,21 +421,254 @@ public class TeamStorage {
     }
   }
 
-  private UUID resolvePlayerUuid(String value) {
+  private TeamLoadResult loadTeamFromConfig(
+      UUID teamId,
+      String teamIdStr,
+      String name,
+      UUID leaderId,
+      String prefix,
+      String color,
+      List<String> rawMembers,
+      long deadline,
+      Map<UUID, Long> deadlines) {
+    Team team = new Team(teamId, name != null ? name.trim() : null, leaderId, prefix, color);
+    List<UUID> memberIds = new ArrayList<>();
+    boolean convertedMembers = false;
+    for (String rawMember : rawMembers) {
+      UUID memberId = parseUuid(rawMember);
+      boolean convertedFromName = false;
+      if (memberId == null) {
+        if (rawMember == null || rawMember.isBlank()) {
+          plugin
+              .getLogger()
+              .warning(
+                  "Skipping member entry '"
+                      + rawMember
+                      + "' for team "
+                      + teamId
+                      + " because it could not be converted to UUID.");
+          continue;
+        }
+        memberId =
+            resolvePlayerUuid(
+                rawMember, resolved -> handleDeferredMember(team, rawMember, resolved));
+        convertedFromName = memberId != null;
+      }
+      if (memberId == null) {
+        continue;
+      }
+      if (!memberIds.contains(memberId)) {
+        memberIds.add(memberId);
+      }
+      if (convertedFromName) {
+        convertedMembers = true;
+      }
+    }
+    if (!memberIds.contains(leaderId)) {
+      memberIds.add(0, leaderId);
+      convertedMembers = true;
+    } else if (!memberIds.isEmpty() && !leaderId.equals(memberIds.get(0))) {
+      memberIds.remove(leaderId);
+      memberIds.add(0, leaderId);
+      convertedMembers = true;
+    }
+    if (memberIds.isEmpty()) {
+      memberIds.add(leaderId);
+      convertedMembers = true;
+    }
+    team.setMembers(memberIds);
+    if (deadline > 0L) {
+      deadlines.put(team.getId(), deadline);
+    }
+    addTeamInternal(team, false);
+    for (UUID member : team.getMembers()) {
+      playerTeams.put(member, team.getId());
+    }
+    if (convertedMembers) {
+      markTeamDirty(team);
+    }
+    return new TeamLoadResult(team, convertedMembers);
+  }
+
+  private UUID resolvePlayerUuid(String value, java.util.function.Consumer<UUID> onResolved) {
     if (value == null || value.isBlank()) {
       return null;
     }
     String trimmed = value.trim();
+    String cacheKey = trimmed.toLowerCase(Locale.ROOT);
+    UUID cached = resolvedProfileCache.get(cacheKey);
+    if (cached != null) {
+      return cached;
+    }
     OfflinePlayer offlinePlayer = plugin.getServer().getOfflinePlayerIfCached(trimmed);
-    if (offlinePlayer == null) {
+    if (offlinePlayer != null && offlinePlayer.getUniqueId() != null) {
+      UUID uuid = offlinePlayer.getUniqueId();
+      resolvedProfileCache.put(cacheKey, uuid);
+      return uuid;
+    }
+    CompletableFuture<UUID> future =
+        pendingProfileLookups.computeIfAbsent(
+            cacheKey,
+            key ->
+                startProfileLookup(trimmed)
+                    .whenComplete(
+                        (uuid, throwable) -> {
+                          pendingProfileLookups.remove(cacheKey);
+                          if (throwable != null) {
+                            plugin
+                                .getLogger()
+                                .warning(
+                                    "Failed to resolve profile for '"
+                                        + trimmed
+                                        + "': "
+                                        + throwable.getMessage());
+                          } else if (uuid != null) {
+                            resolvedProfileCache.put(cacheKey, uuid);
+                          }
+                        }));
+    future.whenComplete(
+        (uuid, throwable) -> {
+          UUID result = uuid;
+          if (throwable != null) {
+            result = null;
+          }
+          if (onResolved != null) {
+            UUID finalResult = result;
+            plugin.getServer().getScheduler().runTask(plugin, () -> onResolved.accept(finalResult));
+          }
+        });
+    return null;
+  }
+
+  private CompletableFuture<UUID> startProfileLookup(String playerName) {
+    CompletableFuture<UUID> result = new CompletableFuture<>();
+    plugin
+        .getServer()
+        .getAsyncScheduler()
+        .runNow(
+            plugin,
+            task -> {
+              try {
+                var profile = plugin.getServer().createProfile(playerName);
+                if (profile.completeFromCache(true, true) && profile.getId() != null) {
+                  result.complete(profile.getId());
+                  return;
+                }
+                profile
+                    .update()
+                    .whenComplete(
+                        (updated, throwable) -> {
+                          if (throwable != null) {
+                            result.completeExceptionally(throwable);
+                            return;
+                          }
+                          UUID uuid = null;
+                          if (updated != null && updated.getId() != null) {
+                            uuid = updated.getId();
+                          } else if (profile.getId() != null) {
+                            uuid = profile.getId();
+                          }
+                          result.complete(uuid);
+                        });
+              } catch (Throwable throwable) {
+                result.completeExceptionally(throwable);
+              }
+            });
+    return result;
+  }
+
+  private void handlePendingLeaderResolution(PendingTeamLoad pending, UUID resolvedLeader) {
+    if (resolvedLeader == null) {
       plugin
           .getLogger()
           .warning(
-              "Cannot resolve player name '"
-                  + trimmed
-                  + "' because no cached profile is available.");
-      return null;
+              "Skipping team entry "
+                  + pending.teamId
+                  + " because player name '"
+                  + pending.leaderRaw
+                  + "' could not be resolved.");
+      pendingTeamLoads.remove(pending.teamId);
+      return;
     }
-    return offlinePlayer.getUniqueId();
+    pendingTeamLoads.remove(pending.teamId);
+    synchronized (saveLock) {
+      TeamLoadResult result =
+          loadTeamFromConfig(
+              pending.teamId,
+              pending.teamIdString,
+              pending.name,
+              resolvedLeader,
+              pending.prefix,
+              pending.color,
+              pending.rawMembers,
+              pending.deadline,
+              deadlinesReference);
+      if (result != null) {
+        Team team = result.team();
+        teamsConfig.set("teams." + pending.teamIdString + ".leader", resolvedLeader.toString());
+        teamsConfig.set(
+            "teams." + pending.teamIdString + ".members",
+            team.getMembers().stream().map(UUID::toString).collect(Collectors.toList()));
+        markTeamDirty(team);
+      }
+    }
   }
+
+  private void handleDeferredMember(Team team, String rawValue, UUID resolvedUuid) {
+    if (resolvedUuid == null) {
+      plugin
+          .getLogger()
+          .warning(
+              "Skipping member entry '"
+                  + rawValue
+                  + "' for team "
+                  + team.getId()
+                  + " because it could not be converted to UUID.");
+      return;
+    }
+    synchronized (saveLock) {
+      List<UUID> members = new ArrayList<>(team.getMembers());
+      if (!members.contains(resolvedUuid)) {
+        members.add(resolvedUuid);
+        team.setMembers(members);
+        playerTeams.put(resolvedUuid, team.getId());
+        teamsConfig.set(
+            "teams." + team.getId() + ".members",
+            members.stream().map(UUID::toString).collect(Collectors.toList()));
+        markTeamDirty(team);
+      }
+    }
+  }
+
+  private static final class PendingTeamLoad {
+    private final UUID teamId;
+    private final String teamIdString;
+    private final String name;
+    private final String leaderRaw;
+    private final String prefix;
+    private final String color;
+    private final List<String> rawMembers;
+    private final long deadline;
+
+    private PendingTeamLoad(
+        UUID teamId,
+        String teamIdString,
+        String name,
+        String leaderRaw,
+        String prefix,
+        String color,
+        List<String> rawMembers,
+        long deadline) {
+      this.teamId = teamId;
+      this.teamIdString = teamIdString;
+      this.name = name;
+      this.leaderRaw = leaderRaw != null ? leaderRaw.trim() : null;
+      this.prefix = prefix;
+      this.color = color;
+      this.rawMembers = new ArrayList<>(rawMembers);
+      this.deadline = deadline;
+    }
+  }
+
+  private record TeamLoadResult(Team team, boolean convertedFromName) {}
 }
