@@ -69,10 +69,12 @@ public class TeamCommand implements org.bukkit.command.CommandExecutor, TabCompl
 
     // При необходимости проверяем статус оператора, чтобы выполнить требование
     // конфигурации.
-    if (pluginConfig.isTeamCommandRequiresOp() && !player.isOp()) {
+    if (pluginConfig.isTeamCommandRequiresOp()
+        && !player.hasPermission("mypurpurplugin.team.requiresop")) {
       player.sendMessage(
           Component.text(
-              "❌ У вас нет прав для использования этой команды! Требуются права OP.",
+              "❌ У вас нет прав для использования этой команды! Требуется разрешение "
+                  + "mypurpurplugin.team.requiresop.",
               NamedTextColor.RED));
       return true;
     }

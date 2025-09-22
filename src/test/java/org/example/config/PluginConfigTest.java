@@ -123,8 +123,7 @@ class PluginConfigTest {
     FileConfiguration configuration = (FileConfiguration) configField.get(pluginConfig);
 
     assertEquals(
-        "BLOCK_NOTE_BLOCK_PLING",
-        configuration.getString(PluginConfig.Keys.Menu.Sound.OPEN));
+        "BLOCK_NOTE_BLOCK_PLING", configuration.getString(PluginConfig.Keys.Menu.Sound.OPEN));
   }
 
   @Test
@@ -153,9 +152,7 @@ class PluginConfigTest {
     configField.setAccessible(true);
     FileConfiguration configuration = (FileConfiguration) configField.get(pluginConfig);
 
-    assertEquals(
-        "FIREWORK",
-        configuration.getString(PluginConfig.Keys.Menu.PARTICLE_EFFECT));
+    assertEquals("FIREWORK", configuration.getString(PluginConfig.Keys.Menu.PARTICLE_EFFECT));
     assertEquals(7, configuration.getInt(PluginConfig.Keys.Team.Membership.MAX_MEMBERS));
   }
 

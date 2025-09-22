@@ -99,8 +99,7 @@ class TeamStorageTest {
 
     PlayerMock leader = server.addPlayer("LeaderMember");
     PlayerMock member = server.addPlayer("SecondMember");
-    Team team =
-        new Team(UUID.randomUUID(), "MembersTeam", leader.getUniqueId(), "[M]", "yellow");
+    Team team = new Team(UUID.randomUUID(), "MembersTeam", leader.getUniqueId(), "[M]", "yellow");
     team.setMembersByUuid(List.of(leader.getUniqueId(), member.getUniqueId()));
     storage.addTeam(team);
     storage.saveTeams(deadlines);

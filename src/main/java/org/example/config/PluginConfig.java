@@ -137,20 +137,16 @@ public class PluginConfig {
     newKeysAdded |= migrateLegacyKey("force-white-chat", Keys.CHAT_FORCE_WHITE);
     newKeysAdded |= migrateLegacyKey("team.requires-op", Keys.Team.Commands.REQUIRES_OP);
     newKeysAdded |= migrateLegacyKey("team.notify-admins", Keys.Team.Notifications.NOTIFY_ADMINS);
-    newKeysAdded |=
-        migrateLegacyKey("team.max-members", Keys.Team.Membership.MAX_MEMBERS);
+    newKeysAdded |= migrateLegacyKey("team.max-members", Keys.Team.Membership.MAX_MEMBERS);
     newKeysAdded |=
         migrateLegacyKey(
-            "team.enforce-max-members-on-reload",
-            Keys.Team.Membership.ENFORCE_MAX_ON_RELOAD);
+            "team.enforce-max-members-on-reload", Keys.Team.Membership.ENFORCE_MAX_ON_RELOAD);
     newKeysAdded |=
         migrateLegacyKey("team.grace-period-enabled", Keys.Team.Membership.GracePeriod.ENABLED);
     newKeysAdded |=
         migrateLegacyKey("team.grace-period-minutes", Keys.Team.Membership.GracePeriod.MINUTES);
-    newKeysAdded |=
-        migrateLegacyKey("team.min-prefix-length", Keys.Team.Naming.Prefix.MIN_LENGTH);
-    newKeysAdded |=
-        migrateLegacyKey("team.max-prefix-length", Keys.Team.Naming.Prefix.MAX_LENGTH);
+    newKeysAdded |= migrateLegacyKey("team.min-prefix-length", Keys.Team.Naming.Prefix.MIN_LENGTH);
+    newKeysAdded |= migrateLegacyKey("team.max-prefix-length", Keys.Team.Naming.Prefix.MAX_LENGTH);
     newKeysAdded |=
         migrateLegacyKey("team.min-team-name-length", Keys.Team.Naming.TeamName.MIN_LENGTH);
     newKeysAdded |=
@@ -230,7 +226,8 @@ public class PluginConfig {
     return defaultValue;
   }
 
-  private int getIntWithLegacyFallback(@NotNull String path, int defaultValue, String... legacyPaths) {
+  private int getIntWithLegacyFallback(
+      @NotNull String path, int defaultValue, String... legacyPaths) {
     if (config.contains(path)) {
       return config.getInt(path, defaultValue);
     }
@@ -321,8 +318,7 @@ public class PluginConfig {
    * @return true, если требуется OP, иначе false
    */
   public boolean isTeamCommandRequiresOp() {
-    return getBooleanWithLegacyFallback(
-        Keys.Team.Commands.REQUIRES_OP, false, "team.requires-op");
+    return getBooleanWithLegacyFallback(Keys.Team.Commands.REQUIRES_OP, false, "team.requires-op");
   }
 
   /**
@@ -351,9 +347,7 @@ public class PluginConfig {
    */
   public boolean isEnforceMaxMembersOnReload() {
     return getBooleanWithLegacyFallback(
-        Keys.Team.Membership.ENFORCE_MAX_ON_RELOAD,
-        true,
-        "team.enforce-max-members-on-reload");
+        Keys.Team.Membership.ENFORCE_MAX_ON_RELOAD, true, "team.enforce-max-members-on-reload");
   }
 
   /**
@@ -383,9 +377,7 @@ public class PluginConfig {
    */
   public long getDeadlineNotifyPeriodSeconds() {
     return getLongWithLegacyFallback(
-        Keys.Team.Deadlines.NOTIFY_PERIOD_SECONDS,
-        300L,
-        "team.deadline-notify-period-seconds");
+        Keys.Team.Deadlines.NOTIFY_PERIOD_SECONDS, 300L, "team.deadline-notify-period-seconds");
   }
 
   /**
