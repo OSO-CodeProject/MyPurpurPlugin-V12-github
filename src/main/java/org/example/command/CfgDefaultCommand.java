@@ -11,7 +11,7 @@ import org.example.config.PluginConfig;
 import org.example.service.TeamService;
 import org.jetbrains.annotations.NotNull;
 
-/** Обработчик команды /cfgDefault для сброса конфигурации плагина до дефолтных настроек. */
+/** Обработчик команды /cfgdefault для сброса конфигурации плагина до дефолтных настроек. */
 public class CfgDefaultCommand implements CommandExecutor {
 
   private final MyPurpurPlugin plugin;
