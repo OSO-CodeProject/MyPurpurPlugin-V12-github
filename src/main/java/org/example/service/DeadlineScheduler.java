@@ -191,8 +191,7 @@ public class DeadlineScheduler {
 
     long now = System.currentTimeMillis();
     for (Team team : storage.getTeams().values()) {
-      changed |=
-          evaluateTeamState(team, max, enforcementEnabled, graceEnabled, now);
+      changed |= evaluateTeamState(team, max, enforcementEnabled, graceEnabled, now);
     }
     if (changed) {
       storage.markDeadlinesDirty();
@@ -243,11 +242,7 @@ public class DeadlineScheduler {
   }
 
   private boolean evaluateTeamState(
-      @NotNull Team team,
-      int max,
-      boolean enforcementEnabled,
-      boolean graceEnabled,
-      long now) {
+      @NotNull Team team, int max, boolean enforcementEnabled, boolean graceEnabled, long now) {
     boolean changed = false;
     UUID teamId = team.getId();
 
@@ -285,8 +280,7 @@ public class DeadlineScheduler {
       notifyAdmins(
           adminBaseMessage(team, size, max)
               .append(Component.space())
-              .append(
-                  Component.text("Автоматическое сокращение отключено.", NamedTextColor.GOLD)));
+              .append(Component.text("Автоматическое сокращение отключено.", NamedTextColor.GOLD)));
       if (deadlines.remove(teamId) != null) {
         changed = true;
       }

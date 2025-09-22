@@ -79,19 +79,16 @@ class TeamChatListenerTest extends MockBukkitTestBase {
     SignedMessage signedMessage = SignedMessage.system("Привет", message);
     AsyncChatEvent event =
         new AsyncChatEvent(
-            false,
-            player,
-            viewers,
-            initialRenderer,
-            message,
-            message,
-            signedMessage);
+            false, player, viewers, initialRenderer, message, message, signedMessage);
 
     server.getPluginManager().callEvent(event);
 
     Component rendered =
-        event.renderer().render(player, Component.text(player.getName()), event.message(), Audience.empty());
-    assertEquals("[B] Chatter: Привет", PlainTextComponentSerializer.plainText().serialize(rendered));
+        event
+            .renderer()
+            .render(player, Component.text(player.getName()), event.message(), Audience.empty());
+    assertEquals(
+        "[B] Chatter: Привет", PlainTextComponentSerializer.plainText().serialize(rendered));
   }
 
   @Test
@@ -103,12 +100,12 @@ class TeamChatListenerTest extends MockBukkitTestBase {
     server
         .getPluginManager()
         .callEvent(new TeamChatListener.PlayerPrefixUpdateEvent(player, prefixComponent));
-    assertEquals("[G] Updater", PlainTextComponentSerializer.plainText().serialize(player.playerListName()));
+    assertEquals(
+        "[G] Updater", PlainTextComponentSerializer.plainText().serialize(player.playerListName()));
 
-    server
-        .getPluginManager()
-        .callEvent(new TeamChatListener.PlayerPrefixUpdateEvent(player, null));
-    assertEquals("Updater", PlainTextComponentSerializer.plainText().serialize(player.playerListName()));
+    server.getPluginManager().callEvent(new TeamChatListener.PlayerPrefixUpdateEvent(player, null));
+    assertEquals(
+        "Updater", PlainTextComponentSerializer.plainText().serialize(player.playerListName()));
   }
 
   @Test
@@ -124,9 +121,12 @@ class TeamChatListenerTest extends MockBukkitTestBase {
     server.getPluginManager().callEvent(quitEvent);
 
     player.playerListName(Component.text("Manual", NamedTextColor.WHITE));
-    server.getPluginManager().callEvent(new TeamChatListener.PlayerPrefixUpdateEvent(player, prefix));
+    server
+        .getPluginManager()
+        .callEvent(new TeamChatListener.PlayerPrefixUpdateEvent(player, prefix));
 
-    assertEquals("[O] Manual", PlainTextComponentSerializer.plainText().serialize(player.playerListName()));
+    assertEquals(
+        "[O] Manual", PlainTextComponentSerializer.plainText().serialize(player.playerListName()));
   }
 
   @Test
@@ -145,9 +145,7 @@ class TeamChatListenerTest extends MockBukkitTestBase {
 
     assertEquals(prefix.append(customName), player.playerListName());
 
-    server
-        .getPluginManager()
-        .callEvent(new TeamChatListener.PlayerPrefixUpdateEvent(player, null));
+    server.getPluginManager().callEvent(new TeamChatListener.PlayerPrefixUpdateEvent(player, null));
 
     assertEquals(customName, player.playerListName());
   }
@@ -170,9 +168,7 @@ class TeamChatListenerTest extends MockBukkitTestBase {
     assertEquals(prefix.append(customDisplay), player.playerListName());
     assertEquals(prefix.append(customDisplay), player.displayName());
 
-    server
-        .getPluginManager()
-        .callEvent(new TeamChatListener.PlayerPrefixUpdateEvent(player, null));
+    server.getPluginManager().callEvent(new TeamChatListener.PlayerPrefixUpdateEvent(player, null));
 
     assertEquals(customDisplay, player.playerListName());
     assertEquals(customDisplay, player.displayName());
@@ -200,9 +196,7 @@ class TeamChatListenerTest extends MockBukkitTestBase {
         .callEvent(new TeamChatListener.PlayerPrefixUpdateEvent(player, secondPrefix));
     assertEquals(secondPrefix.append(customName), player.playerListName());
 
-    server
-        .getPluginManager()
-        .callEvent(new TeamChatListener.PlayerPrefixUpdateEvent(player, null));
+    server.getPluginManager().callEvent(new TeamChatListener.PlayerPrefixUpdateEvent(player, null));
     assertEquals(customName, player.playerListName());
   }
 
@@ -247,7 +241,8 @@ class TeamChatListenerTest extends MockBukkitTestBase {
     assertDoesNotThrow(() -> server.getPluginManager().callEvent(event));
 
     Component rendered =
-        event.renderer()
+        event
+            .renderer()
             .render(player, Component.text(player.getName()), event.message(), Audience.empty());
     assertEquals(
         "[NEW] Immediate: Test", PlainTextComponentSerializer.plainText().serialize(rendered));
@@ -269,14 +264,16 @@ class TeamChatListenerTest extends MockBukkitTestBase {
     ChatRenderer initialRenderer = ChatRenderer.defaultRenderer();
     SignedMessage signedMessage = SignedMessage.system("Hi", message);
     AsyncChatEvent event =
-        new AsyncChatEvent(false, player, viewers, initialRenderer, message, message, signedMessage);
+        new AsyncChatEvent(
+            false, player, viewers, initialRenderer, message, message, signedMessage);
 
     server.getPluginManager().callEvent(event);
 
     Component rendered =
-        event.renderer().render(player, Component.text(player.getName()), event.message(), Audience.empty());
-    assertEquals(
-        "[R] Reloaded: Hi", PlainTextComponentSerializer.plainText().serialize(rendered));
+        event
+            .renderer()
+            .render(player, Component.text(player.getName()), event.message(), Audience.empty());
+    assertEquals("[R] Reloaded: Hi", PlainTextComponentSerializer.plainText().serialize(rendered));
   }
 
   @Test
@@ -297,9 +294,7 @@ class TeamChatListenerTest extends MockBukkitTestBase {
     Component prefix = Component.text("[S] ", NamedTextColor.DARK_GREEN);
     assertEquals(prefix.append(customTabName), player.playerListName());
 
-    server
-        .getPluginManager()
-        .callEvent(new TeamChatListener.PlayerPrefixUpdateEvent(player, null));
+    server.getPluginManager().callEvent(new TeamChatListener.PlayerPrefixUpdateEvent(player, null));
 
     assertEquals(customTabName, player.playerListName());
   }
@@ -346,7 +341,8 @@ class TeamChatListenerTest extends MockBukkitTestBase {
     }
 
     @Override
-    public void createTeam(String teamName, String prefix, String color, org.bukkit.entity.Player leader) {
+    public void createTeam(
+        String teamName, String prefix, String color, org.bukkit.entity.Player leader) {
       throw new UnsupportedOperationException();
     }
 
@@ -378,7 +374,8 @@ class TeamChatListenerTest extends MockBukkitTestBase {
     }
 
     @Override
-    public void renameTeam(String oldTeamName, String newTeamName, org.bukkit.entity.Player leader) {
+    public void renameTeam(
+        String oldTeamName, String newTeamName, org.bukkit.entity.Player leader) {
       throw new UnsupportedOperationException();
     }
 
