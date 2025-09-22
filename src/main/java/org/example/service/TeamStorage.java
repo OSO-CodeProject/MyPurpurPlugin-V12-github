@@ -27,6 +27,7 @@ public class TeamStorage {
   private final Map<UUID, Team> teams = new ConcurrentHashMap<>();
   private final Map<String, UUID> teamIdsByName = new ConcurrentHashMap<>();
   private final Map<UUID, UUID> playerTeams = new ConcurrentHashMap<>();
+  private final Map<UUID, Team> playerTeamCache = new ConcurrentHashMap<>();
   private final ConcurrentMap<String, UUID> resolvedProfileCache = new ConcurrentHashMap<>();
   private final ConcurrentMap<String, CompletableFuture<UUID>> pendingProfileLookups =
       new ConcurrentHashMap<>();
@@ -64,6 +65,7 @@ public class TeamStorage {
       teams.clear();
       teamIdsByName.clear();
       playerTeams.clear();
+      playerTeamCache.clear();
       pendingTeamLoads.clear();
       deadlines.clear();
       var section = teamsConfig.getConfigurationSection("teams");
@@ -217,6 +219,13 @@ public class TeamStorage {
       if (normalizedName != null) {
         teamIdsByName.remove(normalizedName);
       }
+      for (UUID memberId : team.getMembers()) {
+        clearPlayerTeam(memberId);
+      }
+      UUID leaderId = team.getLeaderId();
+      if (leaderId != null) {
+        clearPlayerTeam(leaderId);
+      }
       markTeamDirty(team);
     }
   }
@@ -266,9 +275,22 @@ public class TeamStorage {
   }
 
   public String getPlayerTeam(@NotNull Player player) {
-    UUID id = playerTeams.get(player.getUniqueId());
-    Team team = id != null ? teams.get(id) : null;
+    Team team = playerTeamCache.get(player.getUniqueId());
     return team != null ? team.getName() : null;
+  }
+
+  public void assignPlayerToTeam(@NotNull UUID playerId, @NotNull Team team) {
+    cachePlayerTeam(playerId, team);
+  }
+
+  public void clearPlayerTeam(@NotNull UUID playerId) {
+    playerTeams.remove(playerId);
+    playerTeamCache.remove(playerId);
+  }
+
+  private void cachePlayerTeam(@NotNull UUID playerId, @NotNull Team team) {
+    playerTeams.put(playerId, team.getId());
+    playerTeamCache.put(playerId, team);
   }
 
   @NotNull
@@ -483,7 +505,7 @@ public class TeamStorage {
     }
     addTeamInternal(team, false);
     for (UUID member : team.getMembers()) {
-      playerTeams.put(member, team.getId());
+      cachePlayerTeam(member, team);
     }
     if (convertedMembers) {
       markTeamDirty(team);
@@ -632,7 +654,7 @@ public class TeamStorage {
       if (!members.contains(resolvedUuid)) {
         members.add(resolvedUuid);
         team.setMembersByUuid(members);
-        playerTeams.put(resolvedUuid, team.getId());
+        cachePlayerTeam(resolvedUuid, team);
         teamsConfig.set(
             "teams." + team.getId() + ".members",
             members.stream().map(UUID::toString).collect(Collectors.toList()));
