@@ -1,7 +1,9 @@
 package org.example.command.sub;
 
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.JoinConfiguration;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
@@ -10,22 +12,41 @@ public class HelpSubCommand implements SubCommand {
 
   @Override
   public boolean execute(@NotNull Player player, @NotNull String[] args) {
-    player.sendMessage(Component.text(""));
-    player.sendMessage(Component.text("ℹ Использование /team:", NamedTextColor.AQUA));
-    player.sendMessage(Component.text(""));
-    player.sendMessage(
-        Component.text(
-            "/team create <название> <префикс> <цвет> — создать команду (цвет: RED, BLUE, GREEN и т.д.)",
-            NamedTextColor.AQUA));
-    player.sendMessage(
-        Component.text("/team join <название> — вступить в команду", NamedTextColor.AQUA));
-    player.sendMessage(Component.text("/team leave — покинуть команду", NamedTextColor.AQUA));
-    player.sendMessage(
-        Component.text("/team list — показать список всех команд", NamedTextColor.AQUA));
-    player.sendMessage(
-        Component.text("/team members — показать участников вашей команды", NamedTextColor.AQUA));
-    player.sendMessage(Component.text("/team help — показать эту справку", NamedTextColor.AQUA));
-    player.sendMessage(Component.text(""));
+    Component helpMessage =
+        joinLines(
+            heading("ℹ Использование /team:"),
+            Component.empty(),
+            sectionHeading("Основные команды"),
+            bullet(
+                "/team create <название> <префикс> <цвет>",
+                "создать команду (цвет: RED, BLUE, GREEN и т.д.)"),
+            bullet("/team join <название>", "вступить в команду"),
+            bullet("/team leave", "покинуть команду"),
+            bullet("/team help", "показать эту справку"),
+            Component.empty(),
+            sectionHeading("Управление командой"),
+            bullet("/team list", "показать список всех команд"),
+            bullet("/team members", "показать участников вашей команды"));
+
+    player.sendMessage(helpMessage);
     return true;
+  }
+
+  private static Component heading(String text) {
+    return Component.text(text, NamedTextColor.AQUA).decorate(TextDecoration.BOLD);
+  }
+
+  private static Component sectionHeading(String text) {
+    return Component.text(text, NamedTextColor.AQUA).decorate(TextDecoration.BOLD);
+  }
+
+  private static Component bullet(String command, String description) {
+    return Component.text("• ", NamedTextColor.DARK_GRAY)
+        .append(Component.text(command, NamedTextColor.GOLD))
+        .append(Component.text(" — " + description, NamedTextColor.WHITE));
+  }
+
+  private static Component joinLines(Component... components) {
+    return Component.join(JoinConfiguration.newlines(), components);
   }
 }
