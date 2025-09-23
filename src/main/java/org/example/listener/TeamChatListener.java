@@ -100,14 +100,20 @@ public class TeamChatListener implements Listener {
     event.renderer(
         (source, sourceDisplayName, message, viewer) -> {
           Component latestPrefixComponent = lastPlayerPrefixes.get(playerId);
-          Component base = Component.empty();
-          if (latestPrefixComponent != null) {
-            base = base.append(latestPrefixComponent);
-          }
+          Component sanitized =
+              stripKnownPrefix(sourceDisplayName, latestPrefixComponent, null);
+          Component displayBase =
+              sanitized != null
+                  ? sanitized
+                  : originalPlayerDisplayNames.getOrDefault(playerId, sourceDisplayName);
           Component formattedMessage =
               forceWhiteChat ? message.color(NamedTextColor.WHITE) : message;
-          return base.append(sourceDisplayName)
-              .append(Component.text(": "))
+          Component nameWithPrefix = displayBase;
+          if (latestPrefixComponent != null) {
+            nameWithPrefix =
+                latestPrefixComponent.append(displayBase.colorIfAbsent(NamedTextColor.WHITE));
+          }
+          return nameWithPrefix.append(Component.text(": "))
               .append(formattedMessage);
         });
   }
@@ -131,8 +137,8 @@ public class TeamChatListener implements Listener {
       Component originalName = cacheOriginalPlayerListName(player, prefix);
       Component originalDisplayName = getOrStoreOriginalPlayerDisplayName(player, prefix);
       lastPlayerPrefixes.put(playerId, prefix);
-      player.playerListName(prefix.append(originalName));
-      player.displayName(prefix.append(originalDisplayName));
+      player.playerListName(prefix.append(originalName.colorIfAbsent(NamedTextColor.WHITE)));
+      player.displayName(prefix.append(originalDisplayName.colorIfAbsent(NamedTextColor.WHITE)));
     } else {
       ((MyPurpurPlugin) teamManager.getPlugin())
           .debug("Сбрасываем префикс для игрока " + player.getName());
@@ -182,8 +188,10 @@ public class TeamChatListener implements Listener {
       Component originalName = cacheOriginalPlayerListName(player, prefixComponent);
       Component originalDisplayName = getOrStoreOriginalPlayerDisplayName(player, prefixComponent);
       lastPlayerPrefixes.put(playerId, prefixComponent);
-      player.playerListName(prefixComponent.append(originalName));
-      player.displayName(prefixComponent.append(originalDisplayName));
+      player.playerListName(
+          prefixComponent.append(originalName.colorIfAbsent(NamedTextColor.WHITE)));
+      player.displayName(
+          prefixComponent.append(originalDisplayName.colorIfAbsent(NamedTextColor.WHITE)));
     } else {
       lastPlayerPrefixes.remove(playerId);
       removeCachedTeamFor(playerId);

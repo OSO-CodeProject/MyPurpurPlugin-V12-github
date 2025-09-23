@@ -384,7 +384,8 @@ class TeamCommandTest {
     teamManager.addPlayerToTeam("Gamma", member);
 
     Component expectedPrefix =
-        Component.text("[GM] ", NamedTextColor.WHITE).append(Component.text(member.getName()));
+        Component.text("[GM] ", NamedTextColor.WHITE)
+            .append(Component.text(member.getName(), NamedTextColor.WHITE));
     assertEquals(expectedPrefix, member.playerListName());
 
     assertTrue(commandMap.dispatch(leader, "teamadmin kick KickRecruit"));
@@ -463,13 +464,13 @@ class TeamCommandTest {
     PlainTextComponentSerializer plainSerializer = PlainTextComponentSerializer.plainText();
     Component rendered = event.renderer().render(leader, displayName, message, leader);
 
-    assertEquals("[AA] Captain: hello", plainSerializer.serialize(rendered));
+    assertEquals("[AA] Leader: hello", plainSerializer.serialize(rendered));
     Component nameComponent =
         rendered.children().stream()
-            .filter(component -> "Captain".equals(plainSerializer.serialize(component)))
+            .filter(component -> "Leader".equals(plainSerializer.serialize(component)))
             .findFirst()
             .orElseThrow();
-    assertEquals(NamedTextColor.GOLD, nameComponent.color());
+    assertEquals(NamedTextColor.WHITE, nameComponent.color());
   }
 
   @Test
