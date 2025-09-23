@@ -3,11 +3,14 @@ package org.example.command;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
@@ -67,6 +70,7 @@ public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, Tab
       case "rename" -> handleRenameCommand(player, args);
       case "setprefix" -> handleSetPrefixCommand(player, args);
       case "setcolor" -> handleSetColorCommand(player, args);
+      case "getplinfo" -> handleGetPlayerInfoCommand(player, args);
       case "help" -> {
         sendHelp(player);
         yield true;
@@ -74,7 +78,7 @@ public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, Tab
       default -> {
         player.sendMessage(
             Component.text(
-                "❌ Неизвестная подкоманда! Используйте: /teamadmin <transfer | kick | disband | rename | setprefix | setcolor | help>",
+                "❌ Неизвестная подкоманда! Используйте: /teamadmin <transfer | kick | disband | rename | setprefix | setcolor | getplinfo | help>",
                 NamedTextColor.RED));
         yield true;
       }
@@ -211,10 +215,96 @@ public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, Tab
     return true;
   }
 
+  private boolean handleGetPlayerInfoCommand(Player player, String[] args) {
+    if (args.length < 2) {
+      TeamMessageUtils.sendTeamMessage(
+          player,
+          Component.text("❌ Использование: /teamadmin getplinfo <ник>", NamedTextColor.RED));
+      return true;
+    }
+
+    String inputName = args[1].trim();
+    if (inputName.isEmpty()) {
+      TeamMessageUtils.sendTeamMessage(
+          player, Component.text("❌ Имя игрока не может быть пустым!", NamedTextColor.RED));
+      return true;
+    }
+
+    var server = teamManager.getPlugin().getServer();
+    Player onlineTarget = server.getPlayerExact(inputName);
+    boolean online = onlineTarget != null && onlineTarget.isOnline();
+    OfflinePlayer offlineTarget =
+        onlineTarget != null ? onlineTarget : server.getOfflinePlayer(inputName);
+
+    if (!online
+        && (offlineTarget.getName() == null
+            || (!offlineTarget.hasPlayedBefore() && !offlineTarget.isOnline()))) {
+      TeamMessageUtils.sendTeamMessage(
+          player,
+          Component.text("❌ Игрок ", NamedTextColor.RED)
+              .append(Component.text(inputName, NamedTextColor.WHITE))
+              .append(Component.text(" не найден!", NamedTextColor.RED)));
+      return true;
+    }
+
+    UUID targetId = onlineTarget != null ? onlineTarget.getUniqueId() : offlineTarget.getUniqueId();
+    String resolvedName =
+        onlineTarget != null
+            ? onlineTarget.getName()
+            : offlineTarget.getName() != null ? offlineTarget.getName() : inputName;
+
+    String teamName = null;
+    UUID leaderId = null;
+    for (String existingTeam : teamManager.getTeamNames()) {
+      List<UUID> members = teamManager.getTeamMembers(existingTeam);
+      if (members.contains(targetId)) {
+        teamName = existingTeam;
+        leaderId = teamManager.getTeamLeaderId(existingTeam);
+        break;
+      }
+    }
+
+    boolean isLeader = teamName != null && leaderId != null && leaderId.equals(targetId);
+
+    Component message =
+        Component.text()
+            .append(Component.text("ℹ Информация об игроке ", NamedTextColor.AQUA))
+            .append(Component.text(resolvedName, NamedTextColor.GOLD))
+            .append(Component.text(":", NamedTextColor.AQUA))
+            .append(Component.newline())
+            .append(Component.text("• UUID: ", NamedTextColor.GRAY))
+            .append(Component.text(targetId.toString(), NamedTextColor.WHITE))
+            .append(Component.newline())
+            .append(Component.text("• Статус: ", NamedTextColor.GRAY))
+            .append(
+                Component.text(
+                    online ? "В сети" : "Оффлайн",
+                    online ? NamedTextColor.GREEN : NamedTextColor.RED))
+            .append(Component.newline())
+            .append(Component.text("• Команда: ", NamedTextColor.GRAY))
+            .append(
+                Component.text(
+                    teamName != null ? teamName : "Не состоит",
+                    teamName != null ? NamedTextColor.GOLD : NamedTextColor.GRAY))
+            .append(teamName != null ? Component.newline() : Component.empty())
+            .append(
+                teamName != null
+                    ? Component.text("• Роль: ", NamedTextColor.GRAY)
+                        .append(
+                            Component.text(
+                                isLeader ? "Лидер" : "Участник",
+                                isLeader ? NamedTextColor.YELLOW : NamedTextColor.WHITE))
+                    : Component.empty())
+            .build();
+
+    player.sendMessage(message);
+    return true;
+  }
+
   private void sendUsage(Player player) {
     player.sendMessage(
         Component.text(
-            "❌ Использование: /teamadmin <transfer | kick | disband | rename | setprefix | setcolor | help> [аргументы]",
+            "❌ Использование: /teamadmin <transfer | kick | disband | rename | setprefix | setcolor | getplinfo | help> [аргументы]",
             NamedTextColor.RED));
   }
 
@@ -247,6 +337,10 @@ public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, Tab
             "/teamadmin setcolor <новый_цвет> — изменить цвет команды (требуется быть лидером, цвет: RED, BLUE, GREEN и т.д.)",
             NamedTextColor.AQUA));
     player.sendMessage(
+        Component.text(
+            "/teamadmin getplinfo <ник> — показать командную информацию об игроке",
+            NamedTextColor.AQUA));
+    player.sendMessage(
         Component.text("/teamadmin help — показать эту справку", NamedTextColor.AQUA));
     player.sendMessage(Component.text("")); // Пустая строка после списка
   }
@@ -260,7 +354,15 @@ public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, Tab
     List<String> suggestions = new ArrayList<>();
     if (args.length == 1) {
       suggestions.addAll(
-          Arrays.asList("transfer", "kick", "disband", "rename", "setprefix", "setcolor", "help"));
+          Arrays.asList(
+              "transfer",
+              "kick",
+              "disband",
+              "rename",
+              "setprefix",
+              "setcolor",
+              "getplinfo",
+              "help"));
     } else if (args.length == 2) {
       if (sender instanceof Player player) {
         if (args[0].equalsIgnoreCase("transfer") || args[0].equalsIgnoreCase("kick")) {
@@ -291,6 +393,27 @@ public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, Tab
             String key = NamedTextColor.NAMES.key(color);
             if (key != null && key.toLowerCase(Locale.ROOT).startsWith(lowerInput)) {
               suggestions.add(key.toUpperCase(Locale.ROOT));
+            }
+          }
+        } else if (args[0].equalsIgnoreCase("getplinfo")) {
+          String lowerInput = args[1].toLowerCase(Locale.ROOT);
+          Set<String> seen = new HashSet<>();
+          for (Player online : teamManager.getPlugin().getServer().getOnlinePlayers()) {
+            String name = online.getName();
+            if (name != null
+                && name.toLowerCase(Locale.ROOT).startsWith(lowerInput)
+                && seen.add(name.toLowerCase(Locale.ROOT))) {
+              suggestions.add(name);
+            }
+          }
+          for (String teamName : teamManager.getTeamNames()) {
+            for (UUID memberId : teamManager.getTeamMembers(teamName)) {
+              String memberName = resolveName(memberId);
+              if (!memberName.isEmpty()
+                  && memberName.toLowerCase(Locale.ROOT).startsWith(lowerInput)
+                  && seen.add(memberName.toLowerCase(Locale.ROOT))) {
+                suggestions.add(memberName);
+              }
             }
           }
         }
