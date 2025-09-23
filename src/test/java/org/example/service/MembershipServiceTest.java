@@ -6,10 +6,12 @@ import static org.mockito.Mockito.*;
 import be.seeseemelk.mockbukkit.entity.PlayerMock;
 import java.util.HashSet;
 import java.util.Set;
+import net.kyori.adventure.text.Component;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.example.MockBukkitTestBase;
 import org.example.config.PluginConfig;
 import org.example.model.Team;
+import org.example.util.TeamMessageUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -123,6 +125,216 @@ class MembershipServiceTest extends MockBukkitTestBase {
     assertTrue(
         scheduler.leaderTransfers.contains("Alpha"),
         "Планировщик должен быть уведомлён о смене лидера");
+  }
+
+  @Test
+  void disbandTeamSendsNotifications() {
+    PlayerMock leader = server.addPlayer("LeaderDisband");
+    PlayerMock member = server.addPlayer("MemberDisband");
+    membership.createTeam("Omega", "O", "red", leader);
+    membership.addPlayerToTeam("Omega", member);
+    drainMessages(leader);
+    drainMessages(member);
+
+    membership.disbandTeam("Omega", leader);
+
+    Component leaderMessage = leader.nextComponentMessage();
+    Component memberMessage = member.nextComponentMessage();
+    assertEquals(
+        TeamMessageUtils.teamDisbandedLeaderMessage("Omega"),
+        leaderMessage,
+        "Лидер должен получить подтверждение о роспуске");
+    assertEquals(
+        TeamMessageUtils.teamDisbandedMemberMessage("Omega", leader.getName()),
+        memberMessage,
+        "Участники должны быть уведомлены о роспуске");
+  }
+
+  @Test
+  void disbandTeamDoesNotNotifyNonLeader() {
+    PlayerMock leader = server.addPlayer("LeaderDisbandFail");
+    PlayerMock member = server.addPlayer("MemberDisbandFail");
+    membership.createTeam("Sigma", "S", "red", leader);
+    membership.addPlayerToTeam("Sigma", member);
+    drainMessages(leader);
+    drainMessages(member);
+
+    membership.disbandTeam("Sigma", member);
+
+    assertNull(
+        member.nextComponentMessage(),
+        "Игрок не должен получать сообщение при неудачной попытке роспуска");
+  }
+
+  @Test
+  void transferLeadershipSendsNotifications() {
+    PlayerMock leader = server.addPlayer("LeaderTransfer");
+    PlayerMock newLeader = server.addPlayer("NewLeaderTransfer");
+    PlayerMock teammate = server.addPlayer("TeammateTransfer");
+    membership.createTeam("Zeta", "Z", "red", leader);
+    membership.addPlayerToTeam("Zeta", newLeader);
+    membership.addPlayerToTeam("Zeta", teammate);
+    drainMessages(leader);
+    drainMessages(newLeader);
+    drainMessages(teammate);
+
+    membership.transferLeadership("Zeta", leader, newLeader);
+
+    assertEquals(
+        TeamMessageUtils.leadershipTransferOutgoingMessage(newLeader.getName()),
+        leader.nextComponentMessage(),
+        "Исходящий лидер получает подтверждение");
+    assertEquals(
+        TeamMessageUtils.leadershipTransferIncomingMessage("Zeta"),
+        newLeader.nextComponentMessage(),
+        "Новый лидер получает уведомление");
+    assertEquals(
+        TeamMessageUtils.leadershipTransferBroadcastMessage(newLeader.getName()),
+        teammate.nextComponentMessage(),
+        "Остальные участники получают уведомление о смене лидера");
+  }
+
+  @Test
+  void transferLeadershipDoesNotNotifyWhenInvalid() {
+    PlayerMock leader = server.addPlayer("LeaderTransferFail");
+    PlayerMock teammate = server.addPlayer("TeammateTransferFail");
+    membership.createTeam("Eta", "E", "red", leader);
+    membership.addPlayerToTeam("Eta", teammate);
+    drainMessages(leader);
+    drainMessages(teammate);
+
+    membership.transferLeadership("Eta", teammate, leader);
+
+    assertNull(
+        teammate.nextComponentMessage(),
+        "Игрок без прав не должен получать сообщение о передаче лидерства");
+  }
+
+  @Test
+  void kickPlayerFromTeamSendsNotifications() {
+    PlayerMock leader = server.addPlayer("LeaderKick");
+    PlayerMock target = server.addPlayer("TargetKick");
+    PlayerMock teammate = server.addPlayer("TeammateKick");
+    membership.createTeam("Theta", "T", "red", leader);
+    membership.addPlayerToTeam("Theta", target);
+    membership.addPlayerToTeam("Theta", teammate);
+    drainMessages(leader);
+    drainMessages(target);
+    drainMessages(teammate);
+
+    membership.kickPlayerFromTeam("Theta", leader, target.getName());
+
+    assertEquals(
+        TeamMessageUtils.memberKickedLeaderMessage(target.getName()),
+        leader.nextComponentMessage(),
+        "Лидер получает подтверждение об исключении");
+    assertEquals(
+        TeamMessageUtils.memberKickedTargetMessage("Theta", leader.getName()),
+        target.nextComponentMessage(),
+        "Исключённый игрок получает уведомление");
+    assertEquals(
+        TeamMessageUtils.memberKickedBroadcastMessage(target.getName()),
+        teammate.nextComponentMessage(),
+        "Остальные участники уведомляются об исключении");
+  }
+
+  @Test
+  void kickPlayerFromTeamDoesNotNotifyWhenTargetMissing() {
+    PlayerMock leader = server.addPlayer("LeaderKickFail");
+    membership.createTeam("Iota", "I", "red", leader);
+    drainMessages(leader);
+
+    membership.kickPlayerFromTeam("Iota", leader, "Ghost");
+
+    assertNull(
+        leader.nextComponentMessage(),
+        "Сообщение не должно отправляться при отсутствии цели");
+  }
+
+  @Test
+  void setTeamPrefixSendsNotifications() {
+    PlayerMock leader = server.addPlayer("LeaderPrefix");
+    PlayerMock member = server.addPlayer("MemberPrefix");
+    membership.createTeam("Kappa", "K", "red", leader);
+    membership.addPlayerToTeam("Kappa", member);
+    drainMessages(leader);
+    drainMessages(member);
+
+    membership.setTeamPrefix("Kappa", "KP", leader);
+
+    assertEquals(
+        TeamMessageUtils.teamPrefixUpdatedLeaderMessage("KP"),
+        leader.nextComponentMessage(),
+        "Лидер получает сообщение об обновлении префикса");
+    assertEquals(
+        TeamMessageUtils.teamPrefixUpdatedMemberMessage("KP"),
+        member.nextComponentMessage(),
+        "Участники получают уведомление об обновлении префикса");
+  }
+
+  @Test
+  void setTeamPrefixDoesNotNotifyNonLeader() {
+    PlayerMock leader = server.addPlayer("LeaderPrefixFail");
+    PlayerMock member = server.addPlayer("MemberPrefixFail");
+    membership.createTeam("Lambda", "L", "red", leader);
+    membership.addPlayerToTeam("Lambda", member);
+    drainMessages(leader);
+    drainMessages(member);
+
+    membership.setTeamPrefix("Lambda", "LP", member);
+
+    assertNull(
+        member.nextComponentMessage(),
+        "Игрок без прав не должен получать сообщение об изменении префикса");
+  }
+
+  @Test
+  void setTeamColorSendsNotifications() {
+    PlayerMock leader = server.addPlayer("LeaderColor");
+    PlayerMock member = server.addPlayer("MemberColor");
+    String teamName = "MuTeam";
+    membership.createTeam(teamName, "M", "red", leader);
+    membership.addPlayerToTeam(teamName, member);
+    drainMessages(leader);
+    drainMessages(member);
+
+    membership.setTeamColor(teamName, "blue", leader);
+
+    Component leaderMessage = leader.nextComponentMessage();
+    Component memberMessage = member.nextComponentMessage();
+
+    assertEquals(
+        TeamMessageUtils.teamColorUpdatedLeaderMessage("blue"),
+        leaderMessage,
+        "Лидер получает сообщение об изменении цвета");
+    assertEquals(
+        TeamMessageUtils.teamColorUpdatedMemberMessage("blue"),
+        memberMessage,
+        "Участники получают уведомление об изменении цвета");
+  }
+
+  @Test
+  void setTeamColorDoesNotNotifyNonLeader() {
+    PlayerMock leader = server.addPlayer("LeaderColorFail");
+    PlayerMock member = server.addPlayer("MemberColorFail");
+    String teamName = "NuTeam";
+    membership.createTeam(teamName, "N", "red", leader);
+    membership.addPlayerToTeam(teamName, member);
+    drainMessages(leader);
+    drainMessages(member);
+
+    membership.setTeamColor(teamName, "blue", member);
+
+    assertNull(
+        member.nextComponentMessage(),
+        "Игрок без прав не получает сообщение об изменении цвета");
+  }
+
+  private void drainMessages(PlayerMock player) {
+    Component message;
+    do {
+      message = player.nextComponentMessage();
+    } while (message != null);
   }
 
   private static class TestDeadlineScheduler extends DeadlineScheduler {

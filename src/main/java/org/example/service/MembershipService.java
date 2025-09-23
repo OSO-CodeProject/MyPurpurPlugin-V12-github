@@ -152,6 +152,12 @@ public class MembershipService {
     }
     // Удаляем участника и фиксируем изменения.
 
+    String actualTargetName = targetName;
+    String leaderName = leader.getName();
+    OfflinePlayer offlineTarget = plugin.getServer().getOfflinePlayer(targetId);
+    if (offlineTarget != null && offlineTarget.getName() != null) {
+      actualTargetName = offlineTarget.getName();
+    }
     team.removeMember(targetId);
     storage.clearPlayerTeam(targetId);
     storage.markTeamDirty(team);
@@ -159,6 +165,18 @@ public class MembershipService {
     notifyPrefixUpdate(targetId, null);
 
     updateTeamMembersPrefixes(team);
+    TeamMessageUtils.sendTeamMessage(
+        leader, TeamMessageUtils.memberKickedLeaderMessage(actualTargetName));
+    Player kickedPlayer = plugin.getServer().getPlayer(targetId);
+    if (kickedPlayer != null) {
+      TeamMessageUtils.sendTeamMessage(
+          kickedPlayer,
+          TeamMessageUtils.memberKickedTargetMessage(team.getName(), leaderName));
+    }
+    sendMessageToOnlinePlayers(
+        team.getMembers(),
+        TeamMessageUtils.memberKickedBroadcastMessage(actualTargetName),
+        leader.getUniqueId());
   }
 
   public void transferLeadership(
@@ -168,10 +186,21 @@ public class MembershipService {
     if (team == null || !team.isLeader(leader.getUniqueId())) return;
     // Назначать лидером можно только участника команды.
     if (!team.hasMember(newLeader.getUniqueId())) return;
+    UUID previousLeader = leader.getUniqueId();
     team.setLeader(newLeader.getUniqueId());
     storage.markTeamDirty(team);
     scheduler.handleLeaderTransfer(team);
     scheduler.evaluateTeam(team);
+    String newLeaderName = newLeader.getName();
+    TeamMessageUtils.sendTeamMessage(
+        leader, TeamMessageUtils.leadershipTransferOutgoingMessage(newLeaderName));
+    TeamMessageUtils.sendTeamMessage(
+        newLeader, TeamMessageUtils.leadershipTransferIncomingMessage(team.getName()));
+    sendMessageToOnlinePlayers(
+        team.getMembers(),
+        TeamMessageUtils.leadershipTransferBroadcastMessage(newLeaderName),
+        previousLeader,
+        newLeader.getUniqueId());
   }
 
   public void disbandTeam(String teamName, @NotNull Player leader) {
@@ -180,9 +209,16 @@ public class MembershipService {
     if (team == null || !team.isLeader(leader.getUniqueId())) return;
     // Сохраняем список участников до удаления, чтобы очистить их отображаемые префиксы.
     List<UUID> members = team.getMembers();
+    String leaderName = leader.getName();
     scheduler.cancelDeadline(team);
     // Удаляем команду и уведомляем игроков о сбросе префикса.
     storage.removeTeam(team);
+    TeamMessageUtils.sendTeamMessage(
+        leader, TeamMessageUtils.teamDisbandedLeaderMessage(team.getName()));
+    sendMessageToOnlinePlayers(
+        members,
+        TeamMessageUtils.teamDisbandedMemberMessage(team.getName(), leaderName),
+        leader.getUniqueId());
     for (UUID memberId : members) {
       notifyPrefixUpdate(memberId, null);
     }
@@ -210,6 +246,12 @@ public class MembershipService {
     team.setPrefix(normalizedPrefix);
     storage.markTeamDirty(team);
     updateTeamMembersPrefixes(team);
+    TeamMessageUtils.sendTeamMessage(
+        leader, TeamMessageUtils.teamPrefixUpdatedLeaderMessage(normalizedPrefix));
+    sendMessageToOnlinePlayers(
+        team.getMembers(),
+        TeamMessageUtils.teamPrefixUpdatedMemberMessage(normalizedPrefix),
+        leader.getUniqueId());
   }
 
   public void setTeamColor(String teamName, String newColor, @NotNull Player leader) {
@@ -226,6 +268,12 @@ public class MembershipService {
     team.setColor(normalizedColor);
     storage.markTeamDirty(team);
     updateTeamMembersPrefixes(team);
+    TeamMessageUtils.sendTeamMessage(
+        leader, TeamMessageUtils.teamColorUpdatedLeaderMessage(normalizedColor));
+    sendMessageToOnlinePlayers(
+        team.getMembers(),
+        TeamMessageUtils.teamColorUpdatedMemberMessage(normalizedColor),
+        leader.getUniqueId());
   }
 
   public void updatePlayerPrefixes(String teamName) {
@@ -253,6 +301,25 @@ public class MembershipService {
     Player onlinePlayer = plugin.getServer().getPlayer(playerId);
     if (onlinePlayer != null) {
       notifyPrefixUpdate(onlinePlayer, prefix);
+    }
+  }
+
+  private void sendMessageToOnlinePlayers(
+      @NotNull Collection<UUID> recipients,
+      @NotNull Component message,
+      UUID... excludedPlayers) {
+    Set<UUID> excluded = Collections.emptySet();
+    if (excludedPlayers != null && excludedPlayers.length > 0) {
+      excluded = new HashSet<>(Arrays.asList(excludedPlayers));
+    }
+    for (UUID memberId : recipients) {
+      if (excluded.contains(memberId)) {
+        continue;
+      }
+      Player member = plugin.getServer().getPlayer(memberId);
+      if (member != null) {
+        TeamMessageUtils.sendTeamMessage(member, message);
+      }
     }
   }
 
