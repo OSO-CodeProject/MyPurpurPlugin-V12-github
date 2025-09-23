@@ -118,4 +118,99 @@ public class TeamMessageUtils {
         .append(Component.text(excess + " участника(ов)", NamedTextColor.WHITE))
         .append(Component.text(".", NamedTextColor.YELLOW));
   }
+
+  public static Component teamDisbandedLeaderMessage(String teamName) {
+    return Component.text("✅ Команда ", NamedTextColor.GREEN)
+        .append(Component.text(teamName, NamedTextColor.WHITE))
+        .append(Component.text(" распущена.", NamedTextColor.GREEN));
+  }
+
+  public static Component teamDisbandedMemberMessage(String teamName, String leaderName) {
+    Component base =
+        Component.text("ℹ️ Команда ", NamedTextColor.YELLOW)
+            .append(Component.text(teamName, NamedTextColor.WHITE))
+            .append(Component.text(" была распущена", NamedTextColor.YELLOW));
+    if (leaderName != null && !leaderName.isBlank()) {
+      base =
+          base.append(Component.text(" лидером ", NamedTextColor.YELLOW))
+              .append(Component.text(leaderName, NamedTextColor.WHITE));
+    }
+    return base.append(Component.text(".", NamedTextColor.YELLOW));
+  }
+
+  public static Component leadershipTransferOutgoingMessage(String newLeaderName) {
+    return Component.text("✅ Вы передали лидерство игроку ", NamedTextColor.GREEN)
+        .append(Component.text(newLeaderName, NamedTextColor.WHITE))
+        .append(Component.text(".", NamedTextColor.GREEN));
+  }
+
+  public static Component leadershipTransferIncomingMessage(String teamName) {
+    return Component.text("ℹ️ Вы стали лидером команды ", NamedTextColor.YELLOW)
+        .append(Component.text(teamName, NamedTextColor.WHITE))
+        .append(Component.text(".", NamedTextColor.YELLOW));
+  }
+
+  public static Component leadershipTransferBroadcastMessage(String newLeaderName) {
+    return Component.text("ℹ️ Новый лидер команды — ", NamedTextColor.YELLOW)
+        .append(Component.text(newLeaderName, NamedTextColor.WHITE))
+        .append(Component.text(".", NamedTextColor.YELLOW));
+  }
+
+  public static Component memberKickedLeaderMessage(String targetName) {
+    return Component.text("✅ Игрок ", NamedTextColor.GREEN)
+        .append(Component.text(targetName, NamedTextColor.WHITE))
+        .append(Component.text(" исключён из команды.", NamedTextColor.GREEN));
+  }
+
+  public static Component memberKickedTargetMessage(String teamName, String leaderName) {
+    Component base =
+        Component.text("❌ Вас исключили из команды ", NamedTextColor.RED)
+            .append(Component.text(teamName, NamedTextColor.WHITE));
+    if (leaderName != null && !leaderName.isBlank()) {
+      base =
+          base.append(Component.text(" лидером ", NamedTextColor.RED))
+              .append(Component.text(leaderName, NamedTextColor.WHITE));
+    }
+    return base.append(Component.text(".", NamedTextColor.RED));
+  }
+
+  public static Component memberKickedBroadcastMessage(String targetName) {
+    return Component.text("ℹ️ Игрок ", NamedTextColor.YELLOW)
+        .append(Component.text(targetName, NamedTextColor.WHITE))
+        .append(Component.text(" был исключён из команды.", NamedTextColor.YELLOW));
+  }
+
+  public static Component teamPrefixUpdatedLeaderMessage(String prefix) {
+    return Component.text("✅ Префикс команды обновлён", NamedTextColor.GREEN)
+        .append(Component.text(prefixDisplay(prefix), NamedTextColor.WHITE));
+  }
+
+  public static Component teamPrefixUpdatedMemberMessage(String prefix) {
+    return Component.text("ℹ️ Префикс команды обновлён", NamedTextColor.YELLOW)
+        .append(Component.text(prefixDisplay(prefix), NamedTextColor.WHITE));
+  }
+
+  public static Component teamColorUpdatedLeaderMessage(String color) {
+    return Component.text("✅ Цвет команды обновлён", NamedTextColor.GREEN)
+        .append(Component.text(valueDisplay(color), NamedTextColor.WHITE));
+  }
+
+  public static Component teamColorUpdatedMemberMessage(String color) {
+    return Component.text("ℹ️ Цвет команды обновлён", NamedTextColor.YELLOW)
+        .append(Component.text(valueDisplay(color), NamedTextColor.WHITE));
+  }
+
+  private static String prefixDisplay(String prefix) {
+    if (prefix == null || prefix.isEmpty()) {
+      return " (пустой)";
+    }
+    return " — \"" + prefix + "\"";
+  }
+
+  private static String valueDisplay(String value) {
+    if (value == null || value.isEmpty()) {
+      return " (пустое значение)";
+    }
+    return " — \"" + value + "\"";
+  }
 }
