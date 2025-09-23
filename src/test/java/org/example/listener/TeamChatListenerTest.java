@@ -86,9 +86,48 @@ class TeamChatListenerTest extends MockBukkitTestBase {
     Component rendered =
         event
             .renderer()
-            .render(player, Component.text(player.getName()), event.message(), Audience.empty());
-    assertEquals(
-        "[B] Chatter: Привет", PlainTextComponentSerializer.plainText().serialize(rendered));
+            .render(player, player.displayName(), event.message(), Audience.empty());
+
+    Component expected =
+        prefixComponent
+            .append(Component.text(player.getName(), NamedTextColor.WHITE))
+            .append(Component.text(": "))
+            .append(Component.text("Привет", NamedTextColor.WHITE));
+
+    assertEquals(expected, rendered);
+  }
+
+  @Test
+  void chatRendererUsesSanitizedDisplayNameWithSinglePrefix() {
+    PlayerMock player = server.addPlayer("StyledChatter");
+    Component originalName = Component.text("StyledChatter", NamedTextColor.GREEN);
+    player.displayName(originalName);
+    teamService.assignPlayer(player, "Beta", "B", NamedTextColor.BLUE);
+
+    Component prefixComponent = Component.text("[B] ", NamedTextColor.BLUE);
+    server
+        .getPluginManager()
+        .callEvent(new TeamChatListener.PlayerPrefixUpdateEvent(player, prefixComponent));
+
+    Component message = Component.text("Hello", NamedTextColor.YELLOW);
+    Set<Audience> viewers = new HashSet<>();
+    ChatRenderer initialRenderer = ChatRenderer.defaultRenderer();
+    SignedMessage signedMessage = SignedMessage.system("Hello", message);
+    AsyncChatEvent event =
+        new AsyncChatEvent(
+            false, player, viewers, initialRenderer, message, message, signedMessage);
+
+    server.getPluginManager().callEvent(event);
+
+    Component rendered =
+        event
+            .renderer()
+            .render(player, player.displayName(), event.message(), Audience.empty());
+
+    Component expected =
+        prefixComponent.append(originalName).append(Component.text(": ")).append(message);
+
+    assertEquals(expected, rendered);
   }
 
   @Test
