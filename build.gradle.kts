@@ -25,6 +25,7 @@ dependencies {
     compileOnly("org.jetbrains:annotations:24.0.1")
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.1")
+    testImplementation("net.kyori:adventure-api:4.19.0")
     testImplementation("com.github.seeseemelk:MockBukkit-v1.21:3.133.2")
     testImplementation("io.papermc.paper:paper-api:1.21.1-R0.1-SNAPSHOT")
     testImplementation("org.spigotmc:spigot-api:1.21.1-R0.1-SNAPSHOT")
