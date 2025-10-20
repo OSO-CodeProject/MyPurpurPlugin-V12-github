@@ -311,64 +311,50 @@ public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, Tab
 
   private void sendHelp(Player player) {
     Component helpMessage =
-        Component.join(
-            net.kyori.adventure.text.JoinConfiguration.newlines(),
-            Component.empty(),
-            Component.text("ℹ Использование /teamadmin:", NamedTextColor.AQUA)
-                .decorate(net.kyori.adventure.text.format.TextDecoration.BOLD),
-            Component.empty(),
-            adminBullet("/teamadmin transfer <ник>", "передать лидерство другому игроку в команде"),
-            adminBullet(
-                "/teamadmin kick <ник>", "исключить участника команды (требуется быть лидером)"),
-            adminBullet("/teamadmin disband", "распустить команду (требуется быть лидером)"),
-            adminBullet(
-                "/teamadmin rename <новое_название>",
-                "переименовать команду (требуется быть лидером)"),
-            adminBullet(
-                "/teamadmin setprefix <новый_префикс>",
-                "изменить префикс команды (требуется быть лидером)"),
-            adminBullet(
-                "/teamadmin setcolor <новый_цвет>",
-                "изменить цвет команды (цвет: RED, BLUE, GREEN и т.д.)"),
-            adminBullet("/teamadmin getplinfo <ник>", "показать командную информацию об игроке"),
-            adminBullet("/teamadmin help", "показать эту справку"),
-            Component.empty());
+        Component.text()
+            .append(Component.newline())
+            .append(
+                Component.text("ℹ Использование /teamadmin:", NamedTextColor.AQUA)
+                    .decorate(net.kyori.adventure.text.format.TextDecoration.BOLD))
+            .append(Component.newline())
+            .append(Component.newline())
+            .append(
+                adminBullet(
+                    "/teamadmin transfer <ник>",
+                    "передать лидерство другому игроку в команде"))
+            .append(Component.newline())
+            .append(
+                adminBullet(
+                    "/teamadmin kick <ник>",
+                    "исключить участника команды (требуется быть лидером)"))
+            .append(Component.newline())
+            .append(adminBullet("/teamadmin disband", "распустить команду (требуется быть лидером)"))
+            .append(Component.newline())
+            .append(
+                adminBullet(
+                    "/teamadmin rename <новое_название>",
+                    "переименовать команду (требуется быть лидером)"))
+            .append(Component.newline())
+            .append(
+                adminBullet(
+                    "/teamadmin setprefix <новый_префикс>",
+                    "изменить префикс команды (требуется быть лидером)"))
+            .append(Component.newline())
+            .append(
+                adminBullet(
+                    "/teamadmin setcolor <новый_цвет>",
+                    "изменить цвет команды (цвет: RED, BLUE, GREEN и т.д.)"))
+            .append(Component.newline())
+            .append(
+                adminBullet(
+                    "/teamadmin getplinfo <ник>",
+                    "показать командную информацию об игроке"))
+            .append(Component.newline())
+            .append(adminBullet("/teamadmin help", "показать эту справку"))
+            .append(Component.newline())
+            .build();
 
     player.sendMessage(helpMessage);
-    player.sendMessage(Component.text("")); // Пустая строка перед списком
-    player.sendMessage(Component.text("ℹ Использование /teamadmin:", NamedTextColor.AQUA));
-    player.sendMessage(Component.text(""));
-    player.sendMessage(
-        Component.text(
-            "/teamadmin transfer <ник> — передать лидерство другому игроку в команде",
-            NamedTextColor.AQUA));
-    player.sendMessage(
-        Component.text(
-            "/teamadmin kick <ник> — выгнать участника из команды (требуется быть лидером)",
-            NamedTextColor.AQUA));
-    player.sendMessage(
-        Component.text(
-            "/teamadmin disband — распустить команду (требуется быть лидером)",
-            NamedTextColor.AQUA));
-    player.sendMessage(
-        Component.text(
-            "/teamadmin rename <новое_название> — переименовать команду (требуется быть лидером)",
-            NamedTextColor.AQUA));
-    player.sendMessage(
-        Component.text(
-            "/teamadmin setprefix <новый_префикс> — изменить префикс команды (требуется быть лидером)",
-            NamedTextColor.AQUA));
-    player.sendMessage(
-        Component.text(
-            "/teamadmin setcolor <новый_цвет> — изменить цвет команды (требуется быть лидером, цвет: RED, BLUE, GREEN и т.д.)",
-            NamedTextColor.AQUA));
-    player.sendMessage(
-        Component.text(
-            "/teamadmin getplinfo <ник> — показать командную информацию об игроке",
-            NamedTextColor.AQUA));
-    player.sendMessage(
-        Component.text("/teamadmin help — показать эту справку", NamedTextColor.AQUA));
-    player.sendMessage(Component.text("")); // Пустая строка после списка
   }
 
   @Override
