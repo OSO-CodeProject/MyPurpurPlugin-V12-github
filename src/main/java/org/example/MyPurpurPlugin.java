@@ -26,7 +26,7 @@ public class MyPurpurPlugin extends JavaPlugin {
 
   private TeamChatListener teamChatListener;
 
-  private boolean debugMode = true;
+  private boolean debugMode = false;
   private static final long CONFIG_AUTO_SAVE_INTERVAL_SECONDS = 60L;
 
   @Override

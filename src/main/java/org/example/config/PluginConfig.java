@@ -166,7 +166,7 @@ public class PluginConfig {
     changed |= migrateLegacyKey("menu.sound-pitch", Keys.Menu.Sound.PITCH);
 
     // Глобальные настройки
-    changed |= addDefaultIfMissing(Keys.DEBUG_MODE, true);
+    changed |= addDefaultIfMissing(Keys.DEBUG_MODE, false);
     changed |= addDefaultIfMissing(Keys.CHAT_FORCE_WHITE, false);
 
     // Основные настройки
@@ -301,7 +301,7 @@ public class PluginConfig {
 
   /** Обновляет состояние флага debug.mode и помечает конфигурацию как изменённую. */
   public void updateDebugMode(boolean enabled) {
-    boolean current = config.getBoolean(Keys.DEBUG_MODE, true);
+    boolean current = config.getBoolean(Keys.DEBUG_MODE, false);
     if (current == enabled) {
       return;
     }
@@ -361,7 +361,7 @@ public class PluginConfig {
    * @return true, если режим отладки активен, иначе false
    */
   public boolean isDebugModeEnabled() {
-    return getBooleanWithLegacyFallback(Keys.DEBUG_MODE, true, "debug-mode");
+    return getBooleanWithLegacyFallback(Keys.DEBUG_MODE, false, "debug-mode");
   }
 
   /**
