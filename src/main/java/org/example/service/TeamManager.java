@@ -34,10 +34,12 @@ public class TeamManager implements TeamService {
   }
 
   private void runWithTiming(String methodName, Runnable action) {
-    runWithTiming(methodName, () -> {
-      action.run();
-      return null;
-    });
+    runWithTiming(
+        methodName,
+        () -> {
+          action.run();
+          return null;
+        });
   }
 
   private <T> T runWithTiming(String methodName, Supplier<T> action) {
