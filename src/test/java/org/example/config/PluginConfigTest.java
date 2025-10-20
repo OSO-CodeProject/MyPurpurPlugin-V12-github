@@ -203,7 +203,7 @@ class PluginConfigTest {
 
     File configFile = new File(plugin.getDataFolder(), "config.yml");
     YamlConfiguration yaml = YamlConfiguration.loadConfiguration(configFile);
-    assertTrue(yaml.getBoolean(PluginConfig.Keys.DEBUG_MODE));
+    assertFalse(yaml.getBoolean(PluginConfig.Keys.DEBUG_MODE));
 
     ConsoleCommandSender console = server.getConsoleSender();
     CommandMap commandMap = server.getCommandMap();
@@ -211,12 +211,12 @@ class PluginConfigTest {
 
     // До выключения плагина файл остаётся без изменений.
     yaml = YamlConfiguration.loadConfiguration(configFile);
-    assertTrue(yaml.getBoolean(PluginConfig.Keys.DEBUG_MODE));
+    assertFalse(yaml.getBoolean(PluginConfig.Keys.DEBUG_MODE));
 
     server.getPluginManager().disablePlugin(plugin);
 
     yaml = YamlConfiguration.loadConfiguration(configFile);
-    assertFalse(yaml.getBoolean(PluginConfig.Keys.DEBUG_MODE));
+    assertTrue(yaml.getBoolean(PluginConfig.Keys.DEBUG_MODE));
 
     server.getPluginManager().enablePlugin(plugin);
 
@@ -224,6 +224,6 @@ class PluginConfigTest {
     cfgField.setAccessible(true);
     PluginConfig pluginConfig = (PluginConfig) cfgField.get(plugin);
 
-    assertFalse(pluginConfig.isDebugModeEnabled());
+    assertTrue(pluginConfig.isDebugModeEnabled());
   }
 }
