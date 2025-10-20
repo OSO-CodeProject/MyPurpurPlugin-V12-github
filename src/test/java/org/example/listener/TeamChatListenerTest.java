@@ -21,6 +21,7 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.example.MockBukkitTestBase;
 import org.example.config.PluginConfig;
+import org.example.service.MemberRemovalCause;
 import org.example.service.TeamService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -391,6 +392,16 @@ class TeamChatListenerTest extends MockBukkitTestBase {
 
     @Override
     public void removePlayerFromTeam(String teamName, org.bukkit.entity.Player player) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void removePlayerFromTeam(
+        String teamName,
+        org.bukkit.entity.Player player,
+        MemberRemovalCause cause,
+        String initiatorName,
+        java.util.UUID initiatorId) {
       throw new UnsupportedOperationException();
     }
 

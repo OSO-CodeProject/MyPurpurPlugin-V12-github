@@ -210,6 +210,18 @@ public class TeamMessageUtils {
         .append(Component.text(" был исключён из команды.", NamedTextColor.YELLOW));
   }
 
+  public static Component memberLeftSelfMessage(String teamName) {
+    return Component.text("ℹ️ Вы покинули команду ", NamedTextColor.YELLOW)
+        .append(Component.text(teamName, NamedTextColor.WHITE))
+        .append(Component.text(".", NamedTextColor.YELLOW));
+  }
+
+  public static Component memberLeftBroadcastMessage(String playerName) {
+    return Component.text("ℹ️ Игрок ", NamedTextColor.YELLOW)
+        .append(Component.text(playerName, NamedTextColor.WHITE))
+        .append(Component.text(" покинул команду.", NamedTextColor.YELLOW));
+  }
+
   public static Component teamPrefixUpdatedLeaderMessage(String prefix) {
     return Component.text("✅ Префикс команды обновлён", NamedTextColor.GREEN)
         .append(Component.text(prefixDisplay(prefix), NamedTextColor.WHITE));

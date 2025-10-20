@@ -100,17 +100,45 @@ public class MembershipService {
   }
 
   public void removePlayerFromTeam(String teamName, @NotNull Player player) {
+    removePlayerFromTeam(teamName, player, MemberRemovalCause.LEAVE, null, player.getUniqueId());
+  }
+
+  public void removePlayerFromTeam(
+      String teamName,
+      @NotNull Player player,
+      @NotNull MemberRemovalCause cause,
+      @Nullable String initiatorName,
+      @Nullable UUID initiatorId) {
     Team team = storage.getTeamByName(teamName);
-    // Проводим проверки существования команды и членства игрока.
-    if (team == null) return;
-    UUID playerId = player.getUniqueId();
-    if (!team.hasMember(playerId) && !team.isLeader(playerId)) return;
-    // Удаляем игрока и очищаем обратные ссылки.
+    if (team == null) {
+      return;
+    }
+    removeMember(
+        team,
+        player.getUniqueId(),
+        player,
+        player.getName(),
+        cause,
+        initiatorName,
+        initiatorId);
+  }
+
+  private boolean removeMember(
+      @NotNull Team team,
+      @NotNull UUID playerId,
+      @Nullable Player onlinePlayer,
+      @Nullable String providedName,
+      @NotNull MemberRemovalCause cause,
+      @Nullable String initiatorName,
+      @Nullable UUID initiatorId) {
+    if (!team.hasMember(playerId) && !team.isLeader(playerId)) {
+      return false;
+    }
+    boolean wasLeader = team.isLeader(playerId);
     team.removeMember(playerId);
     storage.clearPlayerTeam(playerId);
     boolean removedTeam = false;
-    // Если ушедший игрок был лидером, либо закрываем команду, либо назначаем нового.
-    if (team.isLeader(playerId)) {
+    if (wasLeader) {
       if (team.getMembers().isEmpty()) {
         scheduler.cancelDeadline(team);
         storage.removeTeam(team);
@@ -123,17 +151,94 @@ public class MembershipService {
         scheduler.handleLeaderTransfer(team);
       }
     }
-    // Отмечаем изменившуюся команду и пересчитываем дедлайны.
     if (!removedTeam) {
       storage.markTeamDirty(team);
-    }
-    if (!removedTeam) {
       scheduler.evaluateTeam(team);
     }
-    notifyPrefixUpdate(player, null);
+    if (onlinePlayer != null) {
+      notifyPrefixUpdate(onlinePlayer, null);
+    } else {
+      notifyPrefixUpdate(playerId, null);
+    }
     if (!removedTeam) {
       updateTeamMembersPrefixes(team);
     }
+    sendRemovalMessages(
+        team,
+        playerId,
+        onlinePlayer,
+        resolvePlayerName(playerId, providedName),
+        cause,
+        initiatorName,
+        initiatorId,
+        wasLeader,
+        removedTeam);
+    return true;
+  }
+
+  private @NotNull String resolvePlayerName(
+      @NotNull UUID playerId, @Nullable String providedName) {
+    if (providedName != null && !providedName.isBlank()) {
+      return providedName;
+    }
+    OfflinePlayer offlinePlayer = plugin.getServer().getOfflinePlayer(playerId);
+    if (offlinePlayer != null) {
+      String name = offlinePlayer.getName();
+      if (name != null && !name.isBlank()) {
+        return name;
+      }
+    }
+    return playerId.toString();
+  }
+
+  private void sendRemovalMessages(
+      @NotNull Team team,
+      @NotNull UUID playerId,
+      @Nullable Player onlinePlayer,
+      @NotNull String playerName,
+      @NotNull MemberRemovalCause cause,
+      @Nullable String initiatorName,
+      @Nullable UUID initiatorId,
+      boolean wasLeader,
+      boolean removedTeam) {
+    if (cause == MemberRemovalCause.LEAVE) {
+      if (onlinePlayer != null) {
+        TeamMessageUtils.sendTeamMessage(
+            onlinePlayer, TeamMessageUtils.memberLeftSelfMessage(team.getName()));
+        if (removedTeam && wasLeader) {
+          TeamMessageUtils.sendTeamMessage(
+              onlinePlayer, TeamMessageUtils.teamDisbandedLeaderMessage(team.getName()));
+        }
+      }
+      if (!removedTeam) {
+        sendMessageToOnlinePlayers(
+            team.getMembers(),
+            TeamMessageUtils.memberLeftBroadcastMessage(playerName),
+            mergeExcluded(playerId, initiatorId));
+      }
+      return;
+    }
+
+    if (onlinePlayer != null) {
+      TeamMessageUtils.sendTeamMessage(
+          onlinePlayer, TeamMessageUtils.memberKickedTargetMessage(team.getName(), initiatorName));
+    }
+    if (!removedTeam) {
+      sendMessageToOnlinePlayers(
+          team.getMembers(),
+          TeamMessageUtils.memberKickedBroadcastMessage(playerName),
+          mergeExcluded(playerId, initiatorId));
+    } else if (onlinePlayer != null && wasLeader) {
+      TeamMessageUtils.sendTeamMessage(
+          onlinePlayer, TeamMessageUtils.teamDisbandedLeaderMessage(team.getName()));
+    }
+  }
+
+  private UUID[] mergeExcluded(@NotNull UUID playerId, @Nullable UUID initiatorId) {
+    if (initiatorId == null || initiatorId.equals(playerId)) {
+      return new UUID[] {playerId};
+    }
+    return new UUID[] {playerId, initiatorId};
   }
 
   public void kickPlayerFromTeam(
@@ -147,7 +252,7 @@ public class MembershipService {
       return;
     }
     if (team.isLeader(targetId)) {
-      removePlayerFromTeam(teamName, leader);
+      removePlayerFromTeam(teamName, leader, MemberRemovalCause.LEAVE, null, leader.getUniqueId());
       return;
     }
     // Удаляем участника и фиксируем изменения.
@@ -158,24 +263,21 @@ public class MembershipService {
     if (offlineTarget != null && offlineTarget.getName() != null) {
       actualTargetName = offlineTarget.getName();
     }
-    team.removeMember(targetId);
-    storage.clearPlayerTeam(targetId);
-    storage.markTeamDirty(team);
-    scheduler.evaluateTeam(team);
-    notifyPrefixUpdate(targetId, null);
-
-    updateTeamMembersPrefixes(team);
+    Player kickedPlayer = plugin.getServer().getPlayer(targetId);
+    boolean removed =
+        removeMember(
+            team,
+            targetId,
+            kickedPlayer,
+            actualTargetName,
+            MemberRemovalCause.KICK,
+            leaderName,
+            leader.getUniqueId());
+    if (!removed) {
+      return;
+    }
     TeamMessageUtils.sendTeamMessage(
         leader, TeamMessageUtils.memberKickedLeaderMessage(actualTargetName));
-    Player kickedPlayer = plugin.getServer().getPlayer(targetId);
-    if (kickedPlayer != null) {
-      TeamMessageUtils.sendTeamMessage(
-          kickedPlayer, TeamMessageUtils.memberKickedTargetMessage(team.getName(), leaderName));
-    }
-    sendMessageToOnlinePlayers(
-        team.getMembers(),
-        TeamMessageUtils.memberKickedBroadcastMessage(actualTargetName),
-        leader.getUniqueId());
   }
 
   public void transferLeadership(

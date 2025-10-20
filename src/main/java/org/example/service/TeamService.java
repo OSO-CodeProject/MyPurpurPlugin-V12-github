@@ -7,6 +7,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.example.config.PluginConfig;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /** Сервис для управления командами. */
 public interface TeamService {
@@ -35,7 +36,25 @@ public interface TeamService {
    * @param teamName Название команды
    * @param player Игрок, которого нужно удалить
    */
-  void removePlayerFromTeam(String teamName, @NotNull Player player);
+  default void removePlayerFromTeam(String teamName, @NotNull Player player) {
+    removePlayerFromTeam(teamName, player, MemberRemovalCause.LEAVE, null, null);
+  }
+
+  /**
+   * Удаляет игрока из команды с указанием причины.
+   *
+   * @param teamName Название команды
+   * @param player Игрок, которого нужно удалить
+   * @param cause Причина удаления
+   * @param initiatorName Имя инициатора (может быть null)
+   * @param initiatorId UUID инициатора (может быть null)
+   */
+  void removePlayerFromTeam(
+      String teamName,
+      @NotNull Player player,
+      @NotNull MemberRemovalCause cause,
+      @Nullable String initiatorName,
+      @Nullable UUID initiatorId);
 
   /**
    * Исключает игрока из команды по приказу лидера.
