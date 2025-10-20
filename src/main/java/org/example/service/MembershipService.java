@@ -227,13 +227,31 @@ public class MembershipService {
     }
   }
 
-  public void renameTeam(String oldTeamName, String newTeamName, @NotNull Player leader) {
+  public @NotNull RenameResult renameTeam(
+      String oldTeamName, String newTeamName, @NotNull Player leader) {
     Team team = storage.getTeamByName(oldTeamName);
     // Проверяем полномочия и уникальность нового имени.
-    if (team == null || !team.isLeader(leader.getUniqueId())) return;
+    if (team == null) {
+      return RenameResult.TEAM_NOT_FOUND;
+    }
+    if (!team.isLeader(leader.getUniqueId())) {
+      return RenameResult.NOT_LEADER;
+    }
     String normalizedNewName = newTeamName == null ? "" : newTeamName.trim();
-    if (storage.getTeamByName(normalizedNewName) != null) return;
+    Team existingTeam = storage.getTeamByName(normalizedNewName);
+    if (existingTeam != null && !existingTeam.getId().equals(team.getId())) {
+      return RenameResult.NAME_TAKEN;
+    }
+
+    String previousName = team.getName();
     storage.updateTeamName(team, normalizedNewName);
+    if (!Objects.equals(previousName, team.getName())) {
+      sendMessageToOnlinePlayers(
+          team.getMembers(),
+          TeamMessageUtils.teamRenamedMemberMessage(previousName, team.getName()),
+          leader.getUniqueId());
+    }
+    return RenameResult.SUCCESS;
   }
 
   public void setTeamPrefix(String teamName, String newPrefix, @NotNull Player leader) {

@@ -220,6 +220,22 @@ public class TeamMessageUtils {
         .append(Component.text(prefixDisplay(prefix), NamedTextColor.WHITE));
   }
 
+  public static Component teamRenamedLeaderMessage(String oldName, String newName) {
+    return Component.text("✅ Команда ", NamedTextColor.GREEN)
+        .append(nameComponent(oldName))
+        .append(Component.text(" переименована в ", NamedTextColor.GREEN))
+        .append(nameComponent(newName))
+        .append(Component.text(".", NamedTextColor.GREEN));
+  }
+
+  public static Component teamRenamedMemberMessage(String oldName, String newName) {
+    return Component.text("ℹ️ Команда ", NamedTextColor.YELLOW)
+        .append(nameComponent(oldName))
+        .append(Component.text(" переименована в ", NamedTextColor.YELLOW))
+        .append(nameComponent(newName))
+        .append(Component.text(".", NamedTextColor.YELLOW));
+  }
+
   public static Component teamColorUpdatedLeaderMessage(String color) {
     return Component.text("✅ Цвет команды обновлён", NamedTextColor.GREEN)
         .append(Component.text(valueDisplay(color), NamedTextColor.WHITE));
@@ -242,5 +258,10 @@ public class TeamMessageUtils {
       return " (пустое значение)";
     }
     return " — \"" + value + "\"";
+  }
+
+  private static Component nameComponent(String name) {
+    String value = (name == null || name.isEmpty()) ? "(без названия)" : name;
+    return Component.text(value, NamedTextColor.WHITE);
   }
 }

@@ -2,6 +2,7 @@ package org.example.service;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Supplier;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -32,12 +33,20 @@ public class TeamManager implements TeamService {
   }
 
   private void runWithTiming(String methodName, Runnable action) {
+    runWithTiming(methodName, () -> {
+      action.run();
+      return null;
+    });
+  }
+
+  private <T> T runWithTiming(String methodName, Supplier<T> action) {
     long start = System.nanoTime();
-    action.run();
+    T result = action.get();
     long durationMs = (System.nanoTime() - start) / 1_000_000;
     if (durationMs > EXECUTION_THRESHOLD_MS) {
       plugin.getLogger().warning(methodName + " took " + durationMs + " ms");
     }
+    return result;
   }
 
   @Override
@@ -75,8 +84,10 @@ public class TeamManager implements TeamService {
   }
 
   @Override
-  public void renameTeam(String oldTeamName, String newTeamName, @NotNull Player leader) {
-    runWithTiming("renameTeam", () -> membership.renameTeam(oldTeamName, newTeamName, leader));
+  public @NotNull RenameResult renameTeam(
+      String oldTeamName, String newTeamName, @NotNull Player leader) {
+    return runWithTiming(
+        "renameTeam", () -> membership.renameTeam(oldTeamName, newTeamName, leader));
   }
 
   @Override

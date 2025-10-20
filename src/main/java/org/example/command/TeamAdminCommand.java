@@ -18,6 +18,7 @@ import org.bukkit.entity.Player;
 import org.example.MyPurpurPlugin;
 import org.example.config.PluginConfig;
 import org.example.service.TeamService;
+import org.example.service.RenameResult;
 import org.example.util.TeamMessageUtils;
 import org.example.util.TeamUtils;
 import org.jetbrains.annotations.NotNull;
@@ -154,7 +155,30 @@ public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, Tab
     if (TeamUtils.isTeamNameLengthInvalid(newTeamName, pluginConfig, player)) {
       return true;
     }
-    teamManager.renameTeam(oldTeamName, newTeamName, player);
+    RenameResult result = teamManager.renameTeam(oldTeamName, newTeamName, player);
+    return handleRenameResult(player, oldTeamName, newTeamName, result);
+  }
+
+  private boolean handleRenameResult(
+      Player player, String oldTeamName, String newTeamName, RenameResult result) {
+    if (result == RenameResult.SUCCESS) {
+      TeamMessageUtils.sendTeamMessage(
+          player, TeamMessageUtils.teamRenamedLeaderMessage(oldTeamName, newTeamName));
+      return true;
+    }
+    if (result == RenameResult.NAME_TAKEN) {
+      TeamMessageUtils.sendTeamMessage(
+          player, TeamMessageUtils.teamAlreadyExistsMessage(newTeamName));
+      return true;
+    }
+    if (result == RenameResult.TEAM_NOT_FOUND) {
+      TeamMessageUtils.sendTeamMessage(
+          player, TeamMessageUtils.teamDoesNotExistMessage(oldTeamName));
+      return true;
+    }
+    if (result == RenameResult.NOT_LEADER) {
+      TeamMessageUtils.sendTeamMessage(player, TeamMessageUtils.notTeamLeaderMessage());
+    }
     return true;
   }
 
