@@ -84,14 +84,12 @@ class TeamChatListenerTest extends MockBukkitTestBase {
     server.getPluginManager().callEvent(event);
 
     Component rendered =
-        event
-            .renderer()
-            .render(player, player.displayName(), event.message(), Audience.empty());
+        event.renderer().render(player, player.displayName(), event.message(), Audience.empty());
 
     Component expected =
         prefixComponent
             .append(Component.text(player.getName(), NamedTextColor.WHITE))
-            .append(Component.text(": "))
+            .append(Component.text(": ", NamedTextColor.GRAY))
             .append(Component.text("Привет", NamedTextColor.WHITE));
 
     assertEquals(expected, rendered);
@@ -120,12 +118,13 @@ class TeamChatListenerTest extends MockBukkitTestBase {
     server.getPluginManager().callEvent(event);
 
     Component rendered =
-        event
-            .renderer()
-            .render(player, player.displayName(), event.message(), Audience.empty());
+        event.renderer().render(player, player.displayName(), event.message(), Audience.empty());
 
     Component expected =
-        prefixComponent.append(originalName).append(Component.text(": ")).append(message);
+        prefixComponent
+            .append(originalName)
+            .append(Component.text(": ", NamedTextColor.GRAY))
+            .append(message);
 
     assertEquals(expected, rendered);
   }

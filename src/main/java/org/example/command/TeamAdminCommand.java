@@ -92,11 +92,7 @@ public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, Tab
       return true;
     }
     String teamName = teamManager.getPlayerTeam(player);
-    if (teamName == null) {
-      TeamMessageUtils.sendTeamMessage(
-          player,
-          Component.text(
-              "❌ Вы не состоите в команде и не можете передать лидерство!", NamedTextColor.RED));
+    if (!ensurePlayerIsLeader(player, teamName)) {
       return true;
     }
     String newLeaderName = args[1].trim();
@@ -120,11 +116,7 @@ public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, Tab
       return true;
     }
     String teamName = teamManager.getPlayerTeam(player);
-    if (teamName == null) {
-      TeamMessageUtils.sendTeamMessage(
-          player,
-          Component.text(
-              "❌ Вы не состоите в команде и не можете исключать игроков!", NamedTextColor.RED));
+    if (!ensurePlayerIsLeader(player, teamName)) {
       return true;
     }
     String targetName = args[1].trim();
@@ -139,11 +131,7 @@ public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, Tab
 
   private boolean handleDisbandCommand(Player player) {
     String teamName = teamManager.getPlayerTeam(player);
-    if (teamName == null) {
-      TeamMessageUtils.sendTeamMessage(
-          player,
-          Component.text(
-              "❌ Вы не состоите в команде и не можете распустить её!", NamedTextColor.RED));
+    if (!ensurePlayerIsLeader(player, teamName)) {
       return true;
     }
     teamManager.disbandTeam(teamName, player);
@@ -159,11 +147,7 @@ public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, Tab
       return true;
     }
     String oldTeamName = teamManager.getPlayerTeam(player);
-    if (oldTeamName == null) {
-      TeamMessageUtils.sendTeamMessage(
-          player,
-          Component.text(
-              "❌ Вы не состоите в команде и не можете её переименовать!", NamedTextColor.RED));
+    if (!ensurePlayerIsLeader(player, oldTeamName)) {
       return true;
     }
     String newTeamName = args[1].trim();
@@ -183,11 +167,7 @@ public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, Tab
       return true;
     }
     String teamName = teamManager.getPlayerTeam(player);
-    if (teamName == null) {
-      TeamMessageUtils.sendTeamMessage(
-          player,
-          Component.text(
-              "❌ Вы не состоите в команде и не можете изменить её префикс!", NamedTextColor.RED));
+    if (!ensurePlayerIsLeader(player, teamName)) {
       return true;
     }
     String newPrefix = args[1].trim();
@@ -203,11 +183,7 @@ public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, Tab
       return true;
     }
     String teamName = teamManager.getPlayerTeam(player);
-    if (teamName == null) {
-      TeamMessageUtils.sendTeamMessage(
-          player,
-          Component.text(
-              "❌ Вы не состоите в команде и не можете изменить её цвет!", NamedTextColor.RED));
+    if (!ensurePlayerIsLeader(player, teamName)) {
       return true;
     }
     String newColor = args[1].trim();
@@ -239,6 +215,7 @@ public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, Tab
     if (!online
         && (offlineTarget.getName() == null
             || (!offlineTarget.hasPlayedBefore() && !offlineTarget.isOnline()))) {
+      TeamMessageUtils.sendTeamMessage(player, TeamMessageUtils.playerNotFoundMessage(inputName));
       TeamMessageUtils.sendTeamMessage(
           player,
           Component.text("❌ Игрок ", NamedTextColor.RED)
@@ -309,6 +286,31 @@ public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, Tab
   }
 
   private void sendHelp(Player player) {
+    Component helpMessage =
+        Component.join(
+            net.kyori.adventure.text.JoinConfiguration.newlines(),
+            Component.empty(),
+            Component.text("ℹ Использование /teamadmin:", NamedTextColor.AQUA)
+                .decorate(net.kyori.adventure.text.format.TextDecoration.BOLD),
+            Component.empty(),
+            adminBullet("/teamadmin transfer <ник>", "передать лидерство другому игроку в команде"),
+            adminBullet(
+                "/teamadmin kick <ник>", "исключить участника команды (требуется быть лидером)"),
+            adminBullet("/teamadmin disband", "распустить команду (требуется быть лидером)"),
+            adminBullet(
+                "/teamadmin rename <новое_название>",
+                "переименовать команду (требуется быть лидером)"),
+            adminBullet(
+                "/teamadmin setprefix <новый_префикс>",
+                "изменить префикс команды (требуется быть лидером)"),
+            adminBullet(
+                "/teamadmin setcolor <новый_цвет>",
+                "изменить цвет команды (цвет: RED, BLUE, GREEN и т.д.)"),
+            adminBullet("/teamadmin getplinfo <ник>", "показать командную информацию об игроке"),
+            adminBullet("/teamadmin help", "показать эту справку"),
+            Component.empty());
+
+    player.sendMessage(helpMessage);
     player.sendMessage(Component.text("")); // Пустая строка перед списком
     player.sendMessage(Component.text("ℹ Использование /teamadmin:", NamedTextColor.AQUA));
     player.sendMessage(Component.text(""));
@@ -431,5 +433,31 @@ public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, Tab
     }
     String name = teamManager.getPlugin().getServer().getOfflinePlayer(playerId).getName();
     return name != null ? name : playerId.toString();
+  }
+
+  private boolean ensurePlayerIsLeader(Player player, String teamName) {
+    if (!ensurePlayerInTeam(player, teamName)) {
+      return false;
+    }
+    UUID leaderId = teamManager.getTeamLeaderId(teamName);
+    if (leaderId == null || !leaderId.equals(player.getUniqueId())) {
+      TeamMessageUtils.sendTeamMessage(player, TeamMessageUtils.notTeamLeaderMessage());
+      return false;
+    }
+    return true;
+  }
+
+  private boolean ensurePlayerInTeam(Player player, String teamName) {
+    if (teamName == null) {
+      TeamMessageUtils.sendTeamMessage(player, TeamMessageUtils.playerNotInAnyTeamMessage());
+      return false;
+    }
+    return true;
+  }
+
+  private Component adminBullet(String commandText, String description) {
+    return Component.text("• ", NamedTextColor.DARK_GRAY)
+        .append(Component.text(commandText, NamedTextColor.GOLD))
+        .append(Component.text(" — " + description, NamedTextColor.WHITE));
   }
 }

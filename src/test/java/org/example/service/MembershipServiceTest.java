@@ -247,8 +247,7 @@ class MembershipServiceTest extends MockBukkitTestBase {
     membership.kickPlayerFromTeam("Iota", leader, "Ghost");
 
     assertNull(
-        leader.nextComponentMessage(),
-        "Сообщение не должно отправляться при отсутствии цели");
+        leader.nextComponentMessage(), "Сообщение не должно отправляться при отсутствии цели");
   }
 
   @Test
@@ -326,8 +325,7 @@ class MembershipServiceTest extends MockBukkitTestBase {
     membership.setTeamColor(teamName, "blue", member);
 
     assertNull(
-        member.nextComponentMessage(),
-        "Игрок без прав не получает сообщение об изменении цвета");
+        member.nextComponentMessage(), "Игрок без прав не получает сообщение об изменении цвета");
   }
 
   private void drainMessages(PlayerMock player) {
