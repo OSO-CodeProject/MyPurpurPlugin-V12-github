@@ -114,13 +114,7 @@ public class MembershipService {
       return;
     }
     removeMember(
-        team,
-        player.getUniqueId(),
-        player,
-        player.getName(),
-        cause,
-        initiatorName,
-        initiatorId);
+        team, player.getUniqueId(), player, player.getName(), cause, initiatorName, initiatorId);
   }
 
   private boolean removeMember(
@@ -176,8 +170,7 @@ public class MembershipService {
     return true;
   }
 
-  private @NotNull String resolvePlayerName(
-      @NotNull UUID playerId, @Nullable String providedName) {
+  private @NotNull String resolvePlayerName(@NotNull UUID playerId, @Nullable String providedName) {
     if (providedName != null && !providedName.isBlank()) {
       return providedName;
     }

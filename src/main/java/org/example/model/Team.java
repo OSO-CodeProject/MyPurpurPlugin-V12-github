@@ -1,11 +1,12 @@
 package org.example.model;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.example.util.TeamUtils;
@@ -18,7 +19,7 @@ public class Team {
   private volatile String name; // Название команды, теперь изменяемое
 
   private UUID leader;
-  private final List<UUID> members;
+  private final CopyOnWriteArrayList<UUID> members;
   private final Set<UUID> memberLookup;
 
   private volatile String prefix;
@@ -32,8 +33,8 @@ public class Team {
     this.id = id;
     this.name = normalizeName(name);
     this.leader = leader;
-    this.members = new ArrayList<>();
-    this.memberLookup = new HashSet<>();
+    this.members = new CopyOnWriteArrayList<>();
+    this.memberLookup = ConcurrentHashMap.newKeySet();
     addMember(leader);
     this.prefix = normalizePrefix(prefix);
     this.color = NamedTextColor.NAMES.valueOr(color.toLowerCase(Locale.ROOT), NamedTextColor.WHITE);
