@@ -92,6 +92,74 @@ class MembershipServiceTest extends MockBukkitTestBase {
   }
 
   @Test
+  void memberLeavingTeamSendsNotifications() {
+    PlayerMock leader = server.addPlayer("LeaderLeave");
+    PlayerMock member = server.addPlayer("MemberLeave");
+    membership.createTeam("Alpha", "A", "red", leader);
+    membership.addPlayerToTeam("Alpha", member);
+    drainMessages(leader);
+    drainMessages(member);
+
+    membership.removePlayerFromTeam("Alpha", member);
+
+    assertEquals(
+        TeamMessageUtils.memberLeftSelfMessage("Alpha"),
+        member.nextComponentMessage(),
+        "Участник должен получить сообщение о выходе");
+    assertEquals(
+        TeamMessageUtils.memberLeftBroadcastMessage("MemberLeave"),
+        leader.nextComponentMessage(),
+        "Лидер получает уведомление о выходе участника");
+  }
+
+  @Test
+  void leaderLeavingAloneDisbandsTeamAndSendsMessage() {
+    PlayerMock leader = server.addPlayer("SoloLeader");
+    membership.createTeam("Solo", "S", "red", leader);
+    drainMessages(leader);
+
+    membership.removePlayerFromTeam("Solo", leader);
+
+    assertEquals(
+        TeamMessageUtils.memberLeftSelfMessage("Solo"),
+        leader.nextComponentMessage(),
+        "Лидер получает сообщение о выходе");
+    assertEquals(
+        TeamMessageUtils.teamDisbandedLeaderMessage("Solo"),
+        leader.nextComponentMessage(),
+        "Лидер информируется о роспуске команды");
+    assertNull(storage.getTeamByName("Solo"), "Команда должна быть удалена");
+  }
+
+  @Test
+  void kickPlayerFromTeamSendsMessagesToAllParties() {
+    PlayerMock leader = server.addPlayer("LeaderKick");
+    PlayerMock member = server.addPlayer("MemberKick");
+    PlayerMock teammate = server.addPlayer("TeammateKick");
+    membership.createTeam("Omega", "O", "red", leader);
+    membership.addPlayerToTeam("Omega", member);
+    membership.addPlayerToTeam("Omega", teammate);
+    drainMessages(leader);
+    drainMessages(member);
+    drainMessages(teammate);
+
+    membership.kickPlayerFromTeam("Omega", leader, member.getName());
+
+    assertEquals(
+        TeamMessageUtils.memberKickedLeaderMessage(member.getName()),
+        leader.nextComponentMessage(),
+        "Лидер получает подтверждение об исключении");
+    assertEquals(
+        TeamMessageUtils.memberKickedTargetMessage("Omega", leader.getName()),
+        member.nextComponentMessage(),
+        "Исключённый игрок получает уведомление");
+    assertEquals(
+        TeamMessageUtils.memberKickedBroadcastMessage(member.getName()),
+        teammate.nextComponentMessage(),
+        "Остальные участники получают уведомление");
+  }
+
+  @Test
   void leaderCanDisbandTeam() {
     PlayerMock leader = server.addPlayer("Leader");
     PlayerMock member = server.addPlayer("Member");

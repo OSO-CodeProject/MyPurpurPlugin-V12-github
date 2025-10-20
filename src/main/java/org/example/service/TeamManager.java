@@ -9,6 +9,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.example.config.PluginConfig;
 import org.example.listener.TeamChatListener;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /** Facade over team related services. Delegates work to specialised classes. */
 public class TeamManager implements TeamService {
@@ -62,6 +63,18 @@ public class TeamManager implements TeamService {
   @Override
   public void removePlayerFromTeam(String teamName, @NotNull Player player) {
     runWithTiming("removePlayerFromTeam", () -> membership.removePlayerFromTeam(teamName, player));
+  }
+
+  @Override
+  public void removePlayerFromTeam(
+      String teamName,
+      @NotNull Player player,
+      @NotNull MemberRemovalCause cause,
+      @Nullable String initiatorName,
+      @Nullable UUID initiatorId) {
+    runWithTiming(
+        "removePlayerFromTeam",
+        () -> membership.removePlayerFromTeam(teamName, player, cause, initiatorName, initiatorId));
   }
 
   @Override
