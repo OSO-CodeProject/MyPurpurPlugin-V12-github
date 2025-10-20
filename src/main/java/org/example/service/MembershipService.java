@@ -170,8 +170,7 @@ public class MembershipService {
     Player kickedPlayer = plugin.getServer().getPlayer(targetId);
     if (kickedPlayer != null) {
       TeamMessageUtils.sendTeamMessage(
-          kickedPlayer,
-          TeamMessageUtils.memberKickedTargetMessage(team.getName(), leaderName));
+          kickedPlayer, TeamMessageUtils.memberKickedTargetMessage(team.getName(), leaderName));
     }
     sendMessageToOnlinePlayers(
         team.getMembers(),
@@ -305,9 +304,7 @@ public class MembershipService {
   }
 
   private void sendMessageToOnlinePlayers(
-      @NotNull Collection<UUID> recipients,
-      @NotNull Component message,
-      UUID... excludedPlayers) {
+      @NotNull Collection<UUID> recipients, @NotNull Component message, UUID... excludedPlayers) {
     Set<UUID> excluded = Collections.emptySet();
     if (excludedPlayers != null && excludedPlayers.length > 0) {
       excluded = new HashSet<>(Arrays.asList(excludedPlayers));

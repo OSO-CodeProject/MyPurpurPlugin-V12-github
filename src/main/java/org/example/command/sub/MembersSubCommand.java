@@ -7,6 +7,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.entity.Player;
 import org.example.config.PluginConfig;
 import org.example.service.TeamService;
+import org.example.util.TeamMessageUtils;
 import org.example.util.TeamUtils;
 import org.jetbrains.annotations.NotNull;
 
@@ -25,7 +26,7 @@ public class MembersSubCommand implements SubCommand {
   public boolean execute(@NotNull Player player, @NotNull String[] args) {
     String playerTeam = teamService.getPlayerTeam(player);
     if (playerTeam == null) {
-      player.sendMessage(Component.text("❌ Вы не состоите в команде!", NamedTextColor.RED));
+      player.sendMessage(TeamMessageUtils.playerNotInAnyTeamMessage());
       return true;
     }
 

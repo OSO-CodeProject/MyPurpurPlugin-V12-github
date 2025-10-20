@@ -46,6 +46,36 @@ public class TeamMessageUtils {
   }
 
   /**
+   * Формирует сообщение о том, что игрок не состоит ни в одной команде.
+   *
+   * @return сообщение об ошибке
+   */
+  public static Component playerNotInAnyTeamMessage() {
+    return Component.text("❌ Вы не состоите в команде!", NamedTextColor.RED);
+  }
+
+  /**
+   * Формирует сообщение о том, что действие доступно только лидеру команды.
+   *
+   * @return сообщение об ошибке
+   */
+  public static Component notTeamLeaderMessage() {
+    return Component.text("❌ Это действие доступно только лидеру команды!", NamedTextColor.RED);
+  }
+
+  /**
+   * Формирует сообщение об ошибке, если запрошенный игрок не найден.
+   *
+   * @param playerName имя игрока
+   * @return сообщение об ошибке
+   */
+  public static Component playerNotFoundMessage(String playerName) {
+    return Component.text("❌ Игрок ", NamedTextColor.RED)
+        .append(Component.text(playerName, NamedTextColor.WHITE))
+        .append(Component.text(" не найден!", NamedTextColor.RED));
+  }
+
+  /**
    * Формирует сообщение об ошибке, если игрок уже состоит в команде.
    *
    * @param teamName Название команды

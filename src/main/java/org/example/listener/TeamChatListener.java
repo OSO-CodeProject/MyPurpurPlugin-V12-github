@@ -37,6 +37,7 @@ public class TeamChatListener implements Listener {
         .forEach(
             player -> {
               cacheOriginalPlayerListName(player);
+              getOrStoreOriginalPlayerDisplayName(player, null);
               updatePlayerPrefix(player);
             });
   }
@@ -100,20 +101,22 @@ public class TeamChatListener implements Listener {
     event.renderer(
         (source, sourceDisplayName, message, viewer) -> {
           Component latestPrefixComponent = lastPlayerPrefixes.get(playerId);
-          Component sanitized =
-              stripKnownPrefix(sourceDisplayName, latestPrefixComponent, null);
-          Component displayBase =
-              sanitized != null
-                  ? sanitized
-                  : originalPlayerDisplayNames.getOrDefault(playerId, sourceDisplayName);
+          Component baseDisplay = originalPlayerDisplayNames.get(playerId);
+          if (baseDisplay == null) {
+            Component stripped = stripKnownPrefix(sourceDisplayName, latestPrefixComponent, null);
+            baseDisplay = stripped != null ? stripped : sourceDisplayName;
+            originalPlayerDisplayNames.put(playerId, baseDisplay);
+          }
+
           Component formattedMessage =
               forceWhiteChat ? message.color(NamedTextColor.WHITE) : message;
-          Component nameWithPrefix = displayBase;
+          Component nameComponent = baseDisplay;
           if (latestPrefixComponent != null) {
-            nameWithPrefix =
-                latestPrefixComponent.append(displayBase.colorIfAbsent(NamedTextColor.WHITE));
+            nameComponent =
+                latestPrefixComponent.append(baseDisplay.colorIfAbsent(NamedTextColor.WHITE));
           }
-          return nameWithPrefix.append(Component.text(": "))
+          return nameComponent
+              .append(Component.text(": ", NamedTextColor.GRAY))
               .append(formattedMessage);
         });
   }
