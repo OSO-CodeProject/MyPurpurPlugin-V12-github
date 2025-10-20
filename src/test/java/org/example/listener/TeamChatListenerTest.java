@@ -412,7 +412,7 @@ class TeamChatListenerTest extends MockBukkitTestBase {
     }
 
     @Override
-    public void renameTeam(
+    public org.example.service.RenameResult renameTeam(
         String oldTeamName, String newTeamName, org.bukkit.entity.Player leader) {
       throw new UnsupportedOperationException();
     }

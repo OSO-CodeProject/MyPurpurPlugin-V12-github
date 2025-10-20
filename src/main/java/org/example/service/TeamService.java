@@ -70,7 +70,8 @@ public interface TeamService {
    * @param newTeamName Новое название команды
    * @param leader Лидер команды, выполняющий переименование
    */
-  void renameTeam(String oldTeamName, String newTeamName, @NotNull Player leader);
+  @NotNull
+  RenameResult renameTeam(String oldTeamName, String newTeamName, @NotNull Player leader);
 
   /**
    * Устанавливает новый префикс для команды.
