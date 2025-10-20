@@ -216,6 +216,11 @@ public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, Tab
         && (offlineTarget.getName() == null
             || (!offlineTarget.hasPlayedBefore() && !offlineTarget.isOnline()))) {
       TeamMessageUtils.sendTeamMessage(player, TeamMessageUtils.playerNotFoundMessage(inputName));
+      TeamMessageUtils.sendTeamMessage(
+          player,
+          Component.text("❌ Игрок ", NamedTextColor.RED)
+              .append(Component.text(inputName, NamedTextColor.WHITE))
+              .append(Component.text(" не найден!", NamedTextColor.RED)));
       return true;
     }
 
@@ -306,6 +311,40 @@ public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, Tab
             Component.empty());
 
     player.sendMessage(helpMessage);
+    player.sendMessage(Component.text("")); // Пустая строка перед списком
+    player.sendMessage(Component.text("ℹ Использование /teamadmin:", NamedTextColor.AQUA));
+    player.sendMessage(Component.text(""));
+    player.sendMessage(
+        Component.text(
+            "/teamadmin transfer <ник> — передать лидерство другому игроку в команде",
+            NamedTextColor.AQUA));
+    player.sendMessage(
+        Component.text(
+            "/teamadmin kick <ник> — выгнать участника из команды (требуется быть лидером)",
+            NamedTextColor.AQUA));
+    player.sendMessage(
+        Component.text(
+            "/teamadmin disband — распустить команду (требуется быть лидером)",
+            NamedTextColor.AQUA));
+    player.sendMessage(
+        Component.text(
+            "/teamadmin rename <новое_название> — переименовать команду (требуется быть лидером)",
+            NamedTextColor.AQUA));
+    player.sendMessage(
+        Component.text(
+            "/teamadmin setprefix <новый_префикс> — изменить префикс команды (требуется быть лидером)",
+            NamedTextColor.AQUA));
+    player.sendMessage(
+        Component.text(
+            "/teamadmin setcolor <новый_цвет> — изменить цвет команды (требуется быть лидером, цвет: RED, BLUE, GREEN и т.д.)",
+            NamedTextColor.AQUA));
+    player.sendMessage(
+        Component.text(
+            "/teamadmin getplinfo <ник> — показать командную информацию об игроке",
+            NamedTextColor.AQUA));
+    player.sendMessage(
+        Component.text("/teamadmin help — показать эту справку", NamedTextColor.AQUA));
+    player.sendMessage(Component.text("")); // Пустая строка после списка
   }
 
   @Override
