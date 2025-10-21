@@ -129,6 +129,8 @@ public class MembershipService {
       return false;
     }
     boolean wasLeader = team.isLeader(playerId);
+    UUID newLeaderId = null;
+    String newLeaderName = null;
     team.removeMember(playerId);
     storage.clearPlayerTeam(playerId);
     boolean removedTeam = false;
@@ -141,9 +143,22 @@ public class MembershipService {
         UUID newLeader = team.getFirstMember();
         if (newLeader != null) {
           team.setLeader(newLeader);
+          newLeaderId = newLeader;
+          newLeaderName = resolvePlayerName(newLeader, null);
         }
         scheduler.handleLeaderTransfer(team);
       }
+    }
+    if (newLeaderId != null && !removedTeam) {
+      Player newLeaderPlayer = plugin.getServer().getPlayer(newLeaderId);
+      if (newLeaderPlayer != null) {
+        TeamMessageUtils.sendTeamMessage(
+            newLeaderPlayer, TeamMessageUtils.leadershipTransferIncomingMessage(team.getName()));
+      }
+      sendMessageToOnlinePlayers(
+          team.getMembers(),
+          TeamMessageUtils.leadershipTransferBroadcastMessage(newLeaderName),
+          newLeaderId);
     }
     if (!removedTeam) {
       storage.markTeamDirty(team);
