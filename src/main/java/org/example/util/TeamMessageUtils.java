@@ -76,6 +76,60 @@ public class TeamMessageUtils {
   }
 
   /**
+   * Сообщает, что команда принимает игроков только по приглашению.
+   *
+   * @return информационное сообщение
+   */
+  public static Component joinInviteOnlyMessage() {
+    return Component.text(
+        "ℹ️ Эта команда принимает новых участников только по приглашению лидера.",
+        NamedTextColor.YELLOW);
+  }
+
+  /**
+   * Сообщает игроку, что заявка на вступление отправлена лидеру.
+   *
+   * @param teamName название команды
+   * @return информационное сообщение
+   */
+  public static Component joinRequestSentMessage(String teamName) {
+    String name = (teamName == null || teamName.isBlank()) ? "команду" : teamName;
+    return Component.text("ℹ️ Заявка на вступление в команду ", NamedTextColor.YELLOW)
+        .append(Component.text(name, NamedTextColor.WHITE))
+        .append(Component.text(" отправлена лидеру.", NamedTextColor.YELLOW));
+  }
+
+  /**
+   * Сообщает игроку, что заявка на вступление уже существует.
+   *
+   * @param teamName название команды
+   * @return информационное сообщение
+   */
+  public static Component joinRequestAlreadySentMessage(String teamName) {
+    String name = (teamName == null || teamName.isBlank()) ? "команду" : teamName;
+    return Component.text("ℹ️ Вы уже отправили заявку в команду ", NamedTextColor.YELLOW)
+        .append(Component.text(name, NamedTextColor.WHITE))
+        .append(Component.text(".", NamedTextColor.YELLOW));
+  }
+
+  /**
+   * Уведомляет лидера о новой заявке на вступление.
+   *
+   * @param playerName имя игрока, отправившего заявку
+   * @param teamName название команды
+   * @return информационное сообщение
+   */
+  public static Component joinRequestReceivedLeaderMessage(String playerName, String teamName) {
+    String candidate = (playerName == null || playerName.isBlank()) ? "Неизвестный игрок" : playerName;
+    String name = (teamName == null || teamName.isBlank()) ? "вашу команду" : teamName;
+    return Component.text("ℹ️ Игрок ", NamedTextColor.YELLOW)
+        .append(Component.text(candidate, NamedTextColor.WHITE))
+        .append(Component.text(" хочет вступить в команду ", NamedTextColor.YELLOW))
+        .append(Component.text(name, NamedTextColor.WHITE))
+        .append(Component.text(".", NamedTextColor.YELLOW));
+  }
+
+  /**
    * Формирует сообщение об ошибке, если игрок уже состоит в команде.
    *
    * @param teamName Название команды

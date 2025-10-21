@@ -5,6 +5,7 @@ import java.util.UUID;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.example.config.JoinMode;
 import org.example.config.PluginConfig;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -184,11 +185,36 @@ public interface TeamService {
   PluginConfig getPluginConfig();
 
   /**
+   * Возвращает текущий режим вступления в команды.
+   *
+   * @return режим вступления
+   */
+  @NotNull
+  JoinMode getJoinMode();
+
+  /**
    * Определяет, применяется ли ограничение по количеству участников при перезагрузке.
    *
    * @return true, если ограничение активно
    */
   boolean isEnforceMaxMembersOnReload();
+
+  /**
+   * Отправляет заявку на вступление игрока в команду.
+   *
+   * @param teamName Название команды
+   * @param player Игрок, отправляющий заявку
+   */
+  void requestToJoinTeam(String teamName, @NotNull Player player);
+
+  /**
+   * Проверяет, отправлял ли игрок заявку в указанную команду.
+   *
+   * @param teamName название команды
+   * @param playerId идентификатор игрока
+   * @return true, если заявка уже существует
+   */
+  boolean hasPendingJoinRequest(String teamName, @NotNull UUID playerId);
 
   /**
    * Проверяет, активен ли льготный период перед удалением лишних участников.

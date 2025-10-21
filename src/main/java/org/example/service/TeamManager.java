@@ -6,6 +6,7 @@ import java.util.function.Supplier;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.example.config.JoinMode;
 import org.example.config.PluginConfig;
 import org.example.listener.TeamChatListener;
 import org.jetbrains.annotations.NotNull;
@@ -161,6 +162,11 @@ public class TeamManager implements TeamService {
   }
 
   @Override
+  public @NotNull JoinMode getJoinMode() {
+    return pluginConfig.getJoinMode();
+  }
+
+  @Override
   public boolean isEnforceMaxMembersOnReload() {
     return pluginConfig.isEnforceMaxMembersOnReload();
   }
@@ -192,6 +198,16 @@ public class TeamManager implements TeamService {
   @Override
   public Long getTeamDeadline(String teamName) {
     return scheduler.getTeamDeadline(teamName);
+  }
+
+  @Override
+  public void requestToJoinTeam(String teamName, @NotNull Player player) {
+    runWithTiming("requestToJoinTeam", () -> membership.requestToJoinTeam(teamName, player));
+  }
+
+  @Override
+  public boolean hasPendingJoinRequest(String teamName, @NotNull UUID playerId) {
+    return membership.hasPendingJoinRequest(teamName, playerId);
   }
 
   @Override

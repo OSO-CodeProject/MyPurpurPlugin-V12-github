@@ -55,6 +55,7 @@ public class PluginConfig {
       public static final class Membership {
         private Membership() {}
 
+        public static final String JOIN_MODE = "team.membership.join-mode";
         public static final String MAX_MEMBERS = "team.membership.max-members";
         public static final String ENFORCE_MAX_ON_RELOAD =
             "team.membership.enforce-max-members-on-reload";
@@ -164,6 +165,7 @@ public class PluginConfig {
     changed |= migrateLegacyKey("menu.open-sound", Keys.Menu.Sound.OPEN);
     changed |= migrateLegacyKey("menu.sound-volume", Keys.Menu.Sound.VOLUME);
     changed |= migrateLegacyKey("menu.sound-pitch", Keys.Menu.Sound.PITCH);
+    changed |= migrateLegacyJoinModeSetting();
 
     // Глобальные настройки
     changed |= addDefaultIfMissing(Keys.DEBUG_MODE, false);
@@ -173,6 +175,7 @@ public class PluginConfig {
     changed |= addDefaultIfMissing(Keys.Team.Commands.REQUIRES_OP, false);
     changed |= addDefaultIfMissing(Keys.Team.Notifications.NOTIFY_ADMINS, true);
     changed |= addDefaultIfMissing(Keys.Team.Membership.MAX_MEMBERS, 0);
+    changed |= addDefaultIfMissing(Keys.Team.Membership.JOIN_MODE, JoinMode.OPEN.name());
     changed |= addDefaultIfMissing(Keys.Team.Naming.Prefix.MIN_LENGTH, 1);
     changed |= addDefaultIfMissing(Keys.Team.Naming.Prefix.MAX_LENGTH, 16);
     changed |= addDefaultIfMissing(Keys.Team.Naming.TeamName.MIN_LENGTH, 3);
@@ -209,6 +212,40 @@ public class PluginConfig {
       Object value = config.get(legacyPath);
       config.set(newPath, value);
       config.set(legacyPath, null);
+      return true;
+    }
+    return false;
+  }
+
+  private boolean migrateLegacyJoinModeSetting() {
+    if (config.contains(Keys.Team.Membership.JOIN_MODE)) {
+      return false;
+    }
+    String legacyInviteOnly = "team.membership.invite-only";
+    if (config.contains(legacyInviteOnly)) {
+      boolean inviteOnly = config.getBoolean(legacyInviteOnly);
+      config.set(
+          Keys.Team.Membership.JOIN_MODE,
+          inviteOnly ? JoinMode.INVITE_ONLY.name() : JoinMode.OPEN.name());
+      config.set(legacyInviteOnly, null);
+      return true;
+    }
+    String legacyRequestKey = "team.membership.request-to-join";
+    if (config.contains(legacyRequestKey)) {
+      boolean requestToJoin = config.getBoolean(legacyRequestKey);
+      config.set(
+          Keys.Team.Membership.JOIN_MODE,
+          requestToJoin ? JoinMode.REQUEST_TO_JOIN.name() : JoinMode.OPEN.name());
+      config.set(legacyRequestKey, null);
+      return true;
+    }
+    String legacyAutoAccept = "team.membership.auto-accept";
+    if (config.contains(legacyAutoAccept)) {
+      boolean autoAccept = config.getBoolean(legacyAutoAccept);
+      config.set(
+          Keys.Team.Membership.JOIN_MODE,
+          autoAccept ? JoinMode.OPEN.name() : JoinMode.INVITE_ONLY.name());
+      config.set(legacyAutoAccept, null);
       return true;
     }
     return false;
@@ -399,6 +436,35 @@ public class PluginConfig {
    */
   public int getMaxMembers() {
     return getIntWithLegacyFallback(Keys.Team.Membership.MAX_MEMBERS, 0, "team.max-members");
+  }
+
+  /**
+   * Возвращает политику вступления в команды.
+   *
+   * @return выбранный режим вступления
+   */
+  public @NotNull JoinMode getJoinMode() {
+    String rawValue =
+        getStringWithLegacyFallback(
+            Keys.Team.Membership.JOIN_MODE, JoinMode.OPEN.name(), "team.join-mode");
+    if (rawValue == null) {
+      return JoinMode.OPEN;
+    }
+    String normalized =
+        rawValue.trim().replace('-', '_').replace(' ', '_').toUpperCase(Locale.ROOT);
+    try {
+      return JoinMode.valueOf(normalized);
+    } catch (IllegalArgumentException ex) {
+      plugin
+          .getLogger()
+          .warning(
+              "Некорректное значение "
+                  + Keys.Team.Membership.JOIN_MODE
+                  + ": "
+                  + rawValue
+                  + ". Используем OPEN.");
+      return JoinMode.OPEN;
+    }
   }
 
   /**
