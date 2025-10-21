@@ -1,5 +1,6 @@
 package org.example.service;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -7,6 +8,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.example.config.JoinMode;
 import org.example.config.PluginConfig;
+import org.example.model.PendingInvite;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -198,6 +200,48 @@ public interface TeamService {
    * @return true, если ограничение активно
    */
   boolean isEnforceMaxMembersOnReload();
+
+  /**
+   * Отправляет приглашение игроку присоединиться к команде лидера.
+   *
+   * @param leader лидер команды, инициирующий приглашение
+   * @param target целевой игрок
+   * @param ttl время жизни приглашения (null — без ограничения)
+   */
+  void sendInvite(@NotNull Player leader, @NotNull Player target, @Nullable Duration ttl);
+
+  /**
+   * Отменяет ранее отправленное приглашение.
+   *
+   * @param leader лидер команды
+   * @param targetName имя игрока, приглашение которого нужно отозвать
+   */
+  void revokeInvite(@NotNull Player leader, @NotNull String targetName);
+
+  /**
+   * Принимает приглашение в указанную команду.
+   *
+   * @param player игрок, принимающий приглашение
+   * @param teamName команда, в которую осуществляется вступление
+   */
+  void acceptInvite(@NotNull Player player, @NotNull String teamName);
+
+  /**
+   * Отклоняет приглашение в указанную команду.
+   *
+   * @param player игрок, отклоняющий приглашение
+   * @param teamName команда, приглашение от которой отклоняется
+   */
+  void declineInvite(@NotNull Player player, @NotNull String teamName);
+
+  /**
+   * Возвращает список активных приглашений игрока.
+   *
+   * @param playerId идентификатор игрока
+   * @return список приглашений
+   */
+  @NotNull
+  List<PendingInvite> getInvitesForPlayer(@NotNull UUID playerId);
 
   /**
    * Отправляет заявку на вступление игрока в команду.

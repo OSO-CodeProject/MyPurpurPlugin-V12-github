@@ -1,5 +1,6 @@
 package org.example.service;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -9,6 +10,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.example.config.JoinMode;
 import org.example.config.PluginConfig;
 import org.example.listener.TeamChatListener;
+import org.example.model.PendingInvite;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -169,6 +171,31 @@ public class TeamManager implements TeamService {
   @Override
   public boolean isEnforceMaxMembersOnReload() {
     return pluginConfig.isEnforceMaxMembersOnReload();
+  }
+
+  @Override
+  public void sendInvite(@NotNull Player leader, @NotNull Player target, @Nullable Duration ttl) {
+    runWithTiming("sendInvite", () -> membership.sendInvite(leader, target, ttl));
+  }
+
+  @Override
+  public void revokeInvite(@NotNull Player leader, @NotNull String targetName) {
+    runWithTiming("revokeInvite", () -> membership.revokeInvite(leader, targetName));
+  }
+
+  @Override
+  public void acceptInvite(@NotNull Player player, @NotNull String teamName) {
+    runWithTiming("acceptInvite", () -> membership.acceptInvite(player, teamName));
+  }
+
+  @Override
+  public void declineInvite(@NotNull Player player, @NotNull String teamName) {
+    runWithTiming("declineInvite", () -> membership.declineInvite(player, teamName));
+  }
+
+  @Override
+  public @NotNull List<PendingInvite> getInvitesForPlayer(@NotNull UUID playerId) {
+    return runWithTiming("getInvitesForPlayer", () -> membership.getInvitesForPlayer(playerId));
   }
 
   @Override

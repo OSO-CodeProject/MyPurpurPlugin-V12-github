@@ -4,12 +4,17 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import be.seeseemelk.mockbukkit.entity.PlayerMock;
+import java.time.Duration;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.example.MockBukkitTestBase;
+import org.example.config.JoinMode;
 import org.example.config.PluginConfig;
+import org.example.model.PendingInvite;
 import org.example.model.Team;
 import org.example.util.TeamMessageUtils;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,12 +35,104 @@ class MembershipServiceTest extends MockBukkitTestBase {
     when(pluginConfig.getMinPrefixLength()).thenReturn(1);
     when(pluginConfig.getMaxPrefixLength()).thenReturn(16);
     when(pluginConfig.getMaxMembers()).thenReturn(10);
+    when(pluginConfig.getJoinMode()).thenReturn(JoinMode.OPEN);
     when(pluginConfig.isGracePeriodEnabled()).thenReturn(true);
     when(pluginConfig.getGracePeriodMinutes()).thenReturn(10);
+    when(pluginConfig.shouldNotifyAdmins()).thenReturn(false);
 
     storage = new TeamStorage(plugin, pluginConfig);
     scheduler = new TestDeadlineScheduler(plugin, pluginConfig, storage);
     membership = new MembershipService(plugin, pluginConfig, storage, scheduler);
+  }
+
+  @Test
+  void sendInviteStoresPendingInvite() {
+    when(pluginConfig.getJoinMode()).thenReturn(JoinMode.INVITE_ONLY);
+    PlayerMock leader = server.addPlayer("LeaderInvite");
+    PlayerMock target = server.addPlayer("TargetInvite");
+    membership.createTeam("InviteTeam", "IT", "red", leader);
+    drainMessages(leader);
+    drainMessages(target);
+
+    membership.sendInvite(leader, target, Duration.ofMinutes(5));
+
+    List<PendingInvite> invites = membership.getInvitesForPlayer(target.getUniqueId());
+    assertEquals(1, invites.size(), "Приглашение должно сохраняться");
+    PendingInvite invite = invites.get(0);
+    assertEquals("InviteTeam", invite.getTeamName(), "Название команды в приглашении сохраняется");
+
+    Component targetMessage = target.nextComponentMessage();
+    String plain = PlainTextComponentSerializer.plainText().serialize(targetMessage);
+    assertTrue(plain.contains("InviteTeam"), "Сообщение должно содержать имя команды");
+    Component leaderMessage = leader.nextComponentMessage();
+    String leaderPlain = PlainTextComponentSerializer.plainText().serialize(leaderMessage);
+    assertTrue(
+        leaderPlain.contains(target.getName()),
+        "Подтверждение для лидера должно содержать имя приглашённого");
+  }
+
+  @Test
+  void acceptInviteAddsPlayerAndBroadcasts() {
+    when(pluginConfig.getJoinMode()).thenReturn(JoinMode.INVITE_ONLY);
+    PlayerMock leader = server.addPlayer("LeaderAccept");
+    PlayerMock teammate = server.addPlayer("TeammateAccept");
+    PlayerMock target = server.addPlayer("TargetAccept");
+    membership.createTeam("AcceptTeam", "AT", "red", leader);
+    membership.addPlayerToTeam("AcceptTeam", teammate);
+    drainMessages(leader);
+    drainMessages(teammate);
+    drainMessages(target);
+
+    membership.sendInvite(leader, target, Duration.ofMinutes(2));
+    // consume invite messages
+    target.nextComponentMessage();
+    leader.nextComponentMessage();
+    teammate.nextComponentMessage();
+
+    membership.acceptInvite(target, "AcceptTeam");
+
+    Team team = storage.getTeamByName("AcceptTeam");
+    assertNotNull(team, "Команда должна существовать");
+    assertTrue(team.hasMember(target.getUniqueId()), "Игрок должен стать участником команды");
+    assertTrue(
+        membership.getInvitesForPlayer(target.getUniqueId()).isEmpty(),
+        "Приглашение удаляется после принятия");
+
+    // Первое сообщение — стандартное уведомление о вступлении
+    target.nextComponentMessage();
+    assertEquals(
+        TeamMessageUtils.inviteAcceptedMessage("AcceptTeam"),
+        target.nextComponentMessage(),
+        "Игрок получает подтверждение принятия");
+    assertEquals(
+        TeamMessageUtils.inviteAcceptedBroadcastMessage(target.getName()),
+        teammate.nextComponentMessage(),
+        "Сокоманник получает уведомление");
+  }
+
+  @Test
+  void acceptInviteFailsWhenExpired() {
+    when(pluginConfig.getJoinMode()).thenReturn(JoinMode.INVITE_ONLY);
+    PlayerMock leader = server.addPlayer("LeaderExpire");
+    PlayerMock target = server.addPlayer("TargetExpire");
+    membership.createTeam("ExpireTeam", "ET", "red", leader);
+    drainMessages(leader);
+    drainMessages(target);
+
+    membership.sendInvite(leader, target, Duration.ZERO);
+    // consume invite notifications
+    target.nextComponentMessage();
+    leader.nextComponentMessage();
+
+    membership.acceptInvite(target, "ExpireTeam");
+
+    Team team = storage.getTeamByName("ExpireTeam");
+    assertNotNull(team);
+    assertFalse(team.hasMember(target.getUniqueId()), "Истёкшее приглашение не добавляет игрока");
+    assertEquals(
+        TeamMessageUtils.inviteExpiredMessage("ExpireTeam"),
+        target.nextComponentMessage(),
+        "Игрок информируется об истечении приглашения");
   }
 
   @Test
