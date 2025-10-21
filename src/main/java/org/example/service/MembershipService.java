@@ -1,5 +1,6 @@
 package org.example.service;
 
+import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import net.kyori.adventure.text.Component;
@@ -7,8 +8,10 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.example.config.JoinMode;
 import org.example.config.PluginConfig;
 import org.example.listener.TeamChatListener;
+import org.example.model.PendingInvite;
 import org.example.model.Team;
 import org.example.util.TeamMessageUtils;
 import org.example.util.TeamUtils;
@@ -23,6 +26,8 @@ public class MembershipService {
   private final TeamStorage storage;
   private final DeadlineScheduler scheduler;
   private final Map<UUID, Set<UUID>> pendingJoinRequests = new ConcurrentHashMap<>();
+  private final Map<UUID, Map<UUID, PendingInvite>> invitesByPlayer = new ConcurrentHashMap<>();
+  private final Map<UUID, Map<UUID, PendingInvite>> invitesByTeam = new ConcurrentHashMap<>();
 
   public MembershipService(
       @NotNull JavaPlugin plugin,
@@ -94,6 +99,7 @@ public class MembershipService {
     // Добавляем игрока и фиксируем изменения в хранилище.
     team.addMember(player.getUniqueId());
     storage.assignPlayerToTeam(player.getUniqueId(), team);
+    clearInvitesForPlayer(player.getUniqueId());
     removeJoinRequest(team.getId(), player.getUniqueId());
     storage.markTeamDirty(team);
     TeamMessageUtils.sendTeamMessage(
@@ -152,6 +158,217 @@ public class MembershipService {
     return requests != null && requests.contains(playerId);
   }
 
+  public void sendInvite(@NotNull Player leader, @NotNull Player target, @Nullable Duration ttl) {
+    if (pluginConfig.getJoinMode() != JoinMode.INVITE_ONLY) {
+      TeamMessageUtils.sendTeamMessage(leader, TeamMessageUtils.invitesDisabledMessage());
+      return;
+    }
+    UUID leaderId = leader.getUniqueId();
+    UUID teamId = storage.getPlayerTeams().get(leaderId);
+    if (teamId == null) {
+      TeamMessageUtils.sendTeamMessage(leader, TeamMessageUtils.playerNotInAnyTeamMessage());
+      return;
+    }
+    Team team = storage.getTeams().get(teamId);
+    if (team == null) {
+      TeamMessageUtils.sendTeamMessage(leader, TeamMessageUtils.teamDoesNotExistMessage(null));
+      return;
+    }
+    if (!team.isLeader(leaderId)) {
+      TeamMessageUtils.sendTeamMessage(leader, TeamMessageUtils.notTeamLeaderMessage());
+      return;
+    }
+    UUID targetId = target.getUniqueId();
+    if (leaderId.equals(targetId)) {
+      TeamMessageUtils.sendTeamMessage(leader, TeamMessageUtils.cannotInviteSelfMessage());
+      return;
+    }
+    String targetTeamName = storage.getPlayerTeam(target);
+    if (targetTeamName != null) {
+      TeamMessageUtils.sendTeamMessage(
+          leader, TeamMessageUtils.targetAlreadyInTeamMessage(target.getName(), targetTeamName));
+      return;
+    }
+    int maxMembers = pluginConfig.getMaxMembers();
+    if (maxMembers > 0 && team.getMembers().size() >= maxMembers) {
+      TeamMessageUtils.sendTeamMessage(leader, TeamMessageUtils.teamIsFullMessage(team.getName()));
+      return;
+    }
+    PendingInvite existing = peekInvite(teamId, targetId);
+    if (existing != null) {
+      if (!existing.isExpired()) {
+        TeamMessageUtils.sendTeamMessage(
+            leader, TeamMessageUtils.inviteAlreadyExistsMessage(existing.getTargetName(), team.getName()));
+        return;
+      }
+      removeInvite(teamId, targetId);
+    }
+
+    PendingInvite invite =
+        new PendingInvite(
+            teamId,
+            targetId,
+            leaderId,
+            team.getName(),
+            leader.getName() != null ? leader.getName() : resolvePlayerName(leaderId, null),
+            target.getName(),
+            ttl);
+    storeInvite(invite);
+
+    TeamMessageUtils.sendTeamMessage(
+        target,
+        TeamMessageUtils.inviteReceivedMessage(
+            invite.getTeamName(),
+            invite.getInviterName(),
+            invite.getExpiresAt(),
+            "/team accept " + invite.getTeamName(),
+            "/team decline " + invite.getTeamName()));
+    TeamMessageUtils.sendTeamMessage(
+        leader, TeamMessageUtils.inviteSentLeaderMessage(invite.getTargetName(), invite.getExpiresAt()));
+    sendMessageToOnlinePlayers(
+        team.getMembers(),
+        TeamMessageUtils.inviteSentTeamBroadcastMessage(invite.getTargetName(), invite.getInviterName()),
+        leaderId);
+    notifyAdmins(
+        TeamMessageUtils.inviteSentAdminMessage(
+            invite.getInviterName(), invite.getTargetName(), invite.getTeamName()));
+  }
+
+  public void revokeInvite(@NotNull Player leader, @NotNull String targetName) {
+    if (pluginConfig.getJoinMode() != JoinMode.INVITE_ONLY) {
+      TeamMessageUtils.sendTeamMessage(leader, TeamMessageUtils.invitesDisabledMessage());
+      return;
+    }
+    UUID leaderId = leader.getUniqueId();
+    UUID teamId = storage.getPlayerTeams().get(leaderId);
+    if (teamId == null) {
+      TeamMessageUtils.sendTeamMessage(leader, TeamMessageUtils.playerNotInAnyTeamMessage());
+      return;
+    }
+    Team team = storage.getTeams().get(teamId);
+    if (team == null || !team.isLeader(leaderId)) {
+      TeamMessageUtils.sendTeamMessage(leader, TeamMessageUtils.notTeamLeaderMessage());
+      return;
+    }
+    PendingInvite invite = findInviteForTeam(teamId, targetName);
+    if (invite == null) {
+      TeamMessageUtils.sendTeamMessage(
+          leader, TeamMessageUtils.inviteNotFoundForLeaderMessage(targetName, team.getName()));
+      return;
+    }
+    removeInvite(invite.getTeamId(), invite.getTargetPlayerId());
+    TeamMessageUtils.sendTeamMessage(
+        leader, TeamMessageUtils.inviteRevokedLeaderMessage(invite.getTargetName()));
+    Player targetPlayer = plugin.getServer().getPlayer(invite.getTargetPlayerId());
+    if (targetPlayer != null) {
+      TeamMessageUtils.sendTeamMessage(
+          targetPlayer, TeamMessageUtils.inviteRevokedTargetMessage(invite.getTeamName()));
+    }
+    notifyAdmins(
+        TeamMessageUtils.inviteRevokedAdminMessage(
+            invite.getInviterName(), invite.getTargetName(), invite.getTeamName()));
+  }
+
+  public void acceptInvite(@NotNull Player player, @NotNull String teamName) {
+    if (pluginConfig.getJoinMode() != JoinMode.INVITE_ONLY) {
+      TeamMessageUtils.sendTeamMessage(player, TeamMessageUtils.invitesDisabledMessage());
+      return;
+    }
+    Team team = storage.getTeamByName(teamName);
+    if (team == null) {
+      TeamMessageUtils.sendTeamMessage(player, TeamMessageUtils.teamDoesNotExistMessage(teamName));
+      return;
+    }
+    UUID playerId = player.getUniqueId();
+    PendingInvite invite = peekInvite(team.getId(), playerId);
+    if (invite == null) {
+      TeamMessageUtils.sendTeamMessage(
+          player, TeamMessageUtils.inviteNotFoundForPlayerMessage(teamName));
+      return;
+    }
+    if (invite.isExpired()) {
+      removeInvite(invite.getTeamId(), invite.getTargetPlayerId());
+      TeamMessageUtils.sendTeamMessage(player, TeamMessageUtils.inviteExpiredMessage(team.getName()));
+      return;
+    }
+    if (storage.getPlayerTeam(player) != null) {
+      TeamMessageUtils.sendTeamMessage(
+          player, Component.text("❌ Вы уже состоите в команде", NamedTextColor.RED));
+      removeInvite(invite.getTeamId(), invite.getTargetPlayerId());
+      return;
+    }
+    int maxMembers = pluginConfig.getMaxMembers();
+    if (maxMembers > 0 && team.getMembers().size() >= maxMembers) {
+      TeamMessageUtils.sendTeamMessage(player, TeamMessageUtils.teamIsFullMessage(team.getName()));
+      return;
+    }
+
+    removeInvite(invite.getTeamId(), invite.getTargetPlayerId());
+    addPlayerToTeam(team.getName(), player);
+    TeamMessageUtils.sendTeamMessage(
+        player, TeamMessageUtils.inviteAcceptedMessage(team.getName()));
+    sendMessageToOnlinePlayers(
+        team.getMembers(),
+        TeamMessageUtils.inviteAcceptedBroadcastMessage(player.getName()),
+        playerId);
+    notifyAdmins(
+        TeamMessageUtils.inviteAcceptedAdminMessage(
+            invite.getInviterName(), invite.getTargetName(), invite.getTeamName()));
+  }
+
+  public void declineInvite(@NotNull Player player, @NotNull String teamName) {
+    if (pluginConfig.getJoinMode() != JoinMode.INVITE_ONLY) {
+      TeamMessageUtils.sendTeamMessage(player, TeamMessageUtils.invitesDisabledMessage());
+      return;
+    }
+    Team team = storage.getTeamByName(teamName);
+    if (team == null) {
+      TeamMessageUtils.sendTeamMessage(player, TeamMessageUtils.teamDoesNotExistMessage(teamName));
+      return;
+    }
+    UUID playerId = player.getUniqueId();
+    PendingInvite invite = peekInvite(team.getId(), playerId);
+    if (invite == null) {
+      TeamMessageUtils.sendTeamMessage(
+          player, TeamMessageUtils.inviteNotFoundForPlayerMessage(teamName));
+      return;
+    }
+    if (invite.isExpired()) {
+      removeInvite(invite.getTeamId(), invite.getTargetPlayerId());
+      TeamMessageUtils.sendTeamMessage(player, TeamMessageUtils.inviteExpiredMessage(team.getName()));
+      return;
+    }
+    removeInvite(invite.getTeamId(), invite.getTargetPlayerId());
+    TeamMessageUtils.sendTeamMessage(player, TeamMessageUtils.inviteDeclinedMessage(team.getName()));
+    sendMessageToOnlinePlayers(
+        team.getMembers(),
+        TeamMessageUtils.inviteDeclinedBroadcastMessage(player.getName()),
+        playerId);
+    notifyAdmins(
+        TeamMessageUtils.inviteDeclinedAdminMessage(
+            invite.getInviterName(), invite.getTargetName(), invite.getTeamName()));
+  }
+
+  public @NotNull List<PendingInvite> getInvitesForPlayer(@NotNull UUID playerId) {
+    Map<UUID, PendingInvite> invites = invitesByPlayer.get(playerId);
+    if (invites == null || invites.isEmpty()) {
+      return List.of();
+    }
+    List<PendingInvite> activeInvites = new ArrayList<>();
+    List<PendingInvite> expiredInvites = new ArrayList<>();
+    for (PendingInvite invite : invites.values()) {
+      if (invite.isExpired()) {
+        expiredInvites.add(invite);
+      } else {
+        activeInvites.add(invite);
+      }
+    }
+    for (PendingInvite expired : expiredInvites) {
+      removeInvite(expired.getTeamId(), expired.getTargetPlayerId());
+    }
+    return List.copyOf(activeInvites);
+  }
+
   public void removePlayerFromTeam(String teamName, @NotNull Player player) {
     removePlayerFromTeam(teamName, player, MemberRemovalCause.LEAVE, null, player.getUniqueId());
   }
@@ -186,6 +403,7 @@ public class MembershipService {
     String newLeaderName = null;
     team.removeMember(playerId);
     storage.clearPlayerTeam(playerId);
+    clearInvitesForPlayer(playerId);
     boolean removedTeam = false;
     if (wasLeader) {
       if (team.getMembers().isEmpty()) {
@@ -219,6 +437,7 @@ public class MembershipService {
     }
     if (removedTeam) {
       clearJoinRequests(team.getId());
+      clearInvitesForTeam(team.getId());
     }
     if (onlinePlayer != null) {
       notifyPrefixUpdate(onlinePlayer, null);
@@ -379,6 +598,7 @@ public class MembershipService {
     // Удаляем команду и уведомляем игроков о сбросе префикса.
     storage.removeTeam(team);
     clearJoinRequests(team.getId());
+    clearInvitesForTeam(team.getId());
     TeamMessageUtils.sendTeamMessage(
         leader, TeamMessageUtils.teamDisbandedLeaderMessage(team.getName()));
     sendMessageToOnlinePlayers(
@@ -492,6 +712,114 @@ public class MembershipService {
 
   private void clearJoinRequests(@NotNull UUID teamId) {
     pendingJoinRequests.remove(teamId);
+  }
+
+  private @Nullable PendingInvite getActiveInvite(@NotNull UUID teamId, @NotNull UUID playerId) {
+    PendingInvite invite = peekInvite(teamId, playerId);
+    if (invite == null) {
+      return null;
+    }
+    if (invite.isExpired()) {
+      removeInvite(teamId, playerId);
+      return null;
+    }
+    return invite;
+  }
+
+  private @Nullable PendingInvite peekInvite(@NotNull UUID teamId, @NotNull UUID playerId) {
+    Map<UUID, PendingInvite> invites = invitesByPlayer.get(playerId);
+    if (invites == null) {
+      return null;
+    }
+    return invites.get(teamId);
+  }
+
+  private @Nullable PendingInvite findInviteForTeam(@NotNull UUID teamId, @NotNull String targetName) {
+    Map<UUID, PendingInvite> invites = invitesByTeam.get(teamId);
+    if (invites == null) {
+      return null;
+    }
+    List<PendingInvite> expired = new ArrayList<>();
+    PendingInvite matched = null;
+    for (PendingInvite invite : invites.values()) {
+      if (invite.isExpired()) {
+        expired.add(invite);
+        continue;
+      }
+      String storedName = invite.getTargetName();
+      String resolvedName = resolvePlayerName(invite.getTargetPlayerId(), storedName);
+      if (storedName.equalsIgnoreCase(targetName) || resolvedName.equalsIgnoreCase(targetName)) {
+        matched = invite;
+        break;
+      }
+    }
+    for (PendingInvite invite : expired) {
+      removeInvite(invite.getTeamId(), invite.getTargetPlayerId());
+    }
+    return matched;
+  }
+
+  private void storeInvite(@NotNull PendingInvite invite) {
+    invitesByPlayer
+        .computeIfAbsent(invite.getTargetPlayerId(), id -> new ConcurrentHashMap<>())
+        .put(invite.getTeamId(), invite);
+    invitesByTeam
+        .computeIfAbsent(invite.getTeamId(), id -> new ConcurrentHashMap<>())
+        .put(invite.getTargetPlayerId(), invite);
+  }
+
+  private void removeInvite(@NotNull UUID teamId, @NotNull UUID playerId) {
+    invitesByPlayer.computeIfPresent(
+        playerId,
+        (id, invites) -> {
+          invites.remove(teamId);
+          return invites.isEmpty() ? null : invites;
+        });
+    invitesByTeam.computeIfPresent(
+        teamId,
+        (id, invites) -> {
+          invites.remove(playerId);
+          return invites.isEmpty() ? null : invites;
+        });
+  }
+
+  private void clearInvitesForPlayer(@NotNull UUID playerId) {
+    Map<UUID, PendingInvite> invites = invitesByPlayer.remove(playerId);
+    if (invites == null) {
+      return;
+    }
+    for (PendingInvite invite : invites.values()) {
+      invitesByTeam.computeIfPresent(
+          invite.getTeamId(),
+          (id, teamInvites) -> {
+            teamInvites.remove(playerId);
+            return teamInvites.isEmpty() ? null : teamInvites;
+          });
+    }
+  }
+
+  private void clearInvitesForTeam(@NotNull UUID teamId) {
+    Map<UUID, PendingInvite> invites = invitesByTeam.remove(teamId);
+    if (invites == null) {
+      return;
+    }
+    for (PendingInvite invite : invites.values()) {
+      invitesByPlayer.computeIfPresent(
+          invite.getTargetPlayerId(),
+          (id, playerInvites) -> {
+            playerInvites.remove(teamId);
+            return playerInvites.isEmpty() ? null : playerInvites;
+          });
+    }
+  }
+
+  private void notifyAdmins(@Nullable Component message) {
+    if (message == null || !pluginConfig.shouldNotifyAdmins()) {
+      return;
+    }
+    plugin.getServer().getOnlinePlayers().stream()
+        .filter(player -> player.hasPermission("mypurpurplugin.admin"))
+        .forEach(player -> TeamMessageUtils.sendTeamMessage(player, message));
   }
 
   private void notifyPrefixUpdate(@NotNull UUID playerId, @Nullable Component prefix) {

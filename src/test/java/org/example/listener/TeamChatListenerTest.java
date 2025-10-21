@@ -22,6 +22,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.example.MockBukkitTestBase;
 import org.example.config.JoinMode;
 import org.example.config.PluginConfig;
+import org.example.model.PendingInvite;
 import org.example.service.MemberRemovalCause;
 import org.example.service.TeamService;
 import org.junit.jupiter.api.AfterEach;
@@ -508,6 +509,34 @@ class TeamChatListenerTest extends MockBukkitTestBase {
     @Override
     public boolean hasPendingJoinRequest(String teamName, java.util.UUID playerId) {
       return false;
+    }
+
+    @Override
+    public void sendInvite(
+        org.bukkit.entity.Player leader,
+        org.bukkit.entity.Player target,
+        java.time.Duration ttl) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void revokeInvite(org.bukkit.entity.Player leader, String targetName) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void acceptInvite(org.bukkit.entity.Player player, String teamName) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void declineInvite(org.bukkit.entity.Player player, String teamName) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public java.util.List<PendingInvite> getInvitesForPlayer(java.util.UUID playerId) {
+      return java.util.List.of();
     }
 
     @Override
