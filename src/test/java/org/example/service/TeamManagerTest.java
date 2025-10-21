@@ -78,6 +78,24 @@ class TeamManagerTest extends MockBukkitTestBase {
 
       manager.updatePlayerPrefixes("Alpha");
       verify(membership).updatePlayerPrefixes("Alpha");
+
+      manager.submitJoinRequest("Alpha", member);
+      verify(membership).submitJoinRequest("Alpha", member);
+
+      manager.cancelJoinRequest("Alpha", member);
+      verify(membership).cancelJoinRequest("Alpha", member);
+
+      manager.listJoinRequests("Alpha");
+      verify(membership).listJoinRequests("Alpha");
+
+      manager.getJoinRequestsForPlayer(member.getUniqueId());
+      verify(membership).getJoinRequestsForPlayer(member.getUniqueId());
+
+      manager.approveJoinRequest("Alpha", leader, member.getName());
+      verify(membership).approveJoinRequest("Alpha", leader, member.getName());
+
+      manager.denyJoinRequest("Alpha", leader, member.getName());
+      verify(membership).denyJoinRequest("Alpha", leader, member.getName());
     }
   }
 

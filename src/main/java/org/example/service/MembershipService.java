@@ -12,6 +12,7 @@ import org.example.config.JoinMode;
 import org.example.config.PluginConfig;
 import org.example.listener.TeamChatListener;
 import org.example.model.PendingInvite;
+import org.example.model.PendingRequest;
 import org.example.model.Team;
 import org.example.util.TeamMessageUtils;
 import org.example.util.TeamUtils;
@@ -25,7 +26,10 @@ public class MembershipService {
   private final PluginConfig pluginConfig;
   private final TeamStorage storage;
   private final DeadlineScheduler scheduler;
-  private final Map<UUID, Set<UUID>> pendingJoinRequests = new ConcurrentHashMap<>();
+  private final Map<UUID, Map<UUID, PendingRequest>> joinRequestsByTeam =
+      new ConcurrentHashMap<>();
+  private final Map<UUID, Map<UUID, PendingRequest>> joinRequestsByPlayer =
+      new ConcurrentHashMap<>();
   private final Map<UUID, Map<UUID, PendingInvite>> invitesByPlayer = new ConcurrentHashMap<>();
   private final Map<UUID, Map<UUID, PendingInvite>> invitesByTeam = new ConcurrentHashMap<>();
 
@@ -100,7 +104,13 @@ public class MembershipService {
     team.addMember(player.getUniqueId());
     storage.assignPlayerToTeam(player.getUniqueId(), team);
     clearInvitesForPlayer(player.getUniqueId());
-    removeJoinRequest(team.getId(), player.getUniqueId());
+    removeJoinRequest(
+        team.getId(),
+        player.getUniqueId(),
+        JoinRequestRemovalCause.JOINED,
+        player.getName(),
+        player.getUniqueId(),
+        team);
     storage.markTeamDirty(team);
     TeamMessageUtils.sendTeamMessage(
         player, Component.text("✅ Вы вступили в команду", NamedTextColor.GREEN));
@@ -108,7 +118,7 @@ public class MembershipService {
     updateTeamMembersPrefixes(team);
   }
 
-  public void requestToJoinTeam(String teamName, @NotNull Player player) {
+  public void submitJoinRequest(String teamName, @NotNull Player player) {
     String normalizedTeamName = teamName == null ? "" : teamName.trim();
     Team team = storage.getTeamByName(normalizedTeamName);
     if (team == null) {
@@ -124,29 +134,180 @@ public class MembershipService {
     int max = pluginConfig.getMaxMembers();
     if (max > 0 && team.getMembers().size() >= max) {
       TeamMessageUtils.sendTeamMessage(
-          player, Component.text("❌ Команда полная", NamedTextColor.RED));
+          player, TeamMessageUtils.teamIsFullMessage(team.getName()));
       return;
     }
     UUID teamId = team.getId();
     UUID playerId = player.getUniqueId();
-    Set<UUID> requests =
-        pendingJoinRequests.computeIfAbsent(teamId, key -> ConcurrentHashMap.newKeySet());
-    if (!requests.add(playerId)) {
+    PendingRequest existing = peekJoinRequest(teamId, playerId);
+    if (existing != null && !existing.isExpired()) {
       TeamMessageUtils.sendTeamMessage(
           player, TeamMessageUtils.joinRequestAlreadySentMessage(team.getName()));
       return;
     }
+    if (existing != null) {
+      removeJoinRequest(teamId, playerId, JoinRequestRemovalCause.EXPIRED, null, null, team);
+    }
+    PendingRequest request =
+        new PendingRequest(
+            teamId,
+            playerId,
+            team.getName(),
+            player.getName() != null ? player.getName() : resolvePlayerName(playerId, null),
+            null);
+    storeJoinRequest(request);
     TeamMessageUtils.sendTeamMessage(
-        player, TeamMessageUtils.joinRequestSentMessage(team.getName()));
-    UUID leaderId = team.getLeaderId();
-    if (leaderId != null) {
-      Player leaderPlayer = plugin.getServer().getPlayer(leaderId);
-      if (leaderPlayer != null) {
-        TeamMessageUtils.sendTeamMessage(
-            leaderPlayer,
-            TeamMessageUtils.joinRequestReceivedLeaderMessage(player.getName(), team.getName()));
+        player, TeamMessageUtils.joinRequestSentPlayerMessage(team.getName()));
+    Player leaderPlayer = resolveOnlineLeader(team);
+    if (leaderPlayer != null) {
+      TeamMessageUtils.sendTeamMessage(
+          leaderPlayer,
+          TeamMessageUtils.joinRequestReceivedLeaderMessage(request.getPlayerName(), team.getName()));
+    }
+  }
+
+  public void cancelJoinRequest(String teamName, @NotNull Player player) {
+    Team team = storage.getTeamByName(teamName);
+    if (team == null) {
+      TeamMessageUtils.sendTeamMessage(player, TeamMessageUtils.teamDoesNotExistMessage(teamName));
+      return;
+    }
+    PendingRequest request = peekJoinRequest(team.getId(), player.getUniqueId());
+    if (request == null) {
+      TeamMessageUtils.sendTeamMessage(player, TeamMessageUtils.joinRequestNotFoundMessage(teamName));
+      return;
+    }
+    removeJoinRequest(
+        request.getTeamId(),
+        request.getPlayerId(),
+        JoinRequestRemovalCause.CANCELLED,
+        player.getName(),
+        null,
+        team);
+  }
+
+  public void approveJoinRequest(
+      String teamName, @NotNull Player leader, @NotNull String targetName) {
+    Team team = storage.getTeamByName(teamName);
+    if (team == null) {
+      TeamMessageUtils.sendTeamMessage(leader, TeamMessageUtils.teamDoesNotExistMessage(teamName));
+      return;
+    }
+    if (!team.isLeader(leader.getUniqueId())) {
+      TeamMessageUtils.sendTeamMessage(leader, TeamMessageUtils.notTeamLeaderMessage());
+      return;
+    }
+    PendingRequest request = findJoinRequestForTeam(team, targetName);
+    if (request == null) {
+      TeamMessageUtils.sendTeamMessage(
+          leader, TeamMessageUtils.joinRequestNotFoundLeaderMessage(targetName));
+      return;
+    }
+    int max = pluginConfig.getMaxMembers();
+    if (max > 0 && team.getMembers().size() >= max) {
+      TeamMessageUtils.sendTeamMessage(leader, TeamMessageUtils.teamIsFullMessage(team.getName()));
+      return;
+    }
+    Player target = plugin.getServer().getPlayer(request.getPlayerId());
+    if (target == null) {
+      OfflinePlayer offline = plugin.getServer().getOfflinePlayer(request.getPlayerId());
+      String targetDisplayName =
+          offline != null && offline.getName() != null
+              ? offline.getName()
+              : request.getPlayerName();
+      TeamMessageUtils.sendTeamMessage(
+          leader, TeamMessageUtils.joinRequestTargetOfflineMessage(targetDisplayName));
+      return;
+    }
+    removeJoinRequest(
+        request.getTeamId(),
+        request.getPlayerId(),
+        JoinRequestRemovalCause.APPROVED,
+        leader.getName(),
+        leader.getUniqueId(),
+        team);
+    addPlayerToTeam(team.getName(), target);
+  }
+
+  public void denyJoinRequest(String teamName, @NotNull Player leader, @NotNull String targetName) {
+    Team team = storage.getTeamByName(teamName);
+    if (team == null) {
+      TeamMessageUtils.sendTeamMessage(leader, TeamMessageUtils.teamDoesNotExistMessage(teamName));
+      return;
+    }
+    if (!team.isLeader(leader.getUniqueId())) {
+      TeamMessageUtils.sendTeamMessage(leader, TeamMessageUtils.notTeamLeaderMessage());
+      return;
+    }
+    PendingRequest request = findJoinRequestForTeam(team, targetName);
+    if (request == null) {
+      TeamMessageUtils.sendTeamMessage(
+          leader, TeamMessageUtils.joinRequestNotFoundLeaderMessage(targetName));
+      return;
+    }
+    removeJoinRequest(
+        request.getTeamId(),
+        request.getPlayerId(),
+        JoinRequestRemovalCause.DENIED,
+        leader.getName(),
+        leader.getUniqueId(),
+        team);
+  }
+
+  public @NotNull List<PendingRequest> listJoinRequests(String teamName) {
+    Team team = storage.getTeamByName(teamName);
+    if (team == null) {
+      return List.of();
+    }
+    Map<UUID, PendingRequest> requests = joinRequestsByTeam.get(team.getId());
+    if (requests == null || requests.isEmpty()) {
+      return List.of();
+    }
+    List<PendingRequest> active = new ArrayList<>();
+    List<PendingRequest> expired = new ArrayList<>();
+    for (PendingRequest request : requests.values()) {
+      if (request.isExpired()) {
+        expired.add(request);
+      } else {
+        active.add(request);
       }
     }
+    for (PendingRequest expiredRequest : expired) {
+      removeJoinRequest(
+          expiredRequest.getTeamId(),
+          expiredRequest.getPlayerId(),
+          JoinRequestRemovalCause.EXPIRED,
+          null,
+          null,
+          team);
+    }
+    return List.copyOf(active);
+  }
+
+  public @NotNull List<PendingRequest> getJoinRequestsForPlayer(@NotNull UUID playerId) {
+    Map<UUID, PendingRequest> requests = joinRequestsByPlayer.get(playerId);
+    if (requests == null || requests.isEmpty()) {
+      return List.of();
+    }
+    List<PendingRequest> active = new ArrayList<>();
+    List<PendingRequest> expired = new ArrayList<>();
+    for (PendingRequest request : requests.values()) {
+      if (request.isExpired()) {
+        expired.add(request);
+      } else {
+        active.add(request);
+      }
+    }
+    for (PendingRequest expiredRequest : expired) {
+      removeJoinRequest(
+          expiredRequest.getTeamId(),
+          expiredRequest.getPlayerId(),
+          JoinRequestRemovalCause.EXPIRED,
+          null,
+          null,
+          storage.getTeams().get(expiredRequest.getTeamId()));
+    }
+    return List.copyOf(active);
   }
 
   public boolean hasPendingJoinRequest(String teamName, @NotNull UUID playerId) {
@@ -154,8 +315,21 @@ public class MembershipService {
     if (team == null) {
       return false;
     }
-    Set<UUID> requests = pendingJoinRequests.get(team.getId());
-    return requests != null && requests.contains(playerId);
+    PendingRequest request = peekJoinRequest(team.getId(), playerId);
+    if (request == null) {
+      return false;
+    }
+    if (request.isExpired()) {
+      removeJoinRequest(
+          request.getTeamId(),
+          request.getPlayerId(),
+          JoinRequestRemovalCause.EXPIRED,
+          null,
+          null,
+          team);
+      return false;
+    }
+    return true;
   }
 
   public void sendInvite(@NotNull Player leader, @NotNull Player target, @Nullable Duration ttl) {
@@ -436,7 +610,7 @@ public class MembershipService {
       scheduler.evaluateTeam(team);
     }
     if (removedTeam) {
-      clearJoinRequests(team.getId());
+      clearJoinRequests(team, JoinRequestRemovalCause.EXPIRED, null);
       clearInvitesForTeam(team.getId());
     }
     if (onlinePlayer != null) {
@@ -597,7 +771,7 @@ public class MembershipService {
     scheduler.cancelDeadline(team);
     // Удаляем команду и уведомляем игроков о сбросе префикса.
     storage.removeTeam(team);
-    clearJoinRequests(team.getId());
+    clearJoinRequests(team, JoinRequestRemovalCause.EXPIRED, leader.getName());
     clearInvitesForTeam(team.getId());
     TeamMessageUtils.sendTeamMessage(
         leader, TeamMessageUtils.teamDisbandedLeaderMessage(team.getName()));
@@ -701,17 +875,191 @@ public class MembershipService {
         .callEvent(new TeamChatListener.PlayerPrefixUpdateEvent(player, prefix));
   }
 
-  private void removeJoinRequest(@NotNull UUID teamId, @NotNull UUID playerId) {
-    pendingJoinRequests.computeIfPresent(
-        teamId,
-        (id, requests) -> {
-          requests.remove(playerId);
-          return requests.isEmpty() ? null : requests;
-        });
+  private void storeJoinRequest(@NotNull PendingRequest request) {
+    joinRequestsByTeam
+        .computeIfAbsent(request.getTeamId(), id -> new ConcurrentHashMap<>())
+        .put(request.getPlayerId(), request);
+    joinRequestsByPlayer
+        .computeIfAbsent(request.getPlayerId(), id -> new ConcurrentHashMap<>())
+        .put(request.getTeamId(), request);
   }
 
-  private void clearJoinRequests(@NotNull UUID teamId) {
-    pendingJoinRequests.remove(teamId);
+  private @Nullable PendingRequest peekJoinRequest(@NotNull UUID teamId, @NotNull UUID playerId) {
+    Map<UUID, PendingRequest> requests = joinRequestsByTeam.get(teamId);
+    if (requests == null) {
+      return null;
+    }
+    return requests.get(playerId);
+  }
+
+  private @Nullable PendingRequest findJoinRequestForTeam(
+      @NotNull Team team, @NotNull String targetName) {
+    Map<UUID, PendingRequest> requests = joinRequestsByTeam.get(team.getId());
+    if (requests == null) {
+      return null;
+    }
+    List<PendingRequest> expired = new ArrayList<>();
+    PendingRequest matched = null;
+    for (PendingRequest request : requests.values()) {
+      if (request.isExpired()) {
+        expired.add(request);
+        continue;
+      }
+      String storedName = request.getPlayerName();
+      String resolvedName = resolvePlayerName(request.getPlayerId(), storedName);
+      if (storedName.equalsIgnoreCase(targetName) || resolvedName.equalsIgnoreCase(targetName)) {
+        matched = request;
+        break;
+      }
+    }
+    for (PendingRequest expiredRequest : expired) {
+      removeJoinRequest(
+          expiredRequest.getTeamId(),
+          expiredRequest.getPlayerId(),
+          JoinRequestRemovalCause.EXPIRED,
+          null,
+          null,
+          team);
+    }
+    return matched;
+  }
+
+  private @Nullable PendingRequest removeJoinRequest(
+      @NotNull UUID teamId,
+      @NotNull UUID playerId,
+      @NotNull JoinRequestRemovalCause cause,
+      @Nullable String actorName,
+      @Nullable UUID actorId,
+      @Nullable Team providedTeam) {
+    Map<UUID, PendingRequest> byTeam = joinRequestsByTeam.get(teamId);
+    if (byTeam == null) {
+      return null;
+    }
+    PendingRequest request = byTeam.remove(playerId);
+    if (request == null) {
+      return null;
+    }
+    if (byTeam.isEmpty()) {
+      joinRequestsByTeam.remove(teamId);
+    }
+    joinRequestsByPlayer.computeIfPresent(
+        playerId,
+        (id, requests) -> {
+          requests.remove(teamId);
+          return requests.isEmpty() ? null : requests;
+        });
+    Team team = providedTeam;
+    if (team == null) {
+      team = storage.getTeams().get(teamId);
+    }
+    notifyJoinRequestRemoval(request, cause, actorName, actorId, team);
+    return request;
+  }
+
+  private void clearJoinRequests(
+      @NotNull Team team,
+      @NotNull JoinRequestRemovalCause cause,
+      @Nullable String actorName) {
+    Map<UUID, PendingRequest> requests = joinRequestsByTeam.remove(team.getId());
+    if (requests == null || requests.isEmpty()) {
+      return;
+    }
+    for (PendingRequest request : requests.values()) {
+      joinRequestsByPlayer.computeIfPresent(
+          request.getPlayerId(),
+          (id, playerRequests) -> {
+            playerRequests.remove(request.getTeamId());
+            return playerRequests.isEmpty() ? null : playerRequests;
+          });
+      notifyJoinRequestRemoval(request, cause, actorName, team.getLeaderId(), team);
+    }
+  }
+
+  private void notifyJoinRequestRemoval(
+      @NotNull PendingRequest request,
+      @NotNull JoinRequestRemovalCause cause,
+      @Nullable String actorName,
+      @Nullable UUID actorId,
+      @Nullable Team team) {
+    Player applicant = plugin.getServer().getPlayer(request.getPlayerId());
+    Player leader = null;
+    UUID leaderId = team != null ? team.getLeaderId() : null;
+    if (leaderId != null) {
+      leader = plugin.getServer().getPlayer(leaderId);
+    }
+
+    switch (cause) {
+      case APPROVED -> {
+        if (applicant != null) {
+          TeamMessageUtils.sendTeamMessage(
+              applicant, TeamMessageUtils.joinRequestApprovedPlayerMessage(request.getTeamName()));
+        }
+        if (leader != null) {
+          TeamMessageUtils.sendTeamMessage(
+              leader,
+              TeamMessageUtils.joinRequestApprovedLeaderMessage(
+                  request.getPlayerName(), request.getTeamName()));
+        }
+      }
+      case DENIED -> {
+        if (applicant != null) {
+          TeamMessageUtils.sendTeamMessage(
+              applicant, TeamMessageUtils.joinRequestDeniedPlayerMessage(request.getTeamName()));
+        }
+        if (leader != null) {
+          TeamMessageUtils.sendTeamMessage(
+              leader,
+              TeamMessageUtils.joinRequestDeniedLeaderMessage(
+                  request.getPlayerName(), request.getTeamName(), actorName));
+        }
+      }
+      case CANCELLED -> {
+        if (applicant != null) {
+          TeamMessageUtils.sendTeamMessage(
+              applicant, TeamMessageUtils.joinRequestCancelledPlayerMessage(request.getTeamName()));
+        }
+        if (leader != null) {
+          TeamMessageUtils.sendTeamMessage(
+              leader,
+              TeamMessageUtils.joinRequestCancelledLeaderMessage(request.getPlayerName(), actorName));
+        }
+      }
+      case EXPIRED -> {
+        if (applicant != null) {
+          TeamMessageUtils.sendTeamMessage(
+              applicant, TeamMessageUtils.joinRequestExpiredPlayerMessage(request.getTeamName()));
+        }
+        if (leader != null) {
+          TeamMessageUtils.sendTeamMessage(
+              leader,
+              TeamMessageUtils.joinRequestExpiredLeaderMessage(request.getPlayerName(), request.getTeamName()));
+        }
+      }
+      case JOINED -> {
+        if (leader != null && actorId != null && !leader.getUniqueId().equals(actorId)) {
+          TeamMessageUtils.sendTeamMessage(
+              leader,
+              TeamMessageUtils.joinRequestAutoClearedLeaderMessage(
+                  request.getPlayerName(), request.getTeamName()));
+        }
+      }
+    }
+  }
+
+  private Player resolveOnlineLeader(@NotNull Team team) {
+    UUID leaderId = team.getLeaderId();
+    if (leaderId == null) {
+      return null;
+    }
+    return plugin.getServer().getPlayer(leaderId);
+  }
+
+  private enum JoinRequestRemovalCause {
+    APPROVED,
+    DENIED,
+    CANCELLED,
+    EXPIRED,
+    JOINED
   }
 
   private @Nullable PendingInvite getActiveInvite(@NotNull UUID teamId, @NotNull UUID playerId) {

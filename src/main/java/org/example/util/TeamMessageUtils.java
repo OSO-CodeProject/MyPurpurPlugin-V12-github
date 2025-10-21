@@ -7,6 +7,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.entity.Player;
 import org.example.model.PendingInvite;
+import org.example.model.PendingRequest;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -193,6 +194,11 @@ public class TeamMessageUtils {
    * @return информационное сообщение
    */
   public static Component joinRequestSentMessage(String teamName) {
+    return joinRequestSentPlayerMessage(teamName);
+  }
+
+  /** Уведомляет игрока о том, что заявка на вступление отправлена. */
+  public static Component joinRequestSentPlayerMessage(String teamName) {
     String name = (teamName == null || teamName.isBlank()) ? "команду" : teamName;
     return Component.text("ℹ️ Заявка на вступление в команду ", NamedTextColor.YELLOW)
         .append(Component.text(name, NamedTextColor.WHITE))
@@ -227,6 +233,180 @@ public class TeamMessageUtils {
         .append(Component.text(" хочет вступить в команду ", NamedTextColor.YELLOW))
         .append(Component.text(name, NamedTextColor.WHITE))
         .append(Component.text(".", NamedTextColor.YELLOW));
+  }
+
+  /** Сообщает игроку об отсутствии активной заявки. */
+  public static Component joinRequestNotFoundMessage(String teamName) {
+    return Component.text("❌ Активная заявка в команду ", NamedTextColor.RED)
+        .append(Component.text(teamName, NamedTextColor.WHITE))
+        .append(Component.text(" не найдена.", NamedTextColor.RED));
+  }
+
+  /** Сообщение для лидера о том, что заявка не найдена. */
+  public static Component joinRequestNotFoundLeaderMessage(String playerName) {
+    return Component.text("❌ Заявка от игрока ", NamedTextColor.RED)
+        .append(Component.text(playerName, NamedTextColor.WHITE))
+        .append(Component.text(" не найдена.", NamedTextColor.RED));
+  }
+
+  /** Сообщает лидеру, что игрок не в сети для утверждения заявки. */
+  public static Component joinRequestTargetOfflineMessage(String playerName) {
+    return Component.text("❌ Игрок ", NamedTextColor.RED)
+        .append(Component.text(playerName, NamedTextColor.WHITE))
+        .append(Component.text(" не в сети.", NamedTextColor.RED));
+  }
+
+  /** Сообщает игроку об одобрении заявки лидером. */
+  public static Component joinRequestApprovedPlayerMessage(String teamName) {
+    return Component.text("✅ Заявка в команду ", NamedTextColor.GREEN)
+        .append(Component.text(teamName, NamedTextColor.WHITE))
+        .append(Component.text(" одобрена!", NamedTextColor.GREEN));
+  }
+
+  /** Сообщает лидеру об успешном одобрении заявки. */
+  public static Component joinRequestApprovedLeaderMessage(String playerName, String teamName) {
+    return Component.text("✅ Вы одобрили заявку игрока ", NamedTextColor.GREEN)
+        .append(Component.text(playerName, NamedTextColor.WHITE))
+        .append(Component.text(" в команду ", NamedTextColor.GREEN))
+        .append(Component.text(teamName, NamedTextColor.WHITE))
+        .append(Component.text(".", NamedTextColor.GREEN));
+  }
+
+  /** Сообщение игроку об отклонении заявки. */
+  public static Component joinRequestDeniedPlayerMessage(String teamName) {
+    return Component.text("❌ Заявка в команду ", NamedTextColor.RED)
+        .append(Component.text(teamName, NamedTextColor.WHITE))
+        .append(Component.text(" отклонена.", NamedTextColor.RED));
+  }
+
+  /** Сообщение лидеру об отклонении заявки. */
+  public static Component joinRequestDeniedLeaderMessage(
+      String playerName, String teamName, @Nullable String actorName) {
+    Component base =
+        Component.text("ℹ️ Заявка игрока ", NamedTextColor.YELLOW)
+            .append(Component.text(playerName, NamedTextColor.WHITE))
+            .append(Component.text(" в команду ", NamedTextColor.YELLOW))
+            .append(Component.text(teamName, NamedTextColor.WHITE))
+            .append(Component.text(" отклонена", NamedTextColor.YELLOW));
+    if (actorName != null && !actorName.isBlank()) {
+      base =
+          base.append(Component.text(" игроком ", NamedTextColor.YELLOW))
+              .append(Component.text(actorName, NamedTextColor.WHITE));
+    }
+    return base.append(Component.text(".", NamedTextColor.YELLOW));
+  }
+
+  /** Сообщение игроку об отзыве собственной заявки. */
+  public static Component joinRequestCancelledPlayerMessage(String teamName) {
+    return Component.text("ℹ️ Заявка в команду ", NamedTextColor.YELLOW)
+        .append(Component.text(teamName, NamedTextColor.WHITE))
+        .append(Component.text(" отозвана.", NamedTextColor.YELLOW));
+  }
+
+  /** Уведомляет лидера об отзыве заявки игроком. */
+  public static Component joinRequestCancelledLeaderMessage(
+      String playerName, @Nullable String actorName) {
+    String displayName = actorName != null ? actorName : playerName;
+    return Component.text("ℹ️ Игрок ", NamedTextColor.YELLOW)
+        .append(Component.text(displayName, NamedTextColor.WHITE))
+        .append(Component.text(" отозвал свою заявку.", NamedTextColor.YELLOW));
+  }
+
+  /** Сообщение игроку о том, что заявка истекла или команда распущена. */
+  public static Component joinRequestExpiredPlayerMessage(String teamName) {
+    return Component.text("ℹ️ Заявка в команду ", NamedTextColor.YELLOW)
+        .append(Component.text(teamName, NamedTextColor.WHITE))
+        .append(Component.text(" больше не действует.", NamedTextColor.YELLOW));
+  }
+
+  /** Сообщение лидеру об автоматическом удалении заявки. */
+  public static Component joinRequestExpiredLeaderMessage(String playerName, String teamName) {
+    return Component.text("ℹ️ Заявка игрока ", NamedTextColor.YELLOW)
+        .append(Component.text(playerName, NamedTextColor.WHITE))
+        .append(Component.text(" в команду ", NamedTextColor.YELLOW))
+        .append(Component.text(teamName, NamedTextColor.WHITE))
+        .append(Component.text(" истекла.", NamedTextColor.YELLOW));
+  }
+
+  /** Сообщает лидеру, что заявка очищена автоматически после вступления. */
+  public static Component joinRequestAutoClearedLeaderMessage(String playerName, String teamName) {
+    return Component.text("ℹ️ Заявка игрока ", NamedTextColor.YELLOW)
+        .append(Component.text(playerName, NamedTextColor.WHITE))
+        .append(Component.text(" в команду ", NamedTextColor.YELLOW))
+        .append(Component.text(teamName, NamedTextColor.WHITE))
+        .append(Component.text(" закрыта автоматически.", NamedTextColor.YELLOW));
+  }
+
+  /** Заголовок списка заявок для игрока. */
+  public static Component joinRequestsHeaderMessage() {
+    return Component.text("📨 Ваши заявки:", NamedTextColor.AQUA);
+  }
+
+  /** Заголовок списка заявок для лидера команды. */
+  public static Component joinRequestsTeamHeaderMessage(String teamName) {
+    return Component.text("📨 Заявки на вступление в команду ", NamedTextColor.AQUA)
+        .append(Component.text(teamName, NamedTextColor.GOLD))
+        .append(Component.text(":", NamedTextColor.AQUA));
+  }
+
+  /** Пункт списка заявок с кнопкой для отмены. */
+  public static Component joinRequestListEntry(
+      @NotNull PendingRequest request, String cancelCommand) {
+    Component entry =
+        Component.text("• ", NamedTextColor.GRAY)
+            .append(Component.text(request.getTeamName(), NamedTextColor.GOLD))
+            .append(Component.text(" (", NamedTextColor.GRAY))
+            .append(Component.text(request.getPlayerName(), NamedTextColor.WHITE))
+            .append(Component.text(")", NamedTextColor.GRAY));
+    if (request.getExpiresAt() != null) {
+      entry = entry.append(expiryInfo(request.getExpiresAt()));
+    }
+    return entry
+        .append(Component.space())
+        .append(
+            clickableAction(
+                "[Отозвать]",
+                NamedTextColor.RED,
+                cancelCommand,
+                "Отозвать заявку"));
+  }
+
+  /** Элемент списка заявок для лидера с кнопками одобрения и отказа. */
+  public static Component joinRequestTeamListEntry(
+      @NotNull PendingRequest request, String acceptCommand, String denyCommand) {
+    Component entry =
+        Component.text("• ", NamedTextColor.GRAY)
+            .append(Component.text(request.getPlayerName(), NamedTextColor.WHITE));
+    if (request.getExpiresAt() != null) {
+      entry = entry.append(expiryInfo(request.getExpiresAt()));
+    }
+    return entry
+        .append(Component.space())
+        .append(
+            clickableAction(
+                "[Одобрить]",
+                NamedTextColor.GREEN,
+                acceptCommand,
+                "Одобрить заявку"))
+        .append(Component.space())
+        .append(
+            clickableAction(
+                "[Отклонить]",
+                NamedTextColor.RED,
+                denyCommand,
+                "Отклонить заявку"));
+  }
+
+  /** Сообщение для лидера после очистки всех заявок. */
+  public static Component joinRequestsClearedLeaderMessage(int count) {
+    return Component.text("ℹ️ Очищено ", NamedTextColor.YELLOW)
+        .append(Component.text(count, NamedTextColor.WHITE))
+        .append(Component.text(" заявок.", NamedTextColor.YELLOW));
+  }
+
+  /** Сообщение об отсутствии заявок. */
+  public static Component noJoinRequestsMessage() {
+    return Component.text("ℹ️ У вас нет активных заявок.", NamedTextColor.YELLOW);
   }
 
   /**

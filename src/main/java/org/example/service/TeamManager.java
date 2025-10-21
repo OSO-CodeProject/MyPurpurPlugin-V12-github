@@ -11,6 +11,7 @@ import org.example.config.JoinMode;
 import org.example.config.PluginConfig;
 import org.example.listener.TeamChatListener;
 import org.example.model.PendingInvite;
+import org.example.model.PendingRequest;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -228,8 +229,36 @@ public class TeamManager implements TeamService {
   }
 
   @Override
-  public void requestToJoinTeam(String teamName, @NotNull Player player) {
-    runWithTiming("requestToJoinTeam", () -> membership.requestToJoinTeam(teamName, player));
+  public void submitJoinRequest(String teamName, @NotNull Player player) {
+    runWithTiming("submitJoinRequest", () -> membership.submitJoinRequest(teamName, player));
+  }
+
+  @Override
+  public void cancelJoinRequest(String teamName, @NotNull Player player) {
+    runWithTiming("cancelJoinRequest", () -> membership.cancelJoinRequest(teamName, player));
+  }
+
+  @Override
+  public @NotNull List<PendingRequest> listJoinRequests(String teamName) {
+    return runWithTiming("listJoinRequests", () -> membership.listJoinRequests(teamName));
+  }
+
+  @Override
+  public @NotNull List<PendingRequest> getJoinRequestsForPlayer(@NotNull UUID playerId) {
+    return runWithTiming(
+        "getJoinRequestsForPlayer", () -> membership.getJoinRequestsForPlayer(playerId));
+  }
+
+  @Override
+  public void approveJoinRequest(String teamName, @NotNull Player leader, @NotNull String targetName) {
+    runWithTiming(
+        "approveJoinRequest", () -> membership.approveJoinRequest(teamName, leader, targetName));
+  }
+
+  @Override
+  public void denyJoinRequest(String teamName, @NotNull Player leader, @NotNull String targetName) {
+    runWithTiming(
+        "denyJoinRequest", () -> membership.denyJoinRequest(teamName, leader, targetName));
   }
 
   @Override

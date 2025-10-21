@@ -9,6 +9,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.example.config.JoinMode;
 import org.example.config.PluginConfig;
 import org.example.model.PendingInvite;
+import org.example.model.PendingRequest;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -32,6 +33,26 @@ public interface TeamService {
    * @param player Игрок, которого нужно добавить
    */
   void addPlayerToTeam(String teamName, @NotNull Player player);
+
+  /** Отправляет заявку на вступление в команду. */
+  void submitJoinRequest(String teamName, @NotNull Player player);
+
+  /** Отзывает заявку на вступление в команду. */
+  void cancelJoinRequest(String teamName, @NotNull Player player);
+
+  /** Возвращает список заявок на вступление для команды. */
+  @NotNull
+  List<PendingRequest> listJoinRequests(String teamName);
+
+  /** Возвращает активные заявки игрока. */
+  @NotNull
+  List<PendingRequest> getJoinRequestsForPlayer(@NotNull UUID playerId);
+
+  /** Одобряет заявку на вступление. */
+  void approveJoinRequest(String teamName, @NotNull Player leader, @NotNull String targetName);
+
+  /** Отклоняет заявку на вступление. */
+  void denyJoinRequest(String teamName, @NotNull Player leader, @NotNull String targetName);
 
   /**
    * Удаляет игрока из указанной команды.
@@ -249,7 +270,9 @@ public interface TeamService {
    * @param teamName Название команды
    * @param player Игрок, отправляющий заявку
    */
-  void requestToJoinTeam(String teamName, @NotNull Player player);
+  default void requestToJoinTeam(String teamName, @NotNull Player player) {
+    submitJoinRequest(teamName, player);
+  }
 
   /**
    * Проверяет, отправлял ли игрок заявку в указанную команду.
