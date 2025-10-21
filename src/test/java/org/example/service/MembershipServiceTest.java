@@ -396,6 +396,51 @@ class MembershipServiceTest extends MockBukkitTestBase {
         member.nextComponentMessage(), "Игрок без прав не получает сообщение об изменении цвета");
   }
 
+  @Test
+  void requestToJoinTeamStoresPendingRequest() {
+    PlayerMock leader = server.addPlayer("JoinLeader");
+    membership.createTeam("JoinTeam", "JT", "red", leader);
+    drainMessages(leader);
+
+    PlayerMock applicant = server.addPlayer("JoinApplicant");
+    membership.requestToJoinTeam("JoinTeam", applicant);
+
+    assertTrue(
+        membership.hasPendingJoinRequest("JoinTeam", applicant.getUniqueId()),
+        "Заявка должна быть сохранена");
+    assertEquals(
+        TeamMessageUtils.joinRequestSentMessage("JoinTeam"),
+        applicant.nextComponentMessage(),
+        "Игрок получает уведомление о заявке");
+    assertEquals(
+        TeamMessageUtils.joinRequestReceivedLeaderMessage("JoinApplicant", "JoinTeam"),
+        leader.nextComponentMessage(),
+        "Лидер получает уведомление о новой заявке");
+  }
+
+  @Test
+  void requestToJoinTeamPreventsDuplicateRequests() {
+    PlayerMock leader = server.addPlayer("JoinLeaderDup");
+    membership.createTeam("JoinDup", "JD", "red", leader);
+    drainMessages(leader);
+
+    PlayerMock applicant = server.addPlayer("JoinApplicantDup");
+    membership.requestToJoinTeam("JoinDup", applicant);
+    // Сбрасываем сообщения из первой заявки
+    applicant.nextComponentMessage();
+    leader.nextComponentMessage();
+
+    membership.requestToJoinTeam("JoinDup", applicant);
+
+    assertTrue(
+        membership.hasPendingJoinRequest("JoinDup", applicant.getUniqueId()),
+        "Заявка остаётся в списке");
+    assertEquals(
+        TeamMessageUtils.joinRequestAlreadySentMessage("JoinDup"),
+        applicant.nextComponentMessage(),
+        "Игрок информируется о повторной заявке");
+  }
+
   private void drainMessages(PlayerMock player) {
     Component message;
     do {

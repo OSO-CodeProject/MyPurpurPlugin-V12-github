@@ -8,7 +8,9 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.example.config.JoinMode;
 import org.example.service.TeamService;
+import org.example.util.TeamMessageUtils;
 import org.jetbrains.annotations.NotNull;
 
 /** Подкоманда /team join. */
@@ -28,7 +30,21 @@ public class JoinSubCommand implements SubCommand {
       return true;
     }
     String teamName = args[1].trim();
-    teamService.addPlayerToTeam(teamName, player);
+    JoinMode joinMode = teamService.getJoinMode();
+    switch (joinMode) {
+      case OPEN:
+        teamService.addPlayerToTeam(teamName, player);
+        break;
+      case INVITE_ONLY:
+        player.sendMessage(TeamMessageUtils.joinInviteOnlyMessage());
+        break;
+      case REQUEST_TO_JOIN:
+        teamService.requestToJoinTeam(teamName, player);
+        break;
+      default:
+        teamService.addPlayerToTeam(teamName, player);
+        break;
+    }
     return true;
   }
 

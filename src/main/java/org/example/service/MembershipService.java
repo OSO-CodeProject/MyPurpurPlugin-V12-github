@@ -1,6 +1,7 @@
 package org.example.service;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.OfflinePlayer;
@@ -21,6 +22,7 @@ public class MembershipService {
   private final PluginConfig pluginConfig;
   private final TeamStorage storage;
   private final DeadlineScheduler scheduler;
+  private final Map<UUID, Set<UUID>> pendingJoinRequests = new ConcurrentHashMap<>();
 
   public MembershipService(
       @NotNull JavaPlugin plugin,
@@ -92,11 +94,62 @@ public class MembershipService {
     // Добавляем игрока и фиксируем изменения в хранилище.
     team.addMember(player.getUniqueId());
     storage.assignPlayerToTeam(player.getUniqueId(), team);
+    removeJoinRequest(team.getId(), player.getUniqueId());
     storage.markTeamDirty(team);
     TeamMessageUtils.sendTeamMessage(
         player, Component.text("✅ Вы вступили в команду", NamedTextColor.GREEN));
     scheduler.evaluateTeam(team);
     updateTeamMembersPrefixes(team);
+  }
+
+  public void requestToJoinTeam(String teamName, @NotNull Player player) {
+    String normalizedTeamName = teamName == null ? "" : teamName.trim();
+    Team team = storage.getTeamByName(normalizedTeamName);
+    if (team == null) {
+      TeamMessageUtils.sendTeamMessage(
+          player, TeamMessageUtils.teamDoesNotExistMessage(normalizedTeamName));
+      return;
+    }
+    if (storage.getPlayerTeam(player) != null) {
+      TeamMessageUtils.sendTeamMessage(
+          player, Component.text("❌ Вы уже состоите в команде", NamedTextColor.RED));
+      return;
+    }
+    int max = pluginConfig.getMaxMembers();
+    if (max > 0 && team.getMembers().size() >= max) {
+      TeamMessageUtils.sendTeamMessage(
+          player, Component.text("❌ Команда полная", NamedTextColor.RED));
+      return;
+    }
+    UUID teamId = team.getId();
+    UUID playerId = player.getUniqueId();
+    Set<UUID> requests =
+        pendingJoinRequests.computeIfAbsent(teamId, key -> ConcurrentHashMap.newKeySet());
+    if (!requests.add(playerId)) {
+      TeamMessageUtils.sendTeamMessage(
+          player, TeamMessageUtils.joinRequestAlreadySentMessage(team.getName()));
+      return;
+    }
+    TeamMessageUtils.sendTeamMessage(
+        player, TeamMessageUtils.joinRequestSentMessage(team.getName()));
+    UUID leaderId = team.getLeaderId();
+    if (leaderId != null) {
+      Player leaderPlayer = plugin.getServer().getPlayer(leaderId);
+      if (leaderPlayer != null) {
+        TeamMessageUtils.sendTeamMessage(
+            leaderPlayer,
+            TeamMessageUtils.joinRequestReceivedLeaderMessage(player.getName(), team.getName()));
+      }
+    }
+  }
+
+  public boolean hasPendingJoinRequest(String teamName, @NotNull UUID playerId) {
+    Team team = storage.getTeamByName(teamName);
+    if (team == null) {
+      return false;
+    }
+    Set<UUID> requests = pendingJoinRequests.get(team.getId());
+    return requests != null && requests.contains(playerId);
   }
 
   public void removePlayerFromTeam(String teamName, @NotNull Player player) {
@@ -163,6 +216,9 @@ public class MembershipService {
     if (!removedTeam) {
       storage.markTeamDirty(team);
       scheduler.evaluateTeam(team);
+    }
+    if (removedTeam) {
+      clearJoinRequests(team.getId());
     }
     if (onlinePlayer != null) {
       notifyPrefixUpdate(onlinePlayer, null);
@@ -322,6 +378,7 @@ public class MembershipService {
     scheduler.cancelDeadline(team);
     // Удаляем команду и уведомляем игроков о сбросе префикса.
     storage.removeTeam(team);
+    clearJoinRequests(team.getId());
     TeamMessageUtils.sendTeamMessage(
         leader, TeamMessageUtils.teamDisbandedLeaderMessage(team.getName()));
     sendMessageToOnlinePlayers(
@@ -422,6 +479,19 @@ public class MembershipService {
         .getServer()
         .getPluginManager()
         .callEvent(new TeamChatListener.PlayerPrefixUpdateEvent(player, prefix));
+  }
+
+  private void removeJoinRequest(@NotNull UUID teamId, @NotNull UUID playerId) {
+    pendingJoinRequests.computeIfPresent(
+        teamId,
+        (id, requests) -> {
+          requests.remove(playerId);
+          return requests.isEmpty() ? null : requests;
+        });
+  }
+
+  private void clearJoinRequests(@NotNull UUID teamId) {
+    pendingJoinRequests.remove(teamId);
   }
 
   private void notifyPrefixUpdate(@NotNull UUID playerId, @Nullable Component prefix) {

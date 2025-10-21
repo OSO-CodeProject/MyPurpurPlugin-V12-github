@@ -20,6 +20,7 @@ import org.bukkit.event.HandlerList;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.example.MockBukkitTestBase;
+import org.example.config.JoinMode;
 import org.example.config.PluginConfig;
 import org.example.service.MemberRemovalCause;
 import org.example.service.TeamService;
@@ -38,6 +39,7 @@ class TeamChatListenerTest extends MockBukkitTestBase {
     pluginConfig = mock(PluginConfig.class);
     when(pluginConfig.isForceWhiteChat()).thenReturn(false);
     when(pluginConfig.getMaxMembers()).thenReturn(5);
+    when(pluginConfig.getJoinMode()).thenReturn(JoinMode.OPEN);
 
     teamService = new StubTeamService(plugin, pluginConfig);
     listener = new TeamChatListener(teamService);
@@ -484,12 +486,27 @@ class TeamChatListenerTest extends MockBukkitTestBase {
     }
 
     @Override
+    public JoinMode getJoinMode() {
+      return config.getJoinMode();
+    }
+
+    @Override
     public boolean isEnforceMaxMembersOnReload() {
       return false;
     }
 
     @Override
     public boolean isGracePeriodEnabled() {
+      return false;
+    }
+
+    @Override
+    public void requestToJoinTeam(String teamName, org.bukkit.entity.Player player) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean hasPendingJoinRequest(String teamName, java.util.UUID playerId) {
       return false;
     }
 
