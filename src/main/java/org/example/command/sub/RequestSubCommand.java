@@ -8,17 +8,15 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.example.config.JoinMode;
 import org.example.service.TeamService;
-import org.example.util.TeamMessageUtils;
 import org.jetbrains.annotations.NotNull;
 
-/** Подкоманда /team join. */
-public class JoinSubCommand implements SubCommand {
+/** Подкоманда /team request. */
+public class RequestSubCommand implements SubCommand {
 
   private final TeamService teamService;
 
-  public JoinSubCommand(@NotNull TeamService teamService) {
+  public RequestSubCommand(@NotNull TeamService teamService) {
     this.teamService = teamService;
   }
 
@@ -26,29 +24,10 @@ public class JoinSubCommand implements SubCommand {
   public boolean execute(@NotNull Player player, @NotNull String[] args) {
     if (args.length < 2) {
       player.sendMessage(
-          Component.text("❌ Использование: /team join <название>", NamedTextColor.RED));
+          Component.text("❌ Использование: /team request <название>", NamedTextColor.RED));
       return true;
     }
-    String teamName = args[1].trim();
-    JoinMode joinMode = teamService.getJoinMode();
-    switch (joinMode) {
-      case OPEN:
-        teamService.addPlayerToTeam(teamName, player);
-        break;
-      case INVITE_ONLY:
-        player.sendMessage(TeamMessageUtils.joinInviteOnlyMessage());
-        break;
-      case REQUEST_TO_JOIN:
-        if (teamService.hasPendingJoinRequest(teamName, player.getUniqueId())) {
-          teamService.cancelJoinRequest(teamName, player);
-        } else {
-          teamService.submitJoinRequest(teamName, player);
-        }
-        break;
-      default:
-        teamService.addPlayerToTeam(teamName, player);
-        break;
-    }
+    teamService.submitJoinRequest(args[1].trim(), player);
     return true;
   }
 

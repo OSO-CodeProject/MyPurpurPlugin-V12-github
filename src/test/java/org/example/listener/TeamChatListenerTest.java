@@ -502,6 +502,39 @@ class TeamChatListenerTest extends MockBukkitTestBase {
     }
 
     @Override
+    public void submitJoinRequest(String teamName, org.bukkit.entity.Player player) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void cancelJoinRequest(String teamName, org.bukkit.entity.Player player) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public java.util.List<org.example.model.PendingRequest> listJoinRequests(String teamName) {
+      return java.util.List.of();
+    }
+
+    @Override
+    public java.util.List<org.example.model.PendingRequest> getJoinRequestsForPlayer(
+        java.util.UUID playerId) {
+      return java.util.List.of();
+    }
+
+    @Override
+    public void approveJoinRequest(
+        String teamName, org.bukkit.entity.Player leader, String targetName) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void denyJoinRequest(
+        String teamName, org.bukkit.entity.Player leader, String targetName) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
     public void requestToJoinTeam(String teamName, org.bukkit.entity.Player player) {
       throw new UnsupportedOperationException();
     }

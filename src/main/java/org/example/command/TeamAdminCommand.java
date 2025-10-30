@@ -19,6 +19,7 @@ import org.example.MyPurpurPlugin;
 import org.example.config.PluginConfig;
 import org.example.service.RenameResult;
 import org.example.service.TeamService;
+import org.example.model.PendingRequest;
 import org.example.util.TeamMessageUtils;
 import org.example.util.TeamUtils;
 import org.jetbrains.annotations.NotNull;
@@ -72,6 +73,10 @@ public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, Tab
       case "setprefix" -> handleSetPrefixCommand(player, args);
       case "setcolor" -> handleSetColorCommand(player, args);
       case "getplinfo" -> handleGetPlayerInfoCommand(player, args);
+      case "requests" -> handleRequestsCommand(player);
+      case "acceptrequest" -> handleAcceptRequestCommand(player, args);
+      case "denyrequest" -> handleDenyRequestCommand(player, args);
+      case "clearrequests" -> handleClearRequestsCommand(player);
       case "help" -> {
         sendHelp(player);
         yield true;
@@ -79,7 +84,7 @@ public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, Tab
       default -> {
         player.sendMessage(
             Component.text(
-                "❌ Неизвестная подкоманда! Используйте: /teamadmin <transfer | kick | disband | rename | setprefix | setcolor | getplinfo | help>",
+                "❌ Неизвестная подкоманда! Используйте: /teamadmin <transfer | kick | disband | rename | setprefix | setcolor | getplinfo | requests | acceptrequest | denyrequest | clearrequests | help>",
                 NamedTextColor.RED));
         yield true;
       }
@@ -215,6 +220,81 @@ public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, Tab
     return true;
   }
 
+  private boolean handleRequestsCommand(Player player) {
+    String teamName = teamManager.getPlayerTeam(player);
+    if (!ensurePlayerIsLeader(player, teamName)) {
+      return true;
+    }
+    List<PendingRequest> requests = teamManager.listJoinRequests(teamName);
+    if (requests.isEmpty()) {
+      TeamMessageUtils.sendTeamMessage(player, TeamMessageUtils.noJoinRequestsMessage());
+      return true;
+    }
+    TeamMessageUtils.sendTeamMessage(
+        player, TeamMessageUtils.joinRequestsTeamHeaderMessage(teamName));
+    for (PendingRequest request : requests) {
+      TeamMessageUtils.sendTeamMessage(
+          player,
+          TeamMessageUtils.joinRequestTeamListEntry(
+              request,
+              "/teamadmin acceptrequest " + request.getPlayerName(),
+              "/teamadmin denyrequest " + request.getPlayerName()));
+    }
+    return true;
+  }
+
+  private boolean handleAcceptRequestCommand(Player player, String[] args) {
+    if (args.length < 2) {
+      TeamMessageUtils.sendTeamMessage(
+          player,
+          Component.text(
+              "❌ Использование: /teamadmin acceptrequest <ник>", NamedTextColor.RED));
+      return true;
+    }
+    String teamName = teamManager.getPlayerTeam(player);
+    if (!ensurePlayerIsLeader(player, teamName)) {
+      return true;
+    }
+    String targetName = args[1].trim();
+    teamManager.approveJoinRequest(teamName, player, targetName);
+    return true;
+  }
+
+  private boolean handleDenyRequestCommand(Player player, String[] args) {
+    if (args.length < 2) {
+      TeamMessageUtils.sendTeamMessage(
+          player,
+          Component.text(
+              "❌ Использование: /teamadmin denyrequest <ник>", NamedTextColor.RED));
+      return true;
+    }
+    String teamName = teamManager.getPlayerTeam(player);
+    if (!ensurePlayerIsLeader(player, teamName)) {
+      return true;
+    }
+    String targetName = args[1].trim();
+    teamManager.denyJoinRequest(teamName, player, targetName);
+    return true;
+  }
+
+  private boolean handleClearRequestsCommand(Player player) {
+    String teamName = teamManager.getPlayerTeam(player);
+    if (!ensurePlayerIsLeader(player, teamName)) {
+      return true;
+    }
+    List<PendingRequest> requests = teamManager.listJoinRequests(teamName);
+    if (requests.isEmpty()) {
+      TeamMessageUtils.sendTeamMessage(player, TeamMessageUtils.noJoinRequestsMessage());
+      return true;
+    }
+    for (PendingRequest request : requests) {
+      teamManager.denyJoinRequest(teamName, player, request.getPlayerName());
+    }
+    TeamMessageUtils.sendTeamMessage(
+        player, TeamMessageUtils.joinRequestsClearedLeaderMessage(requests.size()));
+    return true;
+  }
+
   private boolean handleGetPlayerInfoCommand(Player player, String[] args) {
     if (args.length < 2) {
       TeamMessageUtils.sendTeamMessage(
@@ -305,7 +385,7 @@ public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, Tab
   private void sendUsage(Player player) {
     player.sendMessage(
         Component.text(
-            "❌ Использование: /teamadmin <transfer | kick | disband | rename | setprefix | setcolor | getplinfo | help> [аргументы]",
+            "❌ Использование: /teamadmin <transfer | kick | disband | rename | setprefix | setcolor | getplinfo | requests | acceptrequest | denyrequest | clearrequests | help> [аргументы]",
             NamedTextColor.RED));
   }
 
@@ -344,6 +424,26 @@ public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, Tab
                 adminBullet(
                     "/teamadmin setcolor <новый_цвет>",
                     "изменить цвет команды (цвет: RED, BLUE, GREEN и т.д.)"))
+            .append(Component.newline())
+            .append(
+                adminBullet(
+                    "/teamadmin requests",
+                    "посмотреть заявки на вступление в вашу команду"))
+            .append(Component.newline())
+            .append(
+                adminBullet(
+                    "/teamadmin acceptrequest <ник>",
+                    "одобрить заявку игрока на вступление"))
+            .append(Component.newline())
+            .append(
+                adminBullet(
+                    "/teamadmin denyrequest <ник>",
+                    "отклонить заявку игрока"))
+            .append(Component.newline())
+            .append(
+                adminBullet(
+                    "/teamadmin clearrequests",
+                    "очистить все заявки на вступление"))
             .append(Component.newline())
             .append(
                 adminBullet(

@@ -9,6 +9,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.example.MockBukkitTestBase;
@@ -494,19 +495,19 @@ class MembershipServiceTest extends MockBukkitTestBase {
   }
 
   @Test
-  void requestToJoinTeamStoresPendingRequest() {
+  void submitJoinRequestStoresPendingRequest() {
     PlayerMock leader = server.addPlayer("JoinLeader");
     membership.createTeam("JoinTeam", "JT", "red", leader);
     drainMessages(leader);
 
     PlayerMock applicant = server.addPlayer("JoinApplicant");
-    membership.requestToJoinTeam("JoinTeam", applicant);
+    membership.submitJoinRequest("JoinTeam", applicant);
 
     assertTrue(
         membership.hasPendingJoinRequest("JoinTeam", applicant.getUniqueId()),
         "Заявка должна быть сохранена");
     assertEquals(
-        TeamMessageUtils.joinRequestSentMessage("JoinTeam"),
+        TeamMessageUtils.joinRequestSentPlayerMessage("JoinTeam"),
         applicant.nextComponentMessage(),
         "Игрок получает уведомление о заявке");
     assertEquals(
@@ -516,18 +517,18 @@ class MembershipServiceTest extends MockBukkitTestBase {
   }
 
   @Test
-  void requestToJoinTeamPreventsDuplicateRequests() {
+  void submitJoinRequestPreventsDuplicateRequests() {
     PlayerMock leader = server.addPlayer("JoinLeaderDup");
     membership.createTeam("JoinDup", "JD", "red", leader);
     drainMessages(leader);
 
     PlayerMock applicant = server.addPlayer("JoinApplicantDup");
-    membership.requestToJoinTeam("JoinDup", applicant);
+    membership.submitJoinRequest("JoinDup", applicant);
     // Сбрасываем сообщения из первой заявки
     applicant.nextComponentMessage();
     leader.nextComponentMessage();
 
-    membership.requestToJoinTeam("JoinDup", applicant);
+    membership.submitJoinRequest("JoinDup", applicant);
 
     assertTrue(
         membership.hasPendingJoinRequest("JoinDup", applicant.getUniqueId()),
@@ -536,6 +537,68 @@ class MembershipServiceTest extends MockBukkitTestBase {
         TeamMessageUtils.joinRequestAlreadySentMessage("JoinDup"),
         applicant.nextComponentMessage(),
         "Игрок информируется о повторной заявке");
+  }
+
+  @Test
+  void approveJoinRequestAddsPlayerAndNotifies() {
+    PlayerMock leader = server.addPlayer("JoinLeaderApprove");
+    membership.createTeam("ApproveTeam", "AT", "red", leader);
+    drainMessages(leader);
+
+    PlayerMock applicant = server.addPlayer("JoinApplicantApprove");
+    membership.submitJoinRequest("ApproveTeam", applicant);
+    applicant.nextComponentMessage();
+    leader.nextComponentMessage();
+
+    membership.approveJoinRequest("ApproveTeam", leader, applicant.getName());
+
+    Team team = storage.getTeamByName("ApproveTeam");
+    assertNotNull(team);
+    assertTrue(team.hasMember(applicant.getUniqueId()), "Игрок становится участником");
+    assertFalse(
+        membership.hasPendingJoinRequest("ApproveTeam", applicant.getUniqueId()),
+        "Заявка удаляется после одобрения");
+
+    assertEquals(
+        TeamMessageUtils.joinRequestApprovedPlayerMessage("ApproveTeam"),
+        applicant.nextComponentMessage(),
+        "Игрок получает уведомление об одобрении");
+    assertEquals(
+        Component.text("✅ Вы вступили в команду", NamedTextColor.GREEN),
+        applicant.nextComponentMessage(),
+        "Игрок получает стандартное сообщение о вступлении");
+    assertEquals(
+        TeamMessageUtils.joinRequestApprovedLeaderMessage(
+            applicant.getName(), "ApproveTeam"),
+        leader.nextComponentMessage(),
+        "Лидер получает подтверждение об одобрении");
+  }
+
+  @Test
+  void denyJoinRequestNotifiesBothSides() {
+    PlayerMock leader = server.addPlayer("JoinLeaderDeny");
+    membership.createTeam("DenyTeam", "DT", "red", leader);
+    drainMessages(leader);
+
+    PlayerMock applicant = server.addPlayer("JoinApplicantDeny");
+    membership.submitJoinRequest("DenyTeam", applicant);
+    applicant.nextComponentMessage();
+    leader.nextComponentMessage();
+
+    membership.denyJoinRequest("DenyTeam", leader, applicant.getName());
+
+    assertFalse(
+        membership.hasPendingJoinRequest("DenyTeam", applicant.getUniqueId()),
+        "Заявка удаляется после отказа");
+    assertEquals(
+        TeamMessageUtils.joinRequestDeniedPlayerMessage("DenyTeam"),
+        applicant.nextComponentMessage(),
+        "Игроку сообщают об отказе");
+    assertEquals(
+        TeamMessageUtils.joinRequestDeniedLeaderMessage(
+            applicant.getName(), "DenyTeam", leader.getName()),
+        leader.nextComponentMessage(),
+        "Лидер получает подтверждение об отказе");
   }
 
   private void drainMessages(PlayerMock player) {

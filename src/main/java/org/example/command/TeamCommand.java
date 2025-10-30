@@ -14,8 +14,9 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.example.MyPurpurPlugin;
-import org.example.command.sub.CreateSubCommand;
 import org.example.command.sub.AcceptInviteSubCommand;
+import org.example.command.sub.CreateSubCommand;
+import org.example.command.sub.CancelRequestSubCommand;
 import org.example.command.sub.DeclineInviteSubCommand;
 import org.example.command.sub.HelpSubCommand;
 import org.example.command.sub.JoinSubCommand;
@@ -24,6 +25,8 @@ import org.example.command.sub.ListSubCommand;
 import org.example.command.sub.MembersSubCommand;
 import org.example.command.sub.InviteSubCommand;
 import org.example.command.sub.InvitesSubCommand;
+import org.example.command.sub.RequestSubCommand;
+import org.example.command.sub.RequestsSubCommand;
 import org.example.command.sub.SubCommand;
 import org.example.config.PluginConfig;
 import org.example.config.JoinMode;
@@ -39,6 +42,8 @@ public class TeamCommand implements org.bukkit.command.CommandExecutor, TabCompl
   private final Map<String, SubCommand> subCommands = new LinkedHashMap<>();
   private static final Set<String> INVITE_ONLY_SUB_COMMANDS =
       Set.of("invite", "invites", "accept", "decline");
+  private static final Set<String> REQUEST_ONLY_SUB_COMMANDS =
+      Set.of("request", "cancelrequest", "requests");
 
   public TeamCommand(@NotNull TeamService teamManager, @NotNull PluginConfig pluginConfig) {
     this.teamManager = teamManager;
@@ -56,6 +61,9 @@ public class TeamCommand implements org.bukkit.command.CommandExecutor, TabCompl
     subCommands.put("invites", new InvitesSubCommand(teamManager));
     subCommands.put("accept", new AcceptInviteSubCommand(teamManager));
     subCommands.put("decline", new DeclineInviteSubCommand(teamManager));
+    subCommands.put("request", new RequestSubCommand(teamManager));
+    subCommands.put("cancelrequest", new CancelRequestSubCommand(teamManager));
+    subCommands.put("requests", new RequestsSubCommand(teamManager));
     subCommands.put("help", new HelpSubCommand());
   }
 
@@ -172,9 +180,12 @@ public class TeamCommand implements org.bukkit.command.CommandExecutor, TabCompl
   }
 
   private boolean isSubCommandEnabled(@NotNull String name) {
-    if (!INVITE_ONLY_SUB_COMMANDS.contains(name)) {
-      return true;
+    if (INVITE_ONLY_SUB_COMMANDS.contains(name)) {
+      return teamManager.getJoinMode() == JoinMode.INVITE_ONLY;
     }
-    return teamManager.getJoinMode() == JoinMode.INVITE_ONLY;
+    if (REQUEST_ONLY_SUB_COMMANDS.contains(name)) {
+      return teamManager.getJoinMode() == JoinMode.REQUEST_TO_JOIN;
+    }
+    return true;
   }
 }
