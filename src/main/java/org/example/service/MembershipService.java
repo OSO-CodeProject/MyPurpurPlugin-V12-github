@@ -104,6 +104,7 @@ public class MembershipService {
     team.addMember(player.getUniqueId());
     storage.assignPlayerToTeam(player.getUniqueId(), team);
     clearInvitesForPlayer(player.getUniqueId());
+    clearJoinRequestsForPlayer(player.getUniqueId(), team.getLeaderId());
     removeJoinRequest(
         team.getId(),
         player.getUniqueId(),
@@ -990,6 +991,25 @@ public class MembershipService {
     }
     notifyJoinRequestRemoval(request, cause, actorName, actorId, team);
     return request;
+  }
+
+  private void clearJoinRequestsForPlayer(@NotNull UUID playerId, @Nullable UUID actorId) {
+    Map<UUID, PendingRequest> requests = joinRequestsByPlayer.remove(playerId);
+    if (requests == null || requests.isEmpty()) {
+      return;
+    }
+    for (PendingRequest request : requests.values()) {
+      Map<UUID, PendingRequest> byTeam = joinRequestsByTeam.get(request.getTeamId());
+      if (byTeam != null) {
+        byTeam.remove(playerId);
+        if (byTeam.isEmpty()) {
+          joinRequestsByTeam.remove(request.getTeamId());
+        }
+      }
+      Team requestTeam = storage.getTeams().get(request.getTeamId());
+      notifyJoinRequestRemoval(
+          request, JoinRequestRemovalCause.JOINED, null, actorId, requestTeam);
+    }
   }
 
   private void clearJoinRequests(

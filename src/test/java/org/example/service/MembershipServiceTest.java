@@ -675,6 +675,54 @@ class MembershipServiceTest extends MockBukkitTestBase {
         "Заявка удаляется после отмены по новому имени");
   }
 
+  @Test
+  void joiningTeamClearsOtherPendingJoinRequests() {
+    PlayerMock leaderOne = server.addPlayer("JoinLeaderOne");
+    PlayerMock leaderTwo = server.addPlayer("JoinLeaderTwo");
+    membership.createTeam("FirstTeam", "F1", "red", leaderOne);
+    membership.createTeam("SecondTeam", "S2", "blue", leaderTwo);
+
+    PlayerMock applicant = server.addPlayer("JoinMultiple");
+
+    drainMessages(leaderOne);
+    drainMessages(leaderTwo);
+    drainMessages(applicant);
+
+    membership.submitJoinRequest("FirstTeam", applicant);
+    applicant.nextComponentMessage();
+    leaderOne.nextComponentMessage();
+
+    membership.submitJoinRequest("SecondTeam", applicant);
+    applicant.nextComponentMessage();
+    leaderTwo.nextComponentMessage();
+
+    assertEquals(
+        2,
+        membership.getJoinRequestsForPlayer(applicant.getUniqueId()).size(),
+        "Игрок должен иметь две активные заявки");
+
+    membership.addPlayerToTeam("FirstTeam", applicant);
+
+    Team firstTeam = storage.getTeamByName("FirstTeam");
+    assertNotNull(firstTeam, "Команда должна существовать после вступления");
+    assertTrue(
+        firstTeam.hasMember(applicant.getUniqueId()),
+        "Игрок должен стать участником выбранной команды");
+
+    assertTrue(
+        membership.listJoinRequests("SecondTeam").isEmpty(),
+        "Заявка в другую команду должна удаляться после вступления");
+    assertTrue(
+        membership.getJoinRequestsForPlayer(applicant.getUniqueId()).isEmpty(),
+        "У игрока не должно оставаться заявок после вступления");
+
+    assertEquals(
+        TeamMessageUtils.joinRequestAutoClearedLeaderMessage(
+            applicant.getName(), "SecondTeam"),
+        leaderTwo.nextComponentMessage(),
+        "Лидер второй команды получает уведомление об очистке заявки");
+  }
+
   private void drainMessages(PlayerMock player) {
     Component message;
     do {
