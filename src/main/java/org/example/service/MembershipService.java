@@ -811,6 +811,8 @@ public class MembershipService {
           team.getMembers(),
           TeamMessageUtils.teamRenamedMemberMessage(previousName, team.getName()),
           leader.getUniqueId());
+      refreshPendingInvitesForRenamedTeam(team);
+      refreshPendingRequestsForRenamedTeam(team);
     }
     return RenameResult.SUCCESS;
   }
@@ -1158,6 +1160,67 @@ public class MembershipService {
             playerInvites.remove(teamId);
             return playerInvites.isEmpty() ? null : playerInvites;
           });
+    }
+  }
+
+  private void refreshPendingInvitesForRenamedTeam(@NotNull Team team) {
+    Map<UUID, PendingInvite> invites = invitesByTeam.get(team.getId());
+    if (invites == null || invites.isEmpty()) {
+      return;
+    }
+
+    List<PendingInvite> existingInvites = new ArrayList<>(invites.values());
+    invitesByTeam.put(team.getId(), new ConcurrentHashMap<>());
+    for (PendingInvite invite : existingInvites) {
+      invitesByPlayer.computeIfPresent(
+          invite.getTargetPlayerId(),
+          (playerId, playerInvites) -> {
+            playerInvites.remove(team.getId());
+            return playerInvites.isEmpty() ? null : playerInvites;
+          });
+    }
+
+    for (PendingInvite invite : existingInvites) {
+      PendingInvite updatedInvite = invite.withUpdatedNames(team.getName(), invite.getTargetName());
+      storeInvite(updatedInvite);
+      Player target = plugin.getServer().getPlayer(updatedInvite.getTargetPlayerId());
+      if (target != null) {
+        String acceptCommand = "/team accept " + updatedInvite.getTeamName();
+        String declineCommand = "/team decline " + updatedInvite.getTeamName();
+        TeamMessageUtils.sendTeamMessage(
+            target,
+            TeamMessageUtils.inviteReceivedMessage(
+                updatedInvite.getTeamName(),
+                updatedInvite.getInviterName(),
+                updatedInvite.getExpiresAt(),
+                acceptCommand,
+                declineCommand));
+        TeamMessageUtils.sendTeamMessage(
+            target,
+            TeamMessageUtils.inviteListEntry(updatedInvite, acceptCommand, declineCommand));
+      }
+    }
+  }
+
+  private void refreshPendingRequestsForRenamedTeam(@NotNull Team team) {
+    Map<UUID, PendingRequest> requests = joinRequestsByTeam.get(team.getId());
+    if (requests == null || requests.isEmpty()) {
+      return;
+    }
+
+    List<PendingRequest> existingRequests = new ArrayList<>(requests.values());
+    joinRequestsByTeam.put(team.getId(), new ConcurrentHashMap<>());
+    for (PendingRequest request : existingRequests) {
+      joinRequestsByPlayer.computeIfPresent(
+          request.getPlayerId(),
+          (playerId, playerRequests) -> {
+            playerRequests.remove(team.getId());
+            return playerRequests.isEmpty() ? null : playerRequests;
+          });
+    }
+
+    for (PendingRequest request : existingRequests) {
+      storeJoinRequest(request.withTeamName(team.getName()));
     }
   }
 
