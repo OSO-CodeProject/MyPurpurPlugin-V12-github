@@ -26,7 +26,8 @@ public class HelpSubCommand implements SubCommand {
             Component.empty(),
             sectionHeading("Управление командой"),
             bullet("/team list", "показать список всех команд"),
-            bullet("/team members", "показать участников вашей команды"));
+            bullet("/team members", "показать участников вашей команды"),
+            bullet("/team uninvite <игрок>", "отозвать активное приглашение"));
 
     player.sendMessage(helpMessage);
     return true;

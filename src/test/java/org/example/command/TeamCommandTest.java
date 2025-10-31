@@ -29,6 +29,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.scoreboard.Scoreboard;
 import org.example.MyPurpurPlugin;
+import org.example.config.JoinMode;
 import org.example.config.PluginConfig;
 import org.example.service.DeadlineScheduler;
 import org.example.service.TeamManager;
@@ -176,6 +177,62 @@ class TeamCommandTest {
     assertNotNull(playerListName, "Tab name should not be null");
     String playerListPlain = PlainTextComponentSerializer.plainText().serialize(playerListName);
     assertEquals("[AA] Leader", playerListPlain);
+  }
+
+  @Test
+  void leaderCanRevokeInviteAndSendItAgain() {
+    CommandMap commandMap = server.getCommandMap();
+    config.set(PluginConfig.Keys.Team.Membership.JOIN_MODE, JoinMode.INVITE_ONLY.name());
+
+    PlayerMock leader = server.addPlayer("InviteLeader");
+    leader.addAttachment(plugin, "mypurpurplugin.team", true);
+    PlayerMock recruit = server.addPlayer("InviteRecruit");
+    recruit.addAttachment(plugin, "mypurpurplugin.team", true);
+
+    assertTrue(commandMap.dispatch(leader, "team create Echo EE GREEN"));
+    drainMessages(leader);
+    drainMessages(recruit);
+
+    assertTrue(commandMap.dispatch(leader, "team invite InviteRecruit"));
+    Component firstLeaderMessage = leader.nextComponentMessage();
+    assertNotNull(firstLeaderMessage, "Leader should receive confirmation about the invite");
+    String firstLeaderPlain =
+        PlainTextComponentSerializer.plainText().serialize(firstLeaderMessage);
+    assertTrue(
+        firstLeaderPlain.contains("Приглашение отправлено"),
+        "Leader should be notified that the invite was sent");
+
+    Component inviteForRecruit = recruit.nextComponentMessage();
+    assertNotNull(inviteForRecruit, "Recruit should receive the invite message");
+    String invitePlain = PlainTextComponentSerializer.plainText().serialize(inviteForRecruit);
+    assertTrue(invitePlain.contains("Вас пригласили"));
+
+    assertTrue(commandMap.dispatch(leader, "team uninvite InviteRecruit"));
+    Component revokeLeaderMessage = leader.nextComponentMessage();
+    assertNotNull(revokeLeaderMessage, "Leader should receive confirmation about revocation");
+    String revokeLeaderPlain =
+        PlainTextComponentSerializer.plainText().serialize(revokeLeaderMessage);
+    assertTrue(revokeLeaderPlain.contains("отозвано"));
+
+    Component revokeRecruitMessage = recruit.nextComponentMessage();
+    assertNotNull(revokeRecruitMessage, "Recruit should learn the invite was revoked");
+    String revokeRecruitPlain =
+        PlainTextComponentSerializer.plainText().serialize(revokeRecruitMessage);
+    assertTrue(revokeRecruitPlain.contains("отозвано"));
+
+    assertTrue(commandMap.dispatch(leader, "team invite InviteRecruit"));
+    Component secondLeaderMessage = leader.nextComponentMessage();
+    assertNotNull(secondLeaderMessage, "Leader should be able to send another invite");
+    String secondLeaderPlain =
+        PlainTextComponentSerializer.plainText().serialize(secondLeaderMessage);
+    assertTrue(
+        secondLeaderPlain.contains("Приглашение отправлено"),
+        "The second invite should also report a successful send");
+
+    Component secondInvite = recruit.nextComponentMessage();
+    assertNotNull(secondInvite, "Recruit should receive the renewed invite");
+    String secondInvitePlain = PlainTextComponentSerializer.plainText().serialize(secondInvite);
+    assertTrue(secondInvitePlain.contains("Вас пригласили"));
   }
 
   @Test
@@ -609,5 +666,9 @@ class TeamCommandTest {
         "Из вашей команды удалено 2 участника(ов) из-за превышения лимита.",
         serializer.serialize(forcedMessage));
     assertNull(leader.nextComponentMessage());
+  }
+
+  private void drainMessages(PlayerMock player) {
+    while (player.nextComponentMessage() != null) {}
   }
 }

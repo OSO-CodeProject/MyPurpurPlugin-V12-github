@@ -240,6 +240,16 @@ public interface TeamService {
   void revokeInvite(@NotNull Player leader, @NotNull String targetName);
 
   /**
+   * Возвращает список игроков, приглашения которых лидер может отозвать.
+   *
+   * @param leader лидер команды
+   * @return список имён игроков
+   */
+  default @NotNull List<String> getRevocableInviteTargets(@NotNull Player leader) {
+    return List.of();
+  }
+
+  /**
    * Принимает приглашение в указанную команду.
    *
    * @param player игрок, принимающий приглашение
