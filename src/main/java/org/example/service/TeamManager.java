@@ -185,6 +185,12 @@ public class TeamManager implements TeamService {
   }
 
   @Override
+  public @NotNull List<String> getRevocableInviteTargets(@NotNull Player leader) {
+    return runWithTiming(
+        "getRevocableInviteTargets", () -> membership.getRevocableInviteTargets(leader));
+  }
+
+  @Override
   public void acceptInvite(@NotNull Player player, @NotNull String teamName) {
     runWithTiming("acceptInvite", () -> membership.acceptInvite(player, teamName));
   }

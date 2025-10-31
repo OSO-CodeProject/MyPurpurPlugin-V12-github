@@ -443,6 +443,40 @@ public class MembershipService {
             invite.getInviterName(), invite.getTargetName(), invite.getTeamName()));
   }
 
+  public @NotNull List<String> getRevocableInviteTargets(@NotNull Player leader) {
+    if (pluginConfig.getJoinMode() != JoinMode.INVITE_ONLY) {
+      return List.of();
+    }
+    UUID leaderId = leader.getUniqueId();
+    UUID teamId = storage.getPlayerTeams().get(leaderId);
+    if (teamId == null) {
+      return List.of();
+    }
+    Team team = storage.getTeams().get(teamId);
+    if (team == null || !team.isLeader(leaderId)) {
+      return List.of();
+    }
+    Map<UUID, PendingInvite> invites = invitesByTeam.get(teamId);
+    if (invites == null || invites.isEmpty()) {
+      return List.of();
+    }
+    List<PendingInvite> expired = new ArrayList<>();
+    List<String> names = new ArrayList<>();
+    for (PendingInvite invite : invites.values()) {
+      if (invite.isExpired()) {
+        expired.add(invite);
+        continue;
+      }
+      String storedName = invite.getTargetName();
+      String resolvedName = resolvePlayerName(invite.getTargetPlayerId(), storedName);
+      names.add(resolvedName != null ? resolvedName : storedName);
+    }
+    for (PendingInvite invite : expired) {
+      removeInvite(invite.getTeamId(), invite.getTargetPlayerId());
+    }
+    return names;
+  }
+
   public void acceptInvite(@NotNull Player player, @NotNull String teamName) {
     if (pluginConfig.getJoinMode() != JoinMode.INVITE_ONLY) {
       TeamMessageUtils.sendTeamMessage(player, TeamMessageUtils.invitesDisabledMessage());

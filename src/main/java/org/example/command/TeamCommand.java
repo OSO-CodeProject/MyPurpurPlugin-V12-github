@@ -27,6 +27,7 @@ import org.example.command.sub.InviteSubCommand;
 import org.example.command.sub.InvitesSubCommand;
 import org.example.command.sub.RequestSubCommand;
 import org.example.command.sub.RequestsSubCommand;
+import org.example.command.sub.UninviteSubCommand;
 import org.example.command.sub.SubCommand;
 import org.example.config.PluginConfig;
 import org.example.config.JoinMode;
@@ -41,7 +42,7 @@ public class TeamCommand implements org.bukkit.command.CommandExecutor, TabCompl
   private final PluginConfig pluginConfig;
   private final Map<String, SubCommand> subCommands = new LinkedHashMap<>();
   private static final Set<String> INVITE_ONLY_SUB_COMMANDS =
-      Set.of("invite", "invites", "accept", "decline");
+      Set.of("invite", "invites", "accept", "decline", "uninvite");
   private static final Set<String> REQUEST_ONLY_SUB_COMMANDS =
       Set.of("request", "cancelrequest", "requests");
 
@@ -59,6 +60,7 @@ public class TeamCommand implements org.bukkit.command.CommandExecutor, TabCompl
     subCommands.put("members", new MembersSubCommand(teamManager, pluginConfig));
     subCommands.put("invite", new InviteSubCommand(teamManager));
     subCommands.put("invites", new InvitesSubCommand(teamManager));
+    subCommands.put("uninvite", new UninviteSubCommand(teamManager));
     subCommands.put("accept", new AcceptInviteSubCommand(teamManager));
     subCommands.put("decline", new DeclineInviteSubCommand(teamManager));
     subCommands.put("request", new RequestSubCommand(teamManager));
