@@ -29,6 +29,21 @@ public final class PendingRequest {
     this.expiresAt = expiresAt;
   }
 
+  private PendingRequest(
+      @NotNull UUID teamId,
+      @NotNull UUID playerId,
+      @NotNull String teamName,
+      @NotNull String playerName,
+      long createdAt,
+      @Nullable Long expiresAt) {
+    this.teamId = teamId;
+    this.playerId = playerId;
+    this.teamName = teamName;
+    this.playerName = playerName;
+    this.createdAt = createdAt;
+    this.expiresAt = expiresAt;
+  }
+
   public @NotNull UUID getTeamId() {
     return teamId;
   }
@@ -55,5 +70,10 @@ public final class PendingRequest {
 
   public boolean isExpired() {
     return expiresAt != null && expiresAt <= System.currentTimeMillis();
+  }
+
+  public PendingRequest withTeamName(@NotNull String updatedTeamName) {
+    return new PendingRequest(
+        teamId, playerId, updatedTeamName, playerName, createdAt, expiresAt);
   }
 }

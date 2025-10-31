@@ -16,7 +16,9 @@ import org.example.MockBukkitTestBase;
 import org.example.config.JoinMode;
 import org.example.config.PluginConfig;
 import org.example.model.PendingInvite;
+import org.example.model.PendingRequest;
 import org.example.model.Team;
+import org.example.service.RenameResult;
 import org.example.util.TeamMessageUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -599,6 +601,78 @@ class MembershipServiceTest extends MockBukkitTestBase {
             applicant.getName(), "DenyTeam", leader.getName()),
         leader.nextComponentMessage(),
         "Лидер получает подтверждение об отказе");
+  }
+
+  @Test
+  void renameTeamRefreshesPendingInvitesAndRequests() {
+    when(pluginConfig.getJoinMode()).thenReturn(JoinMode.INVITE_ONLY);
+    PlayerMock leader = server.addPlayer("RenameLeader");
+    membership.createTeam("OldName", "ON", "red", leader);
+
+    PlayerMock invitee = server.addPlayer("RenameInvitee");
+    PlayerMock applicant = server.addPlayer("RenameApplicant");
+
+    drainMessages(leader);
+    drainMessages(invitee);
+    drainMessages(applicant);
+
+    membership.sendInvite(leader, invitee, Duration.ofMinutes(5));
+    membership.submitJoinRequest("OldName", applicant);
+
+    drainMessages(invitee);
+    drainMessages(applicant);
+    drainMessages(leader);
+
+    RenameResult result = membership.renameTeam("OldName", "NewName", leader);
+    assertEquals(RenameResult.SUCCESS, result, "Переименование должно успешно завершиться");
+
+    List<PendingInvite> invites = membership.getInvitesForPlayer(invitee.getUniqueId());
+    assertEquals(1, invites.size(), "Приглашение должно сохраняться после переименования");
+    assertEquals("NewName", invites.get(0).getTeamName(), "Приглашение обновляется новым именем");
+
+    List<PendingRequest> requests = membership.getJoinRequestsForPlayer(applicant.getUniqueId());
+    assertEquals(1, requests.size(), "Заявка должна сохраняться после переименования");
+    assertEquals("NewName", requests.get(0).getTeamName(), "Заявка обновляется новым именем");
+
+    Component renameNotification = invitee.nextComponentMessage();
+    assertNotNull(
+        renameNotification, "Игрок должен получить повторное уведомление о приглашении");
+    String renameNotificationPlain =
+        PlainTextComponentSerializer.plainText().serialize(renameNotification);
+    assertTrue(
+        renameNotificationPlain.contains("NewName"),
+        "Повторное уведомление содержит новое имя команды");
+
+    Component renameListEntry = invitee.nextComponentMessage();
+    assertNotNull(renameListEntry, "Игрок получает обновлённую запись в списке приглашений");
+    String renameListEntryPlain =
+        PlainTextComponentSerializer.plainText().serialize(renameListEntry);
+    assertTrue(
+        renameListEntryPlain.contains("NewName"),
+        "Список приглашений отображает новое имя команды");
+
+    membership.acceptInvite(invitee, "NewName");
+    Team renamedTeam = storage.getTeamByName("NewName");
+    assertNotNull(renamedTeam, "Команда должна существовать после переименования");
+    assertTrue(
+        renamedTeam.hasMember(invitee.getUniqueId()),
+        "Игрок должен принять приглашение по новому имени");
+
+    invitee.nextComponentMessage();
+    assertEquals(
+        TeamMessageUtils.inviteAcceptedMessage("NewName"),
+        invitee.nextComponentMessage(),
+        "Игрок получает подтверждение с новым именем команды");
+
+    membership.cancelJoinRequest("NewName", applicant);
+    Component cancellationMessage = applicant.nextComponentMessage();
+    assertEquals(
+        TeamMessageUtils.joinRequestCancelledPlayerMessage("NewName"),
+        cancellationMessage,
+        "Отмена заявки использует новое имя команды");
+    assertFalse(
+        membership.hasPendingJoinRequest("NewName", applicant.getUniqueId()),
+        "Заявка удаляется после отмены по новому имени");
   }
 
   private void drainMessages(PlayerMock player) {
