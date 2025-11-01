@@ -30,11 +30,11 @@ public class TeamManager implements TeamService {
     this.pluginConfig = pluginConfig;
     this.storage = new TeamStorage(plugin, pluginConfig);
     this.scheduler = new DeadlineScheduler(plugin, pluginConfig, storage);
-    this.storage.loadTeams(scheduler.getDeadlines());
+    this.membership = new MembershipService(plugin, pluginConfig, storage, scheduler);
+    this.storage.loadTeams(scheduler.getDeadlines(), membership);
     this.scheduler.enforceTeamSizes(true);
     this.storage.startAutoSave(pluginConfig.getSaveIntervalSeconds(), scheduler.getDeadlines());
     this.scheduler.start();
-    this.membership = new MembershipService(plugin, pluginConfig, storage, scheduler);
   }
 
   private void runWithTiming(String methodName, Runnable action) {
@@ -216,7 +216,7 @@ public class TeamManager implements TeamService {
     storage.stopAutoSave();
     scheduler.stop();
     pluginConfig.reloadConfig();
-    storage.loadTeams(scheduler.getDeadlines());
+    storage.loadTeams(scheduler.getDeadlines(), membership);
     storage.getTeams().values().forEach(membership::updateTeamMembersPrefixes);
     scheduler.resetLeaderDisplays();
     scheduler.enforceTeamSizes(true);

@@ -111,5 +111,25 @@ public final class PendingInvite {
         createdAt,
         expiresAt);
   }
+
+  public static PendingInvite restored(
+      @NotNull UUID teamId,
+      @NotNull UUID targetPlayerId,
+      @NotNull UUID inviterId,
+      @NotNull String teamName,
+      @NotNull String inviterName,
+      @NotNull String targetName,
+      long createdAt,
+      @Nullable Long expiresAt) {
+    return new PendingInvite(
+        teamId,
+        targetPlayerId,
+        inviterId,
+        teamName,
+        inviterName,
+        targetName,
+        createdAt,
+        expiresAt);
+  }
 }
 

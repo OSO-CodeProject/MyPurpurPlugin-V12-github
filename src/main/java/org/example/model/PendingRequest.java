@@ -76,4 +76,14 @@ public final class PendingRequest {
     return new PendingRequest(
         teamId, playerId, updatedTeamName, playerName, createdAt, expiresAt);
   }
+
+  public static PendingRequest restored(
+      @NotNull UUID teamId,
+      @NotNull UUID playerId,
+      @NotNull String teamName,
+      @NotNull String playerName,
+      long createdAt,
+      @Nullable Long expiresAt) {
+    return new PendingRequest(teamId, playerId, teamName, playerName, createdAt, expiresAt);
+  }
 }
