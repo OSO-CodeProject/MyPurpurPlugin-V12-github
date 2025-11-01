@@ -4,7 +4,9 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import be.seeseemelk.mockbukkit.entity.PlayerMock;
+import java.io.File;
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -136,6 +138,67 @@ class MembershipServiceTest extends MockBukkitTestBase {
         TeamMessageUtils.inviteExpiredMessage("ExpireTeam"),
         target.nextComponentMessage(),
         "Игрок информируется об истечении приглашения");
+  }
+
+  @Test
+  void pendingInvitesAndRequestsPersistAcrossReload() {
+    File teamsFile = new File(plugin.getDataFolder(), "teams.yml");
+    if (teamsFile.exists()) {
+      assertTrue(teamsFile.delete(), "Не удалось очистить предыдущее состояние teams.yml");
+    }
+    storage.loadTeams(new HashMap<>(), membership);
+
+    when(pluginConfig.getJoinMode()).thenReturn(JoinMode.INVITE_ONLY);
+    PlayerMock leader = server.addPlayer("PersistLeader");
+    PlayerMock inviteTarget = server.addPlayer("PersistTarget");
+    PlayerMock applicant = server.addPlayer("PersistApplicant");
+
+    membership.createTeam("PersistTeam", "PT", "red", leader);
+    drainMessages(leader);
+    drainMessages(inviteTarget);
+    drainMessages(applicant);
+
+    membership.sendInvite(leader, inviteTarget, Duration.ofMinutes(5));
+    assertEquals(
+        1,
+        membership.getInvitesForPlayer(inviteTarget.getUniqueId()).size(),
+        "Приглашение должно сохраняться до перезагрузки");
+
+    when(pluginConfig.getJoinMode()).thenReturn(JoinMode.REQUEST_TO_JOIN);
+    membership.submitJoinRequest("PersistTeam", applicant);
+    assertEquals(
+        1,
+        membership.getJoinRequestsForPlayer(applicant.getUniqueId()).size(),
+        "Заявка должна создаваться до перезагрузки");
+
+    storage.flushNow();
+
+    TeamStorage reloadedStorage = new TeamStorage(plugin, pluginConfig);
+    TestDeadlineScheduler reloadedScheduler =
+        new TestDeadlineScheduler(plugin, pluginConfig, reloadedStorage);
+    MembershipService reloadedMembership =
+        new MembershipService(plugin, pluginConfig, reloadedStorage, reloadedScheduler);
+    reloadedStorage.loadTeams(reloadedScheduler.getDeadlines(), reloadedMembership);
+
+    assertEquals(
+        1,
+        reloadedMembership.getInvitesForPlayer(inviteTarget.getUniqueId()).size(),
+        "Приглашение должно восстановиться из хранилища");
+    assertEquals(
+        "PersistTeam",
+        reloadedMembership.getInvitesForPlayer(inviteTarget.getUniqueId()).get(0).getTeamName(),
+        "Название команды в приглашении сохраняется после перезагрузки");
+
+    assertEquals(
+        1,
+        reloadedMembership.getJoinRequestsForPlayer(applicant.getUniqueId()).size(),
+        "Заявка должна восстановиться из хранилища");
+    assertEquals(
+        "PersistTeam",
+        reloadedMembership.getJoinRequestsForPlayer(applicant.getUniqueId()).get(0).getTeamName(),
+        "Название команды в заявке сохраняется после перезагрузки");
+
+    assertTrue(teamsFile.delete(), "teams.yml должен удаляться после теста");
   }
 
   @Test
