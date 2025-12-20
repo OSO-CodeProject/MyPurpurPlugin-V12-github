@@ -44,6 +44,26 @@ public class MembershipService {
     this.scheduler = scheduler;
   }
 
+  public void loadPendingInvites(@NotNull Collection<PendingInvite> invites) {
+    invitesByPlayer.clear();
+    invitesByTeam.clear();
+    for (PendingInvite invite : invites) {
+      if (invite != null && !invite.isExpired()) {
+        storeInvite(invite, false);
+      }
+    }
+  }
+
+  public void loadPendingRequests(@NotNull Collection<PendingRequest> requests) {
+    joinRequestsByTeam.clear();
+    joinRequestsByPlayer.clear();
+    for (PendingRequest request : requests) {
+      if (request != null && !request.isExpired()) {
+        storeJoinRequest(request, false);
+      }
+    }
+  }
+
   public void createTeam(String teamName, String prefix, String color, @NotNull Player leader) {
     String normalizedTeamName = teamName == null ? "" : teamName.trim();
     String normalizedPrefix = prefix == null ? "" : prefix.trim();
@@ -913,12 +933,38 @@ public class MembershipService {
   }
 
   private void storeJoinRequest(@NotNull PendingRequest request) {
+    storeJoinRequest(request, true);
+  }
+
+  private void storeJoinRequest(@NotNull PendingRequest request, boolean persist) {
     joinRequestsByTeam
         .computeIfAbsent(request.getTeamId(), id -> new ConcurrentHashMap<>())
         .put(request.getPlayerId(), request);
     joinRequestsByPlayer
         .computeIfAbsent(request.getPlayerId(), id -> new ConcurrentHashMap<>())
         .put(request.getTeamId(), request);
+    if (persist) {
+      persistJoinRequests();
+    }
+  }
+
+  private void persistJoinRequests() {
+    storage.saveRequests(snapshotJoinRequests());
+  }
+
+  private Collection<PendingRequest> snapshotJoinRequests() {
+    if (joinRequestsByTeam.isEmpty()) {
+      return List.of();
+    }
+    List<PendingRequest> requests = new ArrayList<>();
+    for (Map<UUID, PendingRequest> teamRequests : joinRequestsByTeam.values()) {
+      for (PendingRequest request : teamRequests.values()) {
+        if (request != null && !request.isExpired()) {
+          requests.add(request);
+        }
+      }
+    }
+    return requests.isEmpty() ? List.of() : List.copyOf(requests);
   }
 
   private @Nullable PendingRequest peekJoinRequest(@NotNull UUID teamId, @NotNull UUID playerId) {
@@ -990,6 +1036,7 @@ public class MembershipService {
       team = storage.getTeams().get(teamId);
     }
     notifyJoinRequestRemoval(request, cause, actorName, actorId, team);
+    persistJoinRequests();
     return request;
   }
 
@@ -1010,6 +1057,7 @@ public class MembershipService {
       notifyJoinRequestRemoval(
           request, JoinRequestRemovalCause.JOINED, null, actorId, requestTeam);
     }
+    persistJoinRequests();
   }
 
   private void clearJoinRequests(
@@ -1029,6 +1077,7 @@ public class MembershipService {
           });
       notifyJoinRequestRemoval(request, cause, actorName, team.getLeaderId(), team);
     }
+    persistJoinRequests();
   }
 
   private void notifyJoinRequestRemoval(
@@ -1164,27 +1213,60 @@ public class MembershipService {
   }
 
   private void storeInvite(@NotNull PendingInvite invite) {
+    storeInvite(invite, true);
+  }
+
+  private void storeInvite(@NotNull PendingInvite invite, boolean persist) {
     invitesByPlayer
         .computeIfAbsent(invite.getTargetPlayerId(), id -> new ConcurrentHashMap<>())
         .put(invite.getTeamId(), invite);
     invitesByTeam
         .computeIfAbsent(invite.getTeamId(), id -> new ConcurrentHashMap<>())
         .put(invite.getTargetPlayerId(), invite);
+    if (persist) {
+      persistInvites();
+    }
   }
 
-  private void removeInvite(@NotNull UUID teamId, @NotNull UUID playerId) {
-    invitesByPlayer.computeIfPresent(
-        playerId,
-        (id, invites) -> {
-          invites.remove(teamId);
-          return invites.isEmpty() ? null : invites;
-        });
-    invitesByTeam.computeIfPresent(
-        teamId,
-        (id, invites) -> {
-          invites.remove(playerId);
-          return invites.isEmpty() ? null : invites;
-        });
+  private void persistInvites() {
+    storage.saveInvites(snapshotInvites());
+  }
+
+  private Collection<PendingInvite> snapshotInvites() {
+    if (invitesByTeam.isEmpty()) {
+      return List.of();
+    }
+    List<PendingInvite> invites = new ArrayList<>();
+    for (Map<UUID, PendingInvite> teamInvites : invitesByTeam.values()) {
+      for (PendingInvite invite : teamInvites.values()) {
+        if (invite != null && !invite.isExpired()) {
+          invites.add(invite);
+        }
+      }
+    }
+    return invites.isEmpty() ? List.of() : List.copyOf(invites);
+  }
+
+  private boolean removeInvite(@NotNull UUID teamId, @NotNull UUID playerId) {
+    boolean changed = false;
+    Map<UUID, PendingInvite> byPlayer = invitesByPlayer.get(playerId);
+    if (byPlayer != null) {
+      changed = byPlayer.remove(teamId) != null || changed;
+      if (byPlayer.isEmpty()) {
+        invitesByPlayer.remove(playerId);
+      }
+    }
+    Map<UUID, PendingInvite> byTeam = invitesByTeam.get(teamId);
+    if (byTeam != null) {
+      changed = byTeam.remove(playerId) != null || changed;
+      if (byTeam.isEmpty()) {
+        invitesByTeam.remove(teamId);
+      }
+    }
+    if (changed) {
+      persistInvites();
+    }
+    return changed;
   }
 
   private void clearInvitesForPlayer(@NotNull UUID playerId) {
@@ -1193,13 +1275,15 @@ public class MembershipService {
       return;
     }
     for (PendingInvite invite : invites.values()) {
-      invitesByTeam.computeIfPresent(
-          invite.getTeamId(),
-          (id, teamInvites) -> {
-            teamInvites.remove(playerId);
-            return teamInvites.isEmpty() ? null : teamInvites;
-          });
+      Map<UUID, PendingInvite> teamInvites = invitesByTeam.get(invite.getTeamId());
+      if (teamInvites != null) {
+        teamInvites.remove(playerId);
+        if (teamInvites.isEmpty()) {
+          invitesByTeam.remove(invite.getTeamId());
+        }
+      }
     }
+    persistInvites();
   }
 
   private void clearInvitesForTeam(@NotNull UUID teamId) {
@@ -1208,13 +1292,15 @@ public class MembershipService {
       return;
     }
     for (PendingInvite invite : invites.values()) {
-      invitesByPlayer.computeIfPresent(
-          invite.getTargetPlayerId(),
-          (id, playerInvites) -> {
-            playerInvites.remove(teamId);
-            return playerInvites.isEmpty() ? null : playerInvites;
-          });
+      Map<UUID, PendingInvite> playerInvites = invitesByPlayer.get(invite.getTargetPlayerId());
+      if (playerInvites != null) {
+        playerInvites.remove(teamId);
+        if (playerInvites.isEmpty()) {
+          invitesByPlayer.remove(invite.getTargetPlayerId());
+        }
+      }
     }
+    persistInvites();
   }
 
   private void refreshPendingInvitesForRenamedTeam(@NotNull Team team) {
@@ -1236,7 +1322,7 @@ public class MembershipService {
 
     for (PendingInvite invite : existingInvites) {
       PendingInvite updatedInvite = invite.withUpdatedNames(team.getName(), invite.getTargetName());
-      storeInvite(updatedInvite);
+      storeInvite(updatedInvite, false);
       Player target = plugin.getServer().getPlayer(updatedInvite.getTargetPlayerId());
       if (target != null) {
         String acceptCommand = "/team accept " + updatedInvite.getTeamName();
@@ -1253,6 +1339,9 @@ public class MembershipService {
             target,
             TeamMessageUtils.inviteListEntry(updatedInvite, acceptCommand, declineCommand));
       }
+    }
+    if (!existingInvites.isEmpty()) {
+      persistInvites();
     }
   }
 
@@ -1274,7 +1363,10 @@ public class MembershipService {
     }
 
     for (PendingRequest request : existingRequests) {
-      storeJoinRequest(request.withTeamName(team.getName()));
+      storeJoinRequest(request.withTeamName(team.getName()), false);
+    }
+    if (!existingRequests.isEmpty()) {
+      persistJoinRequests();
     }
   }
 
