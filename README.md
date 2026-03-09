@@ -1,19 +1,73 @@
-# MyPurpurPlugin
+# 🌟 MyPurpurPlugin
 
-[![CI](https://github.com/OWNER/MyPurpurPlugin-V12-github/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/MyPurpurPlugin-V12-github/actions/workflows/ci.yml)
+[![CI](https://github.com/OSO-CodeProject/MyPurpurPlugin-V12-github/actions/workflows/ci.yml/badge.svg)](https://github.com/OSO-CodeProject/MyPurpurPlugin-V12-github/actions/workflows/ci.yml)
 
-A Purpur plugin project.
+Современный, многофункциональный плагин для серверов Minecraft на базе ядра **Purpur (1.21+)**. 
+Проект сфокусирован на иммерсивном выживании, социальном взаимодействии и глубокой кастомизации.
 
-## Tests
+> 📖 **Основы дизайна**: Перед разработкой новых функций ознакомьтесь с [Манифестом проектирования механик (RU)](docs/MECHANICS_MANIFEST_RU.md).
 
-Unit tests run with the standard `./gradlew test` command. A heavier integration test that
-launches a real Purpur server is tagged with `realServer` and is skipped unless explicitly
-enabled. To execute it locally:
+---
 
-1. Download the desired Purpur server jar manually.
-2. Set the `PURPUR_SERVER_JAR` environment variable (or the `purpur.serverJar` system property)
-   to point at the downloaded jar.
-3. Run `./gradlew test -PenableRealServerTests=true`.
+## ✨ Ключевые возможности
 
-The GitHub Actions workflow only runs the lightweight unit tests, preventing timeouts during
-routine validation.
+### 🛡️ Система команд (Кланы)
+Ядро плагина, позволяющее игрокам объединяться в группы. 
+* **Полное управление:** Создание, роспуск, приглашения, заявки на вступление и кик игроков.
+* **Настройки доступа:** Различные режимы вступления (`OPEN`, `INVITE_ONLY`, `REQUEST_TO_JOIN`).
+* **База данных:** Надежное хранение всех данных команд и участников в **SQLite** с кэшированием в памяти для максимальной производительности.
+* **Дедлайны и очистка:** Автоматическое удаление неактивных игроков и чистка.
+
+### 💬 Иммерсивный локальный чат (Proximity Chat)
+Реалистичная система общения в зависимости от расстояния:
+* **Уровни громкости:** Разный радиус слышимости для шепота (`-`), обычного разговора, громкого голоса (`+`) и крика (`++`).
+* **Зона неразборчивости (Falloff):** Сообщения на границе слышимости реалистично искажаются — буквы заменяются на помехи (`#`, `@`, `%`, `*`, `?`), но знаки препинания сохраняются, передавая эмоции.
+* **Изоляция миров:** Сообщения не пересекают границы измерений (Нижний мир, Энд, Обычный мир).
+
+### ⚙️ Тотальная кастомизация
+Каждая механика плагина подстраивается под нужды вашего сервера через `config.yml`:
+* Полная настройка чата (радиусы, форматы, символы искажения).
+* Настройка лимитов команд, длин названий и префиксов.
+* Кастомизация меню (звуки, партиклы, управление).
+
+---
+
+## 🎮 Управление командами
+
+| Основная Команда | Описание |
+|---|---|
+| `/team create <название> <префикс> <цвет>` | Создать новую команду |
+| `/team invite <игрок>` | Пригласить игрока |
+| `/team join <команда>` | Вступить или отправить заявку |
+| `/team leave` | Выйти из команды |
+| `/team accept <игрок>` | Принять заявку на вступление |
+| `/menu` | Открыть главное меню сервера |
+
+*Дополнительные команды для модерации и настройки доступны через `/teamadmin` и `/teamreload`.*
+
+---
+
+## 🛠️ Разработка и Тестирование
+
+Проект использует систему сборки **Gradle** и плагин форматирования кода Spotless.
+
+Вы можете запустить легковесные unit-тесты командой:
+```bash
+./gradlew test
+```
+
+Для запуска полных интеграционных тестов с реальным сервером Purpur:
+1. Скачайте нужный `.jar` сервера Purpur.
+2. Установите системную переменную `PURPUR_SERVER_JAR` (или свойство `purpur.serverJar`) указывающее на скачанный файл.
+3. Запустите тесты:
+```bash
+./gradlew test -PenableRealServerTests=true
+```
+*(В GitHub Actions запускаются только быстрые unit-тесты для предотвращения таймаутов).*
+
+---
+
+## 📦 Установка на сервер
+1. Скачайте последний скомпилированный билд `MyPurpurPlugin-<версия>.jar` из папки `build/libs/`.
+2. Поместите файл в папку `plugins/` вашего сервера (убедитесь, что сервер работает на Java 21+).
+3. Перезапустите сервер. Плагин автоматически создаст конфигурацию `config.yml` и файл базы данных `database.db`.
