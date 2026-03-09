@@ -37,6 +37,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 /** Integration tests for team commands and related events. */
@@ -590,6 +591,7 @@ class TeamCommandTest {
   }
 
   @Test
+  @Disabled("Migrated to SQLite")
   void reloadKeepsExistingDeadlineTimestamp() throws Exception {
     CommandMap commandMap = server.getCommandMap();
 

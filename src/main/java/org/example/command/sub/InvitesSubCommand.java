@@ -47,4 +47,3 @@ public class InvitesSubCommand implements SubCommand {
     return List.of();
   }
 }
-

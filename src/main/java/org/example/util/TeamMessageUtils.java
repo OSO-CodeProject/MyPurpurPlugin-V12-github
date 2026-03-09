@@ -35,8 +35,7 @@ public class TeamMessageUtils {
   public static Component teamAlreadyExistsMessage(String teamName) {
     return Component.text("❌ Команда ", NamedTextColor.RED)
         .append(Component.text(teamName, NamedTextColor.WHITE))
-        .append(Component.text(" уже существует ", NamedTextColor.RED))
-        .append(Component.text("!", NamedTextColor.RED));
+        .append(Component.text(" уже существует!", NamedTextColor.RED));
   }
 
   /**
@@ -85,8 +84,7 @@ public class TeamMessageUtils {
   /** Возвращает сообщение о том, что команды приглашений сейчас недоступны. */
   public static Component invitesDisabledMessage() {
     return Component.text(
-        "❌ Управление приглашениями доступно только в режиме приглашений.",
-        NamedTextColor.RED);
+        "❌ Управление приглашениями доступно только в режиме приглашений.", NamedTextColor.RED);
   }
 
   /** Сообщение о том, что нельзя пригласить самого себя. */
@@ -141,11 +139,13 @@ public class TeamMessageUtils {
             .append(expiryInfo(expiresAt));
     Component actions =
         Component.space()
-            .append(clickableAction(
-                "[Принять]", NamedTextColor.GREEN, acceptCommand, "Принять приглашение"))
+            .append(
+                clickableAction(
+                    "[Принять]", NamedTextColor.GREEN, acceptCommand, "Принять приглашение"))
             .append(Component.space())
-            .append(clickableAction(
-                "[Отклонить]", NamedTextColor.RED, declineCommand, "Отклонить приглашение"));
+            .append(
+                clickableAction(
+                    "[Отклонить]", NamedTextColor.RED, declineCommand, "Отклонить приглашение"));
     return message.append(actions);
   }
 
@@ -226,7 +226,8 @@ public class TeamMessageUtils {
    * @return информационное сообщение
    */
   public static Component joinRequestReceivedLeaderMessage(String playerName, String teamName) {
-    String candidate = (playerName == null || playerName.isBlank()) ? "Неизвестный игрок" : playerName;
+    String candidate =
+        (playerName == null || playerName.isBlank()) ? "Неизвестный игрок" : playerName;
     String name = (teamName == null || teamName.isBlank()) ? "вашу команду" : teamName;
     return Component.text("ℹ️ Игрок ", NamedTextColor.YELLOW)
         .append(Component.text(candidate, NamedTextColor.WHITE))
@@ -364,11 +365,7 @@ public class TeamMessageUtils {
     return entry
         .append(Component.space())
         .append(
-            clickableAction(
-                "[Отозвать]",
-                NamedTextColor.RED,
-                cancelCommand,
-                "Отозвать заявку"));
+            clickableAction("[Отозвать]", NamedTextColor.RED, cancelCommand, "Отозвать заявку"));
   }
 
   /** Элемент списка заявок для лидера с кнопками одобрения и отказа. */
@@ -383,18 +380,10 @@ public class TeamMessageUtils {
     return entry
         .append(Component.space())
         .append(
-            clickableAction(
-                "[Одобрить]",
-                NamedTextColor.GREEN,
-                acceptCommand,
-                "Одобрить заявку"))
+            clickableAction("[Одобрить]", NamedTextColor.GREEN, acceptCommand, "Одобрить заявку"))
         .append(Component.space())
         .append(
-            clickableAction(
-                "[Отклонить]",
-                NamedTextColor.RED,
-                denyCommand,
-                "Отклонить заявку"));
+            clickableAction("[Отклонить]", NamedTextColor.RED, denyCommand, "Отклонить заявку"));
   }
 
   /** Сообщение для лидера после очистки всех заявок. */
@@ -420,7 +409,7 @@ public class TeamMessageUtils {
     return Component.text("❌ Вы уже состоите в команде ", NamedTextColor.RED)
         .append(prefixComponent)
         .append(Component.text(teamName, NamedTextColor.WHITE))
-        .append(Component.text(" !", NamedTextColor.RED));
+        .append(Component.text("!", NamedTextColor.RED));
   }
 
   /**
@@ -434,7 +423,7 @@ public class TeamMessageUtils {
     return Component.text("❌ Вы не состоите в команде ", NamedTextColor.RED)
         .append(prefixComponent)
         .append(Component.text(teamName, NamedTextColor.WHITE))
-        .append(Component.text(" !", NamedTextColor.RED));
+        .append(Component.text("!", NamedTextColor.RED));
   }
 
   /** Сообщает лидеру, что приглашение для указанного игрока не найдено. */
@@ -468,7 +457,8 @@ public class TeamMessageUtils {
   }
 
   /** Оповещает администраторов о том, что приглашение было отозвано. */
-  public static Component inviteRevokedAdminMessage(String inviter, String target, String teamName) {
+  public static Component inviteRevokedAdminMessage(
+      String inviter, String target, String teamName) {
     return Component.text("📨 ", NamedTextColor.YELLOW)
         .append(Component.text(inviter, NamedTextColor.WHITE))
         .append(Component.text(" отозвал приглашение для ", NamedTextColor.YELLOW))
@@ -498,7 +488,8 @@ public class TeamMessageUtils {
   }
 
   /** Сообщение для администраторов о принятии приглашения. */
-  public static Component inviteAcceptedAdminMessage(String inviter, String target, String teamName) {
+  public static Component inviteAcceptedAdminMessage(
+      String inviter, String target, String teamName) {
     return Component.text("📨 ", NamedTextColor.YELLOW)
         .append(Component.text(target, NamedTextColor.WHITE))
         .append(Component.text(" принял приглашение команды ", NamedTextColor.YELLOW))
@@ -528,7 +519,8 @@ public class TeamMessageUtils {
   }
 
   /** Сообщение для администраторов об отклонении приглашения. */
-  public static Component inviteDeclinedAdminMessage(String inviter, String target, String teamName) {
+  public static Component inviteDeclinedAdminMessage(
+      String inviter, String target, String teamName) {
     return Component.text("📨 ", NamedTextColor.YELLOW)
         .append(Component.text(target, NamedTextColor.WHITE))
         .append(Component.text(" отклонил приглашение команды ", NamedTextColor.YELLOW))
@@ -567,11 +559,13 @@ public class TeamMessageUtils {
             .append(expiryInfo(invite.getExpiresAt()));
     Component actions =
         Component.space()
-            .append(clickableAction(
-                "[Принять]", NamedTextColor.GREEN, acceptCommand, "Принять приглашение"))
+            .append(
+                clickableAction(
+                    "[Принять]", NamedTextColor.GREEN, acceptCommand, "Принять приглашение"))
             .append(Component.space())
-            .append(clickableAction(
-                "[Отклонить]", NamedTextColor.RED, declineCommand, "Отклонить приглашение"));
+            .append(
+                clickableAction(
+                    "[Отклонить]", NamedTextColor.RED, declineCommand, "Отклонить приглашение"));
     return entry.append(actions);
   }
 

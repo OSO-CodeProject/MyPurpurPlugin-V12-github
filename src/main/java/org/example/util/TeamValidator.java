@@ -35,7 +35,7 @@ public class TeamValidator {
           Component.text("❌ Только лидер может " + action + " ", NamedTextColor.RED)
               .append(prefix)
               .append(Component.text(teamName, NamedTextColor.WHITE))
-              .append(Component.text(" !", NamedTextColor.RED)));
+              .append(Component.text("!", NamedTextColor.RED)));
       return true;
     }
     return false;

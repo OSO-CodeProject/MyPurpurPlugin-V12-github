@@ -256,7 +256,8 @@ public class TeamManager implements TeamService {
   }
 
   @Override
-  public void approveJoinRequest(String teamName, @NotNull Player leader, @NotNull String targetName) {
+  public void approveJoinRequest(
+      String teamName, @NotNull Player leader, @NotNull String targetName) {
     runWithTiming(
         "approveJoinRequest", () -> membership.approveJoinRequest(teamName, leader, targetName));
   }

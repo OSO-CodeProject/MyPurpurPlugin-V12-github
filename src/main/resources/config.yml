@@ -10,6 +10,31 @@ debug:
   mode: false # Включает подробное логирование действий плагина
 chat:
   force-white: false # Принудительно перекрашивать сообщения чата в белый цвет
+  local:
+    enabled: true
+    obfuscate-falloff: true
+    obfuscation-chars: ["#", "@", "%", "*", "?"] # Символы для искажения
+    volumes:
+      whisper:
+        prefix: "-"
+        radius: 2.5
+        falloff: 1.5
+        format: "< Шепотом >"
+      talk:
+        prefix: "" # По умолчанию
+        radius: 16.0
+        falloff: 4.0
+        format: ""
+      yell:
+        prefix: "+"
+        radius: 32.0
+        falloff: 6.0
+        format: "< Громко >"
+      scream:
+        prefix: "++"
+        radius: 48.0
+        falloff: 8.0
+        format: "< Крик >"
 
 # Настройки команды /team
 team:

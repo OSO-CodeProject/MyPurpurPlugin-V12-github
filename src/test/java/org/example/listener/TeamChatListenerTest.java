@@ -546,9 +546,7 @@ class TeamChatListenerTest extends MockBukkitTestBase {
 
     @Override
     public void sendInvite(
-        org.bukkit.entity.Player leader,
-        org.bukkit.entity.Player target,
-        java.time.Duration ttl) {
+        org.bukkit.entity.Player leader, org.bukkit.entity.Player target, java.time.Duration ttl) {
       throw new UnsupportedOperationException();
     }
 

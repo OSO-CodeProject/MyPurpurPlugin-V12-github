@@ -58,4 +58,3 @@ public class AcceptInviteSubCommand implements SubCommand {
     return suggestions;
   }
 }
-

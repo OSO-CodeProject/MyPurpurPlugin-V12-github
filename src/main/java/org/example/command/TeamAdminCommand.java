@@ -17,9 +17,9 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.example.MyPurpurPlugin;
 import org.example.config.PluginConfig;
+import org.example.model.PendingRequest;
 import org.example.service.RenameResult;
 import org.example.service.TeamService;
-import org.example.model.PendingRequest;
 import org.example.util.TeamMessageUtils;
 import org.example.util.TeamUtils;
 import org.jetbrains.annotations.NotNull;
@@ -247,8 +247,7 @@ public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, Tab
     if (args.length < 2) {
       TeamMessageUtils.sendTeamMessage(
           player,
-          Component.text(
-              "❌ Использование: /teamadmin acceptrequest <ник>", NamedTextColor.RED));
+          Component.text("❌ Использование: /teamadmin acceptrequest <ник>", NamedTextColor.RED));
       return true;
     }
     String teamName = teamManager.getPlayerTeam(player);
@@ -264,8 +263,7 @@ public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, Tab
     if (args.length < 2) {
       TeamMessageUtils.sendTeamMessage(
           player,
-          Component.text(
-              "❌ Использование: /teamadmin denyrequest <ник>", NamedTextColor.RED));
+          Component.text("❌ Использование: /teamadmin denyrequest <ник>", NamedTextColor.RED));
       return true;
     }
     String teamName = teamManager.getPlayerTeam(player);
@@ -400,15 +398,15 @@ public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, Tab
             .append(Component.newline())
             .append(
                 adminBullet(
-                    "/teamadmin transfer <ник>",
-                    "передать лидерство другому игроку в команде"))
+                    "/teamadmin transfer <ник>", "передать лидерство другому игроку в команде"))
             .append(Component.newline())
             .append(
                 adminBullet(
                     "/teamadmin kick <ник>",
                     "исключить участника команды (требуется быть лидером)"))
             .append(Component.newline())
-            .append(adminBullet("/teamadmin disband", "распустить команду (требуется быть лидером)"))
+            .append(
+                adminBullet("/teamadmin disband", "распустить команду (требуется быть лидером)"))
             .append(Component.newline())
             .append(
                 adminBullet(
@@ -427,28 +425,19 @@ public class TeamAdminCommand implements org.bukkit.command.CommandExecutor, Tab
             .append(Component.newline())
             .append(
                 adminBullet(
-                    "/teamadmin requests",
-                    "посмотреть заявки на вступление в вашу команду"))
+                    "/teamadmin requests", "посмотреть заявки на вступление в вашу команду"))
             .append(Component.newline())
             .append(
                 adminBullet(
-                    "/teamadmin acceptrequest <ник>",
-                    "одобрить заявку игрока на вступление"))
+                    "/teamadmin acceptrequest <ник>", "одобрить заявку игрока на вступление"))
+            .append(Component.newline())
+            .append(adminBullet("/teamadmin denyrequest <ник>", "отклонить заявку игрока"))
+            .append(Component.newline())
+            .append(adminBullet("/teamadmin clearrequests", "очистить все заявки на вступление"))
             .append(Component.newline())
             .append(
                 adminBullet(
-                    "/teamadmin denyrequest <ник>",
-                    "отклонить заявку игрока"))
-            .append(Component.newline())
-            .append(
-                adminBullet(
-                    "/teamadmin clearrequests",
-                    "очистить все заявки на вступление"))
-            .append(Component.newline())
-            .append(
-                adminBullet(
-                    "/teamadmin getplinfo <ник>",
-                    "показать командную информацию об игроке"))
+                    "/teamadmin getplinfo <ник>", "показать командную информацию об игроке"))
             .append(Component.newline())
             .append(adminBullet("/teamadmin help", "показать эту справку"))
             .append(Component.newline())

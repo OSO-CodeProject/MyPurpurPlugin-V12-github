@@ -73,8 +73,7 @@ public final class PendingRequest {
   }
 
   public PendingRequest withTeamName(@NotNull String updatedTeamName) {
-    return new PendingRequest(
-        teamId, playerId, updatedTeamName, playerName, createdAt, expiresAt);
+    return new PendingRequest(teamId, playerId, updatedTeamName, playerName, createdAt, expiresAt);
   }
 
   public static PendingRequest restored(

@@ -49,8 +49,7 @@ public class InviteSubCommand implements SubCommand {
         } else if (minutes == 0) {
           ttl = Duration.ZERO;
         } else {
-          TeamMessageUtils.sendTeamMessage(
-              player, TeamMessageUtils.invalidInviteDurationMessage());
+          TeamMessageUtils.sendTeamMessage(player, TeamMessageUtils.invalidInviteDurationMessage());
           return true;
         }
       } catch (NumberFormatException ex) {
@@ -74,11 +73,7 @@ public class InviteSubCommand implements SubCommand {
     }
     if (args.length == 2) {
       String partial = args[1].toLowerCase(Locale.ROOT);
-      teamService
-          .getPlugin()
-          .getServer()
-          .getOnlinePlayers()
-          .stream()
+      teamService.getPlugin().getServer().getOnlinePlayers().stream()
           .filter(online -> !online.getUniqueId().equals(player.getUniqueId()))
           .map(Player::getName)
           .filter(name -> name != null && name.toLowerCase(Locale.ROOT).startsWith(partial))
@@ -91,4 +86,3 @@ public class InviteSubCommand implements SubCommand {
     return suggestions;
   }
 }
-

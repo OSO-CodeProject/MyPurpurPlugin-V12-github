@@ -59,11 +59,7 @@ public class UninviteSubCommand implements SubCommand {
       if (invited.isEmpty()) {
         return suggestions;
       }
-      teamService
-          .getPlugin()
-          .getServer()
-          .getOnlinePlayers()
-          .stream()
+      teamService.getPlugin().getServer().getOnlinePlayers().stream()
           .filter(online -> !online.getUniqueId().equals(player.getUniqueId()))
           .forEach(
               online -> {

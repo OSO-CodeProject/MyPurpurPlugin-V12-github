@@ -96,6 +96,38 @@ public class PluginConfig {
 
       public static final String PARTICLE_EFFECT = "menu.particle-effect";
     }
+
+    public static final class Chat {
+      private Chat() {}
+
+      public static final class Local {
+        private Local() {}
+
+        public static final String ENABLED = "chat.local.enabled";
+        public static final String OBFUSCATE_FALLOFF = "chat.local.obfuscate-falloff";
+        public static final String OBFUSCATION_CHARS = "chat.local.obfuscation-chars";
+
+        public static final String WHISPER_PREFIX = "chat.local.volumes.whisper.prefix";
+        public static final String WHISPER_RADIUS = "chat.local.volumes.whisper.radius";
+        public static final String WHISPER_FALLOFF = "chat.local.volumes.whisper.falloff";
+        public static final String WHISPER_FORMAT = "chat.local.volumes.whisper.format";
+
+        public static final String TALK_PREFIX = "chat.local.volumes.talk.prefix";
+        public static final String TALK_RADIUS = "chat.local.volumes.talk.radius";
+        public static final String TALK_FALLOFF = "chat.local.volumes.talk.falloff";
+        public static final String TALK_FORMAT = "chat.local.volumes.talk.format";
+
+        public static final String YELL_PREFIX = "chat.local.volumes.yell.prefix";
+        public static final String YELL_RADIUS = "chat.local.volumes.yell.radius";
+        public static final String YELL_FALLOFF = "chat.local.volumes.yell.falloff";
+        public static final String YELL_FORMAT = "chat.local.volumes.yell.format";
+
+        public static final String SCREAM_PREFIX = "chat.local.volumes.scream.prefix";
+        public static final String SCREAM_RADIUS = "chat.local.volumes.scream.radius";
+        public static final String SCREAM_FALLOFF = "chat.local.volumes.scream.falloff";
+        public static final String SCREAM_FORMAT = "chat.local.volumes.scream.format";
+      }
+    }
   }
 
   private final JavaPlugin plugin;
@@ -170,6 +202,33 @@ public class PluginConfig {
     // Глобальные настройки
     changed |= addDefaultIfMissing(Keys.DEBUG_MODE, false);
     changed |= addDefaultIfMissing(Keys.CHAT_FORCE_WHITE, false);
+
+    // Настройки локального чата
+    changed |= addDefaultIfMissing(Keys.Chat.Local.ENABLED, true);
+    changed |= addDefaultIfMissing(Keys.Chat.Local.OBFUSCATE_FALLOFF, true);
+    changed |=
+        addDefaultIfMissing(
+            Keys.Chat.Local.OBFUSCATION_CHARS, java.util.Arrays.asList("#", "@", "%", "*", "?"));
+
+    changed |= addDefaultIfMissing(Keys.Chat.Local.WHISPER_PREFIX, "-");
+    changed |= addDefaultIfMissing(Keys.Chat.Local.WHISPER_RADIUS, 2.5);
+    changed |= addDefaultIfMissing(Keys.Chat.Local.WHISPER_FALLOFF, 1.5);
+    changed |= addDefaultIfMissing(Keys.Chat.Local.WHISPER_FORMAT, "< Шепотом >");
+
+    changed |= addDefaultIfMissing(Keys.Chat.Local.TALK_PREFIX, "");
+    changed |= addDefaultIfMissing(Keys.Chat.Local.TALK_RADIUS, 16.0);
+    changed |= addDefaultIfMissing(Keys.Chat.Local.TALK_FALLOFF, 4.0);
+    changed |= addDefaultIfMissing(Keys.Chat.Local.TALK_FORMAT, "");
+
+    changed |= addDefaultIfMissing(Keys.Chat.Local.YELL_PREFIX, "+");
+    changed |= addDefaultIfMissing(Keys.Chat.Local.YELL_RADIUS, 32.0);
+    changed |= addDefaultIfMissing(Keys.Chat.Local.YELL_FALLOFF, 6.0);
+    changed |= addDefaultIfMissing(Keys.Chat.Local.YELL_FORMAT, "< Громко >");
+
+    changed |= addDefaultIfMissing(Keys.Chat.Local.SCREAM_PREFIX, "++");
+    changed |= addDefaultIfMissing(Keys.Chat.Local.SCREAM_RADIUS, 48.0);
+    changed |= addDefaultIfMissing(Keys.Chat.Local.SCREAM_FALLOFF, 8.0);
+    changed |= addDefaultIfMissing(Keys.Chat.Local.SCREAM_FORMAT, "< Крик >");
 
     // Основные настройки
     changed |= addDefaultIfMissing(Keys.Team.Commands.REQUIRES_OP, false);
@@ -628,5 +687,83 @@ public class PluginConfig {
    */
   public double getMenuSoundPitch() {
     return getDoubleWithLegacyFallback(Keys.Menu.Sound.PITCH, 1.0, "menu.sound-pitch");
+  }
+
+  // --- Настройки локального чата ---
+
+  public boolean isLocalChatEnabled() {
+    return config.getBoolean(Keys.Chat.Local.ENABLED, true);
+  }
+
+  public boolean isLocalChatObfuscationEnabled() {
+    return config.getBoolean(Keys.Chat.Local.OBFUSCATE_FALLOFF, true);
+  }
+
+  public java.util.List<String> getLocalChatObfuscationChars() {
+    return config.getStringList(Keys.Chat.Local.OBFUSCATION_CHARS);
+  }
+
+  public String getWhisperPrefix() {
+    return config.getString(Keys.Chat.Local.WHISPER_PREFIX, "-");
+  }
+
+  public double getWhisperRadius() {
+    return config.getDouble(Keys.Chat.Local.WHISPER_RADIUS, 2.5);
+  }
+
+  public double getWhisperFalloff() {
+    return config.getDouble(Keys.Chat.Local.WHISPER_FALLOFF, 1.5);
+  }
+
+  public String getWhisperFormat() {
+    return config.getString(Keys.Chat.Local.WHISPER_FORMAT, "< Шепотом >");
+  }
+
+  public String getTalkPrefix() {
+    return config.getString(Keys.Chat.Local.TALK_PREFIX, "");
+  }
+
+  public double getTalkRadius() {
+    return config.getDouble(Keys.Chat.Local.TALK_RADIUS, 16.0);
+  }
+
+  public double getTalkFalloff() {
+    return config.getDouble(Keys.Chat.Local.TALK_FALLOFF, 4.0);
+  }
+
+  public String getTalkFormat() {
+    return config.getString(Keys.Chat.Local.TALK_FORMAT, "");
+  }
+
+  public String getYellPrefix() {
+    return config.getString(Keys.Chat.Local.YELL_PREFIX, "+");
+  }
+
+  public double getYellRadius() {
+    return config.getDouble(Keys.Chat.Local.YELL_RADIUS, 32.0);
+  }
+
+  public double getYellFalloff() {
+    return config.getDouble(Keys.Chat.Local.YELL_FALLOFF, 6.0);
+  }
+
+  public String getYellFormat() {
+    return config.getString(Keys.Chat.Local.YELL_FORMAT, "< Громко >");
+  }
+
+  public String getScreamPrefix() {
+    return config.getString(Keys.Chat.Local.SCREAM_PREFIX, "++");
+  }
+
+  public double getScreamRadius() {
+    return config.getDouble(Keys.Chat.Local.SCREAM_RADIUS, 48.0);
+  }
+
+  public double getScreamFalloff() {
+    return config.getDouble(Keys.Chat.Local.SCREAM_FALLOFF, 8.0);
+  }
+
+  public String getScreamFormat() {
+    return config.getString(Keys.Chat.Local.SCREAM_FORMAT, "< Крик >");
   }
 }

@@ -58,4 +58,3 @@ public class DeclineInviteSubCommand implements SubCommand {
     return suggestions;
   }
 }
-

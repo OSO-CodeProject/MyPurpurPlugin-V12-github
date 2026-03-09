@@ -10,6 +10,7 @@ import org.example.command.TeamAdminCommand;
 import org.example.command.TeamCommand;
 import org.example.command.TeamReloadCommand;
 import org.example.config.PluginConfig;
+import org.example.listener.LocalChatListener;
 import org.example.listener.TeamChatListener;
 import org.example.service.TeamManager;
 import org.example.service.TeamService;
@@ -25,6 +26,7 @@ public class MyPurpurPlugin extends JavaPlugin {
   private PluginConfig pluginConfig;
 
   private TeamChatListener teamChatListener;
+  private LocalChatListener localChatListener;
 
   private boolean debugMode = false;
   private static final long CONFIG_AUTO_SAVE_INTERVAL_SECONDS = 60L;
@@ -48,9 +50,11 @@ public class MyPurpurPlugin extends JavaPlugin {
     registerCommand("menu", new MenuCommand(this, pluginConfig));
     registerCommand("debugtoggle", new DebugToggleCommand(this));
 
-    // Регистрация слушателя чата
+    // Регистрация слушателей чата
     teamChatListener = new TeamChatListener(teamManager);
+    localChatListener = new LocalChatListener(pluginConfig);
     getServer().getPluginManager().registerEvents(teamChatListener, this);
+    getServer().getPluginManager().registerEvents(localChatListener, this);
 
     getLogger().info("Плагин MyPurpurPlugin успешно загружен!");
   }

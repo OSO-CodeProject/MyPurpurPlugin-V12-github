@@ -122,14 +122,6 @@ public final class PendingInvite {
       long createdAt,
       @Nullable Long expiresAt) {
     return new PendingInvite(
-        teamId,
-        targetPlayerId,
-        inviterId,
-        teamName,
-        inviterName,
-        targetName,
-        createdAt,
-        expiresAt);
+        teamId, targetPlayerId, inviterId, teamName, inviterName, targetName, createdAt, expiresAt);
   }
 }
-

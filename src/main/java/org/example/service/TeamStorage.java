@@ -3,26 +3,24 @@ package org.example.service;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 import net.kyori.adventure.text.format.NamedTextColor;
-import org.bukkit.OfflinePlayer;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 import org.example.config.PluginConfig;
+import org.example.database.DatabaseManager;
+import org.example.database.TeamRepository;
 import org.example.model.PendingInvite;
 import org.example.model.PendingRequest;
 import org.example.model.Team;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-/** Handles persistence of team data and keeps track of player memberships. */
+/** Handles persistence of team data via SQLite and keeps track of player memberships in memory. */
 public class TeamStorage {
 
   private final JavaPlugin plugin;
@@ -32,13 +30,10 @@ public class TeamStorage {
   private final Map<String, UUID> teamIdsByName = new ConcurrentHashMap<>();
   private final Map<UUID, UUID> playerTeams = new ConcurrentHashMap<>();
   private final Map<UUID, Team> playerTeamCache = new ConcurrentHashMap<>();
-  private final ConcurrentMap<String, UUID> resolvedProfileCache = new ConcurrentHashMap<>();
-  private final ConcurrentMap<String, CompletableFuture<UUID>> pendingProfileLookups =
-      new ConcurrentHashMap<>();
-  private final ConcurrentMap<UUID, PendingTeamLoad> pendingTeamLoads = new ConcurrentHashMap<>();
 
-  private FileConfiguration teamsConfig;
-  private File teamsFile;
+  // State File for Pending Invites & Requests
+  private FileConfiguration stateConfig;
+  private File stateFile;
 
   private final Set<UUID> dirtyTeams = ConcurrentHashMap.newKeySet();
   private volatile boolean deadlinesDirty;
@@ -51,12 +46,18 @@ public class TeamStorage {
   private volatile boolean invitesDirty;
   private volatile boolean requestsDirty;
 
+  private final DatabaseManager dbManager;
+  private final TeamRepository repository;
+
   public TeamStorage(@NotNull JavaPlugin plugin, @NotNull PluginConfig pluginConfig) {
     this.plugin = plugin;
     this.pluginConfig = pluginConfig;
+    this.dbManager = new DatabaseManager(plugin);
+    this.dbManager.connect();
+    this.repository = new TeamRepository(this.dbManager, plugin);
   }
 
-  /** Loads team information from teams.yml and fills provided deadlines map. */
+  /** Loads team information from SQLite and fills provided deadlines map. */
   public void loadTeams(Map<UUID, Long> deadlines) {
     loadTeams(deadlines, null);
   }
@@ -64,186 +65,109 @@ public class TeamStorage {
   public void loadTeams(Map<UUID, Long> deadlines, @Nullable MembershipService membershipService) {
     synchronized (saveLock) {
       deadlinesReference = deadlines;
-      teamsFile = new File(plugin.getDataFolder(), "teams.yml");
-      if (!teamsFile.exists()) {
+      deadlines.clear();
+
+      // Load Invites and Requests from a separate state.yml file since they are temporary
+      stateFile = new File(plugin.getDataFolder(), "state.yml");
+      if (!stateFile.exists()) {
         try {
-          File parent = teamsFile.getParentFile();
-          if (parent != null && !parent.exists() && !parent.mkdirs()) {
-            plugin
-                .getLogger()
-                .severe("Failed to create directory for teams.yml at " + parent.getAbsolutePath());
-            return;
-          }
-          teamsFile.createNewFile();
+          stateFile.createNewFile();
         } catch (IOException e) {
-          plugin.getLogger().severe("Failed to create teams.yml: " + e.getMessage());
+          plugin
+              .getLogger()
+              .warning("Could not create state.yml for tracking invites: " + e.getMessage());
         }
       }
-      teamsConfig = YamlConfiguration.loadConfiguration(teamsFile);
+      stateConfig = YamlConfiguration.loadConfiguration(stateFile);
+
       teams.clear();
       teamIdsByName.clear();
       playerTeams.clear();
       playerTeamCache.clear();
-      pendingTeamLoads.clear();
-      deadlines.clear();
-      var section = teamsConfig.getConfigurationSection("teams");
-      boolean legacyDataUpdated = false;
-      if (section != null) {
-        for (String teamIdStr : section.getKeys(false)) {
-          UUID teamId;
-          try {
-            teamId = UUID.fromString(teamIdStr);
-          } catch (IllegalArgumentException ex) {
-            plugin
-                .getLogger()
-                .warning("Skipping team entry with invalid UUID '" + teamIdStr + "'.");
-            continue;
-          }
-          String name = teamsConfig.getString("teams." + teamIdStr + ".name", "");
-          if (name == null || name.isBlank()) {
-            plugin
-                .getLogger()
-                .warning("Skipping team entry " + teamId + " because it does not define a name.");
-            continue;
-          }
-          String leaderRaw = teamsConfig.getString("teams." + teamIdStr + ".leader", "");
-          UUID leaderId = parseUuid(leaderRaw);
-          boolean leaderFromName = false;
-          String prefix = teamsConfig.getString("teams." + teamIdStr + ".prefix", "");
-          String color =
-              normalizeColorKey(teamsConfig.getString("teams." + teamIdStr + ".color", "WHITE"));
-          List<String> rawMembers = teamsConfig.getStringList("teams." + teamIdStr + ".members");
-          long deadline = teamsConfig.getLong("teams." + teamIdStr + ".deadline", 0L);
-          if (leaderId == null) {
-            if (leaderRaw == null || leaderRaw.isBlank()) {
-              plugin
-                  .getLogger()
-                  .warning(
-                      "Skipping team entry " + teamId + " because it does not define a leader.");
-              continue;
-            }
-            leaderId =
-                resolvePlayerUuid(
-                    leaderRaw,
-                    resolved ->
-                        handlePendingLeaderResolution(
-                            new PendingTeamLoad(
-                                teamId,
-                                teamIdStr,
-                                name,
-                                leaderRaw,
-                                prefix,
-                                color,
-                                rawMembers,
-                                deadline),
-                            resolved));
-            leaderFromName = leaderId != null;
-          }
-          if (leaderId == null) {
-            PendingTeamLoad pending =
-                new PendingTeamLoad(
-                    teamId, teamIdStr, name, leaderRaw, prefix, color, rawMembers, deadline);
-            pendingTeamLoads.put(teamId, pending);
-            plugin
-                .getLogger()
-                .info(
-                    "Queued asynchronous lookup for leader '"
-                        + leaderRaw
-                        + "' while loading team "
-                        + teamId
-                        + ". Team data will be restored once the profile resolves.");
-            continue;
-          }
-          TeamLoadResult result =
-              loadTeamFromConfig(
-                  teamId,
-                  teamIdStr,
-                  name,
-                  leaderId,
-                  prefix,
-                  color,
-                  rawMembers,
-                  deadline,
-                  deadlines);
-          if (result == null) {
-            continue;
-          }
-          legacyDataUpdated = legacyDataUpdated || leaderFromName || result.convertedFromName();
-        }
+
+      List<Team> loadedTeams = repository.loadAllTeams(deadlines);
+      for (Team team : loadedTeams) {
+        addTeamInternal(team, false);
       }
+
       PendingData<PendingInvite> inviteData = loadPendingInvites();
       PendingData<PendingRequest> requestData = loadPendingRequests();
       pendingInvites = List.copyOf(inviteData.values());
       pendingRequests = List.copyOf(requestData.values());
+
       if (membershipService != null) {
         membershipService.loadPendingInvites(pendingInvites);
         membershipService.loadPendingRequests(pendingRequests);
       }
+
       dirtyTeams.clear();
       deadlinesDirty = false;
       invitesDirty = false;
       requestsDirty = false;
-      if (legacyDataUpdated || inviteData.updated() || requestData.updated()) {
-        saveTeams(deadlines);
+    }
+  }
+
+  /** Saves dirty teams to SQLite asynchronously, and volatile data to state.yml */
+  public void saveTeams(Map<UUID, Long> deadlines) {
+    synchronized (saveLock) {
+      // Prepare list of dirty teams to avoid locking for too long
+      List<Team> toSave = new ArrayList<>();
+      List<Long> deadlinesToSave = new ArrayList<>();
+      for (UUID teamId : dirtyTeams) {
+        Team team = teams.get(teamId);
+        if (team != null) {
+          toSave.add(team);
+          deadlinesToSave.add(deadlines.getOrDefault(teamId, 0L));
+        }
+      }
+      dirtyTeams.clear();
+
+      // Save to SQLite asynchronously
+      if (!toSave.isEmpty()) {
+        plugin
+            .getServer()
+            .getScheduler()
+            .runTaskAsynchronously(
+                plugin,
+                () -> {
+                  for (int i = 0; i < toSave.size(); i++) {
+                    repository.saveTeam(toSave.get(i), deadlinesToSave.get(i));
+                  }
+                });
+      }
+
+      if (invitesDirty || requestsDirty) {
+        saveStateSync();
         invitesDirty = false;
         requestsDirty = false;
       }
     }
   }
 
-  /** Saves teams and deadlines back to teams.yml. */
-  public void saveTeams(Map<UUID, Long> deadlines) {
-    synchronized (saveLock) {
-      if (teamsConfig == null || teamsFile == null) return;
-      teamsConfig.set("teams", null);
-      for (Map.Entry<UUID, Team> entry : teams.entrySet()) {
-        UUID teamId = entry.getKey();
-        Team team = entry.getValue();
-        String path = "teams." + teamId;
-        teamsConfig.set(path + ".name", team.getName());
-        UUID leaderId = team.getLeaderId();
-        teamsConfig.set(path + ".leader", leaderId != null ? leaderId.toString() : null);
-        teamsConfig.set(
-            path + ".members",
-            team.getMembers().stream().map(UUID::toString).collect(Collectors.toList()));
-        teamsConfig.set(path + ".prefix", team.getPrefix());
-        teamsConfig.set(path + ".color", colorKeyFor(team.getColor()));
-        Long deadline = deadlines.get(teamId);
-        if (deadline != null) {
-          teamsConfig.set(path + ".deadline", deadline);
-        }
-      }
-      teamsConfig.set("invites", null);
-      for (PendingInvite invite : pendingInvites) {
-        String base = "invites." + invite.getTeamId() + "." + invite.getTargetPlayerId();
-        teamsConfig.set(base + ".teamName", invite.getTeamName());
-        teamsConfig.set(base + ".inviterId", invite.getInviterId().toString());
-        teamsConfig.set(base + ".inviterName", invite.getInviterName());
-        teamsConfig.set(base + ".targetName", invite.getTargetName());
-        teamsConfig.set(base + ".createdAt", invite.getCreatedAt());
-        if (invite.getExpiresAt() != null) {
-          teamsConfig.set(base + ".expiresAt", invite.getExpiresAt());
-        } else {
-          teamsConfig.set(base + ".expiresAt", null);
-        }
-      }
-      teamsConfig.set("requests", null);
-      for (PendingRequest request : pendingRequests) {
-        String base = "requests." + request.getTeamId() + "." + request.getPlayerId();
-        teamsConfig.set(base + ".teamName", request.getTeamName());
-        teamsConfig.set(base + ".playerName", request.getPlayerName());
-        teamsConfig.set(base + ".createdAt", request.getCreatedAt());
-        if (request.getExpiresAt() != null) {
-          teamsConfig.set(base + ".expiresAt", request.getExpiresAt());
-        } else {
-          teamsConfig.set(base + ".expiresAt", null);
-        }
-      }
-      try {
-        teamsConfig.save(teamsFile);
-      } catch (IOException e) {
-        plugin.getLogger().warning("Failed to save teams.yml: " + e.getMessage());
-      }
+  private void saveStateSync() {
+    if (stateConfig == null || stateFile == null) return;
+    stateConfig.set("invites", null);
+    for (PendingInvite invite : pendingInvites) {
+      String base = "invites." + invite.getTeamId() + "." + invite.getTargetPlayerId();
+      stateConfig.set(base + ".teamName", invite.getTeamName());
+      stateConfig.set(base + ".inviterId", invite.getInviterId().toString());
+      stateConfig.set(base + ".inviterName", invite.getInviterName());
+      stateConfig.set(base + ".targetName", invite.getTargetName());
+      stateConfig.set(base + ".createdAt", invite.getCreatedAt());
+      stateConfig.set(base + ".expiresAt", invite.getExpiresAt());
+    }
+    stateConfig.set("requests", null);
+    for (PendingRequest request : pendingRequests) {
+      String base = "requests." + request.getTeamId() + "." + request.getPlayerId();
+      stateConfig.set(base + ".teamName", request.getTeamName());
+      stateConfig.set(base + ".playerName", request.getPlayerName());
+      stateConfig.set(base + ".createdAt", request.getCreatedAt());
+      stateConfig.set(base + ".expiresAt", request.getExpiresAt());
+    }
+    try {
+      stateConfig.save(stateFile);
+    } catch (IOException e) {
+      plugin.getLogger().warning("Failed to save state.yml: " + e.getMessage());
     }
   }
 
@@ -279,6 +203,10 @@ public class TeamStorage {
     if (normalizedName != null) {
       teamIdsByName.put(normalizedName, team.getId());
     }
+    for (UUID memberId : team.getMembers()) {
+      playerTeams.put(memberId, team.getId());
+      playerTeamCache.put(memberId, team);
+    }
     if (markDirty) {
       markTeamDirty(team);
     }
@@ -298,105 +226,24 @@ public class TeamStorage {
       if (leaderId != null) {
         clearPlayerTeam(leaderId);
       }
-      markTeamDirty(team);
+      dirtyTeams.remove(team.getId());
+
+      plugin
+          .getServer()
+          .getScheduler()
+          .runTaskAsynchronously(
+              plugin,
+              () -> {
+                repository.deleteTeam(team.getId());
+              });
+      scheduleImmediateSaveIfDisabled();
     }
-  }
-
-  public void updateTeamName(@NotNull Team team, @NotNull String newName) {
-    synchronized (saveLock) {
-      String normalizedNewNameValue = newName.trim();
-      String currentName = team.getName();
-      if (Objects.equals(currentName, normalizedNewNameValue)) {
-        return;
-      }
-      String normalizedNewName = normalizeTeamKey(normalizedNewNameValue);
-      if (normalizedNewName != null) {
-        UUID existingId = teamIdsByName.get(normalizedNewName);
-        if (existingId != null && !existingId.equals(team.getId())) {
-          return;
-        }
-      }
-      String normalizedCurrentName = normalizeTeamKey(currentName);
-      if (normalizedCurrentName != null) {
-        teamIdsByName.remove(normalizedCurrentName);
-      }
-      team.setName(normalizedNewNameValue);
-      if (normalizedNewName != null) {
-        teamIdsByName.put(normalizedNewName, team.getId());
-      }
-      markTeamDirty(team);
-    }
-  }
-
-  public @NotNull Map<UUID, UUID> getPlayerTeams() {
-    return playerTeams;
-  }
-
-  public @Nullable Team getTeamByName(@Nullable String teamName) {
-    String normalizedName = normalizeTeamKey(teamName);
-    if (normalizedName == null) {
-      return null;
-    }
-    UUID teamId = teamIdsByName.get(normalizedName);
-    return teamId != null ? teams.get(teamId) : null;
-  }
-
-  public @Nullable UUID getTeamIdByName(@Nullable String teamName) {
-    String normalizedName = normalizeTeamKey(teamName);
-    return normalizedName != null ? teamIdsByName.get(normalizedName) : null;
-  }
-
-  public @Nullable String getPlayerTeam(@NotNull Player player) {
-    Team team = playerTeamCache.get(player.getUniqueId());
-    return team != null ? team.getName() : null;
-  }
-
-  public void assignPlayerToTeam(@NotNull UUID playerId, @NotNull Team team) {
-    cachePlayerTeam(playerId, team);
-  }
-
-  public void clearPlayerTeam(@NotNull UUID playerId) {
-    playerTeams.remove(playerId);
-    playerTeamCache.remove(playerId);
-  }
-
-  private void cachePlayerTeam(@NotNull UUID playerId, @NotNull Team team) {
-    playerTeams.put(playerId, team.getId());
-    playerTeamCache.put(playerId, team);
-  }
-
-  @NotNull
-  public List<UUID> getTeamMembers(String teamName) {
-    Team team = getTeamByName(teamName);
-    return team != null ? new ArrayList<>(team.getMembers()) : List.of();
-  }
-
-  @NotNull
-  public List<String> getTeamNames() {
-    return teams.values().stream().map(Team::getName).collect(Collectors.toList());
-  }
-
-  public @NotNull String getTeamPrefix(@Nullable String teamName) {
-    Team team = getTeamByName(teamName);
-    return team != null ? team.getPrefix() : "";
-  }
-
-  public @NotNull NamedTextColor getTeamColor(@Nullable String teamName) {
-    Team team = getTeamByName(teamName);
-    return team != null ? team.getColor() : NamedTextColor.WHITE;
-  }
-
-  public @Nullable UUID getTeamLeaderId(@Nullable String teamName) {
-    Team team = getTeamByName(teamName);
-    return team != null ? team.getLeaderId() : null;
   }
 
   public void markTeamDirty(@NotNull Team team) {
-    markTeamDirty(team.getId());
-  }
-
-  public void markTeamDirty(@NotNull UUID teamId) {
-    dirtyTeams.add(teamId);
+    synchronized (saveLock) {
+      dirtyTeams.add(team.getId());
+    }
     scheduleImmediateSaveIfDisabled();
   }
 
@@ -407,532 +254,272 @@ public class TeamStorage {
 
   private void scheduleImmediateSaveIfDisabled() {
     if (!autoSaveEnabled) {
-      flushIfDirty(null);
+      plugin
+          .getServer()
+          .getScheduler()
+          .runTaskAsynchronously(plugin, () -> saveTeams(deadlinesReference));
     }
   }
 
-  public synchronized void startAutoSave(long intervalSeconds, @NotNull Map<UUID, Long> deadlines) {
-    synchronized (saveLock) {
-      deadlinesReference = deadlines;
+  public @Nullable Team getTeam(@NotNull UUID teamId) {
+    return teams.get(teamId);
+  }
+
+  public @Nullable Team getTeamByName(@NotNull String teamName) {
+    String normalized = normalizeTeamKey(teamName);
+    if (normalized == null) return null;
+    UUID id = teamIdsByName.get(normalized);
+    return id != null ? teams.get(id) : null;
+  }
+
+  public void setPlayerTeam(@NotNull UUID playerId, @NotNull UUID teamId) {
+    Team team = teams.get(teamId);
+    if (team != null) {
+      playerTeams.put(playerId, teamId);
+      playerTeamCache.put(playerId, team);
     }
+  }
+
+  public void assignPlayerToTeam(@NotNull UUID playerId, @NotNull Team team) {
+    playerTeams.put(playerId, team.getId());
+    playerTeamCache.put(playerId, team);
+  }
+
+  public void updateTeamName(@NotNull Team team, @NotNull String newName) {
+    synchronized (saveLock) {
+      String oldNormalized = normalizeTeamKey(team.getName());
+      if (oldNormalized != null) {
+        teamIdsByName.remove(oldNormalized);
+      }
+      team.setName(newName);
+      String newNormalized = normalizeTeamKey(newName);
+      if (newNormalized != null) {
+        teamIdsByName.put(newNormalized, team.getId());
+      }
+      markTeamDirty(team);
+    }
+  }
+
+  public void clearPlayerTeam(@NotNull UUID playerId) {
+    playerTeams.remove(playerId);
+    playerTeamCache.remove(playerId);
+  }
+
+  public String getPlayerTeam(@NotNull Player player) {
+    Team team = playerTeamCache.get(player.getUniqueId());
+    return team != null ? team.getName() : null;
+  }
+
+  public UUID getPlayerTeamId(@NotNull UUID playerId) {
+    return playerTeams.get(playerId);
+  }
+
+  public @Nullable Team getPlayerTeamObj(@NotNull UUID playerId) {
+    return playerTeamCache.get(playerId);
+  }
+
+  public @NotNull Map<UUID, UUID> getPlayerTeams() {
+    return playerTeams;
+  }
+
+  public @Nullable UUID getTeamIdByName(@NotNull String teamName) {
+    String normalized = normalizeTeamKey(teamName);
+    return normalized != null ? teamIdsByName.get(normalized) : null;
+  }
+
+  public @Nullable UUID getTeamLeaderId(@NotNull String teamName) {
+    Team team = getTeamByName(teamName);
+    return team != null ? team.getLeaderId() : null;
+  }
+
+  public @NotNull List<UUID> getTeamMembers(String teamName) {
+    Team team = getTeamByName(teamName);
+    return team != null ? team.getMembers() : Collections.emptyList();
+  }
+
+  public @NotNull List<String> getTeamNames() {
+    return teams.values().stream().map(Team::getName).collect(Collectors.toList());
+  }
+
+  public String getTeamPrefix(String teamName) {
+    Team team = getTeamByName(teamName);
+    return team != null ? team.getPrefix() : "";
+  }
+
+  public @NotNull NamedTextColor getTeamColor(String teamName) {
+    Team team = getTeamByName(teamName);
+    return team != null ? team.getColor() : NamedTextColor.WHITE;
+  }
+
+  public void startAutoSave(long intervalSeconds, Map<UUID, Long> deadlines) {
+    this.deadlinesReference = deadlines;
     if (autoSaveTask != null) {
       autoSaveTask.cancel();
-      autoSaveTask = null;
     }
     autoSaveEnabled = intervalSeconds > 0;
-    if (!autoSaveEnabled) {
-      flushIfDirty(null);
-      return;
+    if (autoSaveEnabled) {
+      autoSaveTask =
+          plugin
+              .getServer()
+              .getScheduler()
+              .runTaskTimerAsynchronously(
+                  plugin,
+                  () -> {
+                    if (!dirtyTeams.isEmpty() || deadlinesDirty || invitesDirty || requestsDirty) {
+                      saveTeams(deadlinesReference);
+                      deadlinesDirty = false;
+                    }
+                  },
+                  intervalSeconds * 20L,
+                  intervalSeconds * 20L);
     }
-    long ticks = Math.max(1L, intervalSeconds) * 20L;
-    autoSaveTask =
-        plugin
-            .getServer()
-            .getScheduler()
-            .runTaskTimerAsynchronously(plugin, this::flushNow, ticks, ticks);
   }
 
-  public synchronized void stopAutoSave() {
+  public void stopAutoSave() {
     if (autoSaveTask != null) {
       autoSaveTask.cancel();
-      autoSaveTask = null;
     }
     autoSaveEnabled = false;
   }
 
   public void flushNow() {
-    flushIfDirty(null);
+    saveTeams(deadlinesReference);
   }
 
-  public void flushIfDirty(Map<UUID, Long> deadlines) {
-    if (!deadlinesDirty && dirtyTeams.isEmpty() && !invitesDirty && !requestsDirty) {
-      return;
-    }
-    synchronized (saveLock) {
-      if (!deadlinesDirty && dirtyTeams.isEmpty() && !invitesDirty && !requestsDirty) {
-        return;
-      }
-      saveTeams(deadlines != null ? deadlines : deadlinesReference);
-      dirtyTeams.clear();
-      deadlinesDirty = false;
-      invitesDirty = false;
-      requestsDirty = false;
+  public void onDisable() {
+    stopAutoSave();
+    flushNow(); // Final save
+
+    if (dbManager != null) {
+      dbManager.disconnect();
     }
   }
 
-  private static final String DEFAULT_COLOR_KEY =
-      Objects.requireNonNull(NamedTextColor.NAMES.key(NamedTextColor.WHITE));
-
-  private static String colorKeyFor(NamedTextColor color) {
-    if (color == null) {
-      return DEFAULT_COLOR_KEY;
-    }
-    String key = NamedTextColor.NAMES.key(color);
-    return key != null ? key : DEFAULT_COLOR_KEY;
-  }
-
-  private static String normalizeColorKey(String rawColor) {
-    if (rawColor == null || rawColor.isBlank()) {
-      return DEFAULT_COLOR_KEY;
-    }
-    String trimmed = rawColor.trim();
-    NamedTextColor direct = NamedTextColor.NAMES.value(trimmed.toLowerCase(Locale.ROOT));
-    if (direct != null) {
-      String key = NamedTextColor.NAMES.key(direct);
-      return key != null ? key : DEFAULT_COLOR_KEY;
-    }
-    if (trimmed.startsWith("NamedTextColor{")) {
-      int nameIndex = trimmed.indexOf("name=");
-      if (nameIndex >= 0) {
-        int separatorIndex = trimmed.indexOf(',', nameIndex);
-        int endIndex = separatorIndex >= 0 ? separatorIndex : trimmed.indexOf('}', nameIndex);
-        if (endIndex > nameIndex + 5) {
-          String candidate = trimmed.substring(nameIndex + 5, endIndex).trim();
-          if (!candidate.isEmpty()) {
-            NamedTextColor named = NamedTextColor.NAMES.value(candidate.toLowerCase(Locale.ROOT));
-            if (named != null) {
-              String key = NamedTextColor.NAMES.key(named);
-              return key != null ? key : DEFAULT_COLOR_KEY;
-            }
-          }
-        }
-      }
-    }
-    return DEFAULT_COLOR_KEY;
-  }
-
-  private static String normalizeTeamKey(String name) {
-    return name != null ? name.trim().toLowerCase(Locale.ROOT) : null;
-  }
-
-  private UUID parseUuid(String value) {
-    if (value == null || value.isBlank()) {
-      return null;
-    }
-    try {
-      return UUID.fromString(value.trim());
-    } catch (IllegalArgumentException ex) {
-      return null;
-    }
-  }
-
-  private TeamLoadResult loadTeamFromConfig(
-      UUID teamId,
-      String teamIdStr,
-      String name,
-      UUID leaderId,
-      String prefix,
-      String color,
-      List<String> rawMembers,
-      long deadline,
-      Map<UUID, Long> deadlines) {
-    Team team = new Team(teamId, name != null ? name.trim() : null, leaderId, prefix, color);
-    team.setMembers(rawMembers);
-    List<UUID> memberIds = new ArrayList<>(team.getMembers());
-    boolean convertedMembers = false;
-    for (String rawMember : rawMembers) {
-      UUID memberId = parseUuid(rawMember);
-      boolean convertedFromName = false;
-      if (memberId == null) {
-        if (rawMember == null || rawMember.isBlank()) {
-          plugin
-              .getLogger()
-              .warning(
-                  "Skipping member entry '"
-                      + rawMember
-                      + "' for team "
-                      + teamId
-                      + " because it could not be converted to UUID.");
-          continue;
-        }
-        memberId =
-            resolvePlayerUuid(
-                rawMember, resolved -> handleDeferredMember(team, rawMember, resolved));
-        convertedFromName = memberId != null;
-      }
-      if (memberId == null) {
-        continue;
-      }
-      if (!memberIds.contains(memberId)) {
-        memberIds.add(memberId);
-      }
-      if (convertedFromName) {
-        convertedMembers = true;
-      }
-    }
-    if (!memberIds.contains(leaderId)) {
-      memberIds.add(0, leaderId);
-      convertedMembers = true;
-    } else if (!memberIds.isEmpty() && !leaderId.equals(memberIds.getFirst())) {
-      memberIds.remove(leaderId);
-      memberIds.add(0, leaderId);
-      convertedMembers = true;
-    }
-    if (memberIds.isEmpty()) {
-      memberIds.add(leaderId);
-      convertedMembers = true;
-    }
-    team.setMembersByUuid(memberIds);
-    if (deadline > 0L) {
-      deadlines.put(team.getId(), deadline);
-    }
-    addTeamInternal(team, false);
-    for (UUID member : team.getMembers()) {
-      cachePlayerTeam(member, team);
-    }
-    if (convertedMembers) {
-      markTeamDirty(team);
-    }
-    return new TeamLoadResult(team, convertedMembers);
-  }
-
-  private PendingData<PendingInvite> loadPendingInvites() {
-    if (teamsConfig == null) {
-      return new PendingData<>(List.of(), false);
-    }
-    ConfigurationSection invitesSection = teamsConfig.getConfigurationSection("invites");
-    if (invitesSection == null) {
-      return new PendingData<>(List.of(), false);
-    }
-    List<PendingInvite> invites = new ArrayList<>();
-    boolean updated = false;
-    for (String teamIdKey : invitesSection.getKeys(false)) {
-      UUID teamId = parseUuid(teamIdKey);
-      if (teamId == null) {
-        plugin
-            .getLogger()
-            .warning("Skipping invite section with invalid team id '" + teamIdKey + "'.");
-        updated = true;
-        continue;
-      }
-      ConfigurationSection teamInvites = invitesSection.getConfigurationSection(teamIdKey);
-      if (teamInvites == null) {
-        continue;
-      }
-      for (String playerIdKey : teamInvites.getKeys(false)) {
-        UUID playerId = parseUuid(playerIdKey);
-        if (playerId == null) {
-          plugin
-              .getLogger()
-              .warning(
-                  "Skipping invite entry for team "
-                      + teamId
-                      + " with invalid player id '"
-                      + playerIdKey
-                      + "'.");
-          updated = true;
-          continue;
-        }
-        String basePath = "invites." + teamIdKey + "." + playerIdKey;
-        String teamName = teamsConfig.getString(basePath + ".teamName");
-        String inviterIdRaw = teamsConfig.getString(basePath + ".inviterId");
-        UUID inviterId = parseUuid(inviterIdRaw);
-        String inviterName = teamsConfig.getString(basePath + ".inviterName");
-        String targetName = teamsConfig.getString(basePath + ".targetName");
-        long createdAt = teamsConfig.getLong(basePath + ".createdAt", 0L);
-        Long expiresAt = teamsConfig.isSet(basePath + ".expiresAt")
-            ? teamsConfig.getLong(basePath + ".expiresAt")
-            : null;
-        if (teamName == null
-            || inviterId == null
-            || inviterName == null
-            || targetName == null
-            || createdAt <= 0L) {
-          plugin
-              .getLogger()
-              .warning(
-                  "Skipping invite entry for team "
-                      + teamId
-                      + " because it lacks required fields.");
-          updated = true;
-          continue;
-        }
-        PendingInvite invite =
-            PendingInvite.restored(
-                teamId, playerId, inviterId, teamName, inviterName, targetName, createdAt, expiresAt);
-        if (invite.isExpired()) {
-          updated = true;
-          continue;
-        }
-        invites.add(invite);
-      }
-    }
-    return new PendingData<>(invites, updated);
-  }
-
-  private PendingData<PendingRequest> loadPendingRequests() {
-    if (teamsConfig == null) {
-      return new PendingData<>(List.of(), false);
-    }
-    ConfigurationSection requestsSection = teamsConfig.getConfigurationSection("requests");
-    if (requestsSection == null) {
-      return new PendingData<>(List.of(), false);
-    }
-    List<PendingRequest> requests = new ArrayList<>();
-    boolean updated = false;
-    for (String teamIdKey : requestsSection.getKeys(false)) {
-      UUID teamId = parseUuid(teamIdKey);
-      if (teamId == null) {
-        plugin
-            .getLogger()
-            .warning("Skipping requests section with invalid team id '" + teamIdKey + "'.");
-        updated = true;
-        continue;
-      }
-      ConfigurationSection teamRequests = requestsSection.getConfigurationSection(teamIdKey);
-      if (teamRequests == null) {
-        continue;
-      }
-      for (String playerIdKey : teamRequests.getKeys(false)) {
-        UUID playerId = parseUuid(playerIdKey);
-        if (playerId == null) {
-          plugin
-              .getLogger()
-              .warning(
-                  "Skipping request entry for team "
-                      + teamId
-                      + " with invalid player id '"
-                      + playerIdKey
-                      + "'.");
-          updated = true;
-          continue;
-        }
-        String basePath = "requests." + teamIdKey + "." + playerIdKey;
-        String teamName = teamsConfig.getString(basePath + ".teamName");
-        String playerName = teamsConfig.getString(basePath + ".playerName");
-        long createdAt = teamsConfig.getLong(basePath + ".createdAt", 0L);
-        Long expiresAt = teamsConfig.isSet(basePath + ".expiresAt")
-            ? teamsConfig.getLong(basePath + ".expiresAt")
-            : null;
-        if (teamName == null || playerName == null || createdAt <= 0L) {
-          plugin
-              .getLogger()
-              .warning(
-                  "Skipping request entry for team "
-                      + teamId
-                      + " because it lacks required fields.");
-          updated = true;
-          continue;
-        }
-        PendingRequest request =
-            PendingRequest.restored(teamId, playerId, teamName, playerName, createdAt, expiresAt);
-        if (request.isExpired()) {
-          updated = true;
-          continue;
-        }
-        requests.add(request);
-      }
-    }
-    return new PendingData<>(requests, updated);
-  }
-
-  private UUID resolvePlayerUuid(String value, java.util.function.Consumer<UUID> onResolved) {
-    if (value == null || value.isBlank()) {
-      return null;
-    }
-    String trimmed = value.trim();
-    String cacheKey = trimmed.toLowerCase(Locale.ROOT);
-    UUID cached = resolvedProfileCache.get(cacheKey);
-    if (cached != null) {
-      return cached;
-    }
-    OfflinePlayer offlinePlayer = plugin.getServer().getOfflinePlayerIfCached(trimmed);
-    if (offlinePlayer != null && offlinePlayer.getUniqueId() != null) {
-      UUID uuid = offlinePlayer.getUniqueId();
-      resolvedProfileCache.put(cacheKey, uuid);
-      return uuid;
-    }
-    CompletableFuture<UUID> future =
-        pendingProfileLookups.computeIfAbsent(
-            cacheKey,
-            key ->
-                startProfileLookup(trimmed)
-                    .whenComplete(
-                        (uuid, throwable) -> {
-                          pendingProfileLookups.remove(cacheKey);
-                          if (throwable != null) {
-                            plugin
-                                .getLogger()
-                                .warning(
-                                    "Failed to resolve profile for '"
-                                        + trimmed
-                                        + "': "
-                                        + throwable.getMessage());
-                          } else if (uuid != null) {
-                            resolvedProfileCache.put(cacheKey, uuid);
-                          }
-                        }));
-    future.whenComplete(
-        (uuid, throwable) -> {
-          UUID result = uuid;
-          if (throwable != null) {
-            result = null;
-          }
-          if (onResolved != null) {
-            UUID finalResult = result;
-            plugin.getServer().getScheduler().runTask(plugin, () -> onResolved.accept(finalResult));
-          }
-        });
-    return null;
-  }
-
-  private CompletableFuture<UUID> startProfileLookup(String playerName) {
-    CompletableFuture<UUID> result = new CompletableFuture<>();
-    plugin
-        .getServer()
-        .getAsyncScheduler()
-        .runNow(
-            plugin,
-            task -> {
-              try {
-                var profile = plugin.getServer().createProfile(playerName);
-                if (profile.completeFromCache(true, true) && profile.getId() != null) {
-                  result.complete(profile.getId());
-                  return;
-                }
-                profile
-                    .update()
-                    .whenComplete(
-                        (updated, throwable) -> {
-                          if (throwable != null) {
-                            result.completeExceptionally(throwable);
-                            return;
-                          }
-                          UUID uuid = null;
-                          if (updated != null && updated.getId() != null) {
-                            uuid = updated.getId();
-                          } else if (profile.getId() != null) {
-                            uuid = profile.getId();
-                          }
-                          result.complete(uuid);
-                        });
-              } catch (Throwable throwable) {
-                result.completeExceptionally(throwable);
-              }
-            });
-    return result;
-  }
-
-  private void handlePendingLeaderResolution(PendingTeamLoad pending, UUID resolvedLeader) {
-    if (resolvedLeader == null) {
-      plugin
-          .getLogger()
-          .warning(
-              "Skipping team entry "
-                  + pending.teamId
-                  + " because player name '"
-                  + pending.leaderRaw
-                  + "' could not be resolved.");
-      pendingTeamLoads.remove(pending.teamId);
-      return;
-    }
-    pendingTeamLoads.remove(pending.teamId);
-    synchronized (saveLock) {
-      TeamLoadResult result =
-          loadTeamFromConfig(
-              pending.teamId,
-              pending.teamIdString,
-              pending.name,
-              resolvedLeader,
-              pending.prefix,
-              pending.color,
-              pending.rawMembers,
-              pending.deadline,
-              deadlinesReference);
-      if (result != null) {
-        Team team = result.team();
-        teamsConfig.set("teams." + pending.teamIdString + ".leader", resolvedLeader.toString());
-        teamsConfig.set(
-            "teams." + pending.teamIdString + ".members",
-            team.getMembers().stream().map(UUID::toString).collect(Collectors.toList()));
-        markTeamDirty(team);
-      }
-    }
-  }
-
-  private void handleDeferredMember(Team team, String rawValue, UUID resolvedUuid) {
-    if (resolvedUuid == null) {
-      plugin
-          .getLogger()
-          .warning(
-              "Skipping member entry '"
-                  + rawValue
-                  + "' for team "
-                  + team.getId()
-                  + " because it could not be converted to UUID.");
-      return;
-    }
-    synchronized (saveLock) {
-      List<UUID> members = new ArrayList<>(team.getMembers());
-      if (!members.contains(resolvedUuid)) {
-        members.add(resolvedUuid);
-        team.setMembersByUuid(members);
-        cachePlayerTeam(resolvedUuid, team);
-        teamsConfig.set(
-            "teams." + team.getId() + ".members",
-            members.stream().map(UUID::toString).collect(Collectors.toList()));
-        markTeamDirty(team);
-      }
-    }
+  private String normalizeTeamKey(String name) {
+    return name == null ? null : name.toLowerCase(Locale.ROOT);
   }
 
   private List<PendingInvite> filterActiveInvites(Collection<PendingInvite> invites) {
-    if (invites.isEmpty()) {
-      return List.of();
-    }
-    List<PendingInvite> active = new ArrayList<>();
-    for (PendingInvite invite : invites) {
-      if (invite != null && !invite.isExpired()) {
-        active.add(invite);
-      }
-    }
-    return active.isEmpty() ? List.of() : List.copyOf(active);
+    long now = System.currentTimeMillis();
+    return invites.stream()
+        .filter(i -> i.getExpiresAt() == null || i.getExpiresAt() > now)
+        .collect(Collectors.toList());
   }
 
   private List<PendingRequest> filterActiveRequests(Collection<PendingRequest> requests) {
-    if (requests.isEmpty()) {
-      return List.of();
+    long now = System.currentTimeMillis();
+    return requests.stream()
+        .filter(r -> r.getExpiresAt() == null || r.getExpiresAt() > now)
+        .collect(Collectors.toList());
+  }
+
+  private PendingData<PendingInvite> loadPendingInvites() {
+    List<PendingInvite> result = new ArrayList<>();
+    if (stateConfig == null || !stateConfig.contains("invites")) {
+      return new PendingData<>(result, false);
     }
-    List<PendingRequest> active = new ArrayList<>();
-    for (PendingRequest request : requests) {
-      if (request != null && !request.isExpired()) {
-        active.add(request);
+    boolean updated = false;
+    long now = System.currentTimeMillis();
+    var section = stateConfig.getConfigurationSection("invites");
+    if (section != null) {
+      for (String teamIdStr : section.getKeys(false)) {
+        UUID teamId;
+        try {
+          teamId = UUID.fromString(teamIdStr);
+        } catch (IllegalArgumentException e) {
+          continue;
+        }
+        var targetSection = stateConfig.getConfigurationSection("invites." + teamIdStr);
+        if (targetSection != null) {
+          for (String targetIdStr : targetSection.getKeys(false)) {
+            UUID targetId;
+            try {
+              targetId = UUID.fromString(targetIdStr);
+            } catch (IllegalArgumentException e) {
+              continue;
+            }
+            String base = "invites." + teamIdStr + "." + targetIdStr;
+            String teamName = stateConfig.getString(base + ".teamName", "");
+            UUID inviterId;
+            try {
+              inviterId = UUID.fromString(stateConfig.getString(base + ".inviterId", ""));
+            } catch (IllegalArgumentException e) {
+              continue;
+            }
+            String inviterName = stateConfig.getString(base + ".inviterName", "");
+            String targetName = stateConfig.getString(base + ".targetName", "");
+            long createdAt = stateConfig.getLong(base + ".createdAt", now);
+            Long expiresAt =
+                stateConfig.contains(base + ".expiresAt")
+                    ? stateConfig.getLong(base + ".expiresAt")
+                    : null;
+            if (expiresAt != null && expiresAt <= now) {
+              updated = true;
+              continue;
+            }
+            result.add(
+                PendingInvite.restored(
+                    teamId,
+                    targetId,
+                    inviterId,
+                    teamName,
+                    inviterName,
+                    targetName,
+                    createdAt,
+                    expiresAt));
+          }
+        }
       }
     }
-    return active.isEmpty() ? List.of() : List.copyOf(active);
+    return new PendingData<>(result, updated);
+  }
+
+  private PendingData<PendingRequest> loadPendingRequests() {
+    List<PendingRequest> result = new ArrayList<>();
+    if (stateConfig == null || !stateConfig.contains("requests")) {
+      return new PendingData<>(result, false);
+    }
+    boolean updated = false;
+    long now = System.currentTimeMillis();
+    var section = stateConfig.getConfigurationSection("requests");
+    if (section != null) {
+      for (String teamIdStr : section.getKeys(false)) {
+        UUID teamId;
+        try {
+          teamId = UUID.fromString(teamIdStr);
+        } catch (IllegalArgumentException e) {
+          continue;
+        }
+        var playerSection = stateConfig.getConfigurationSection("requests." + teamIdStr);
+        if (playerSection != null) {
+          for (String playerIdStr : playerSection.getKeys(false)) {
+            UUID playerId;
+            try {
+              playerId = UUID.fromString(playerIdStr);
+            } catch (IllegalArgumentException e) {
+              continue;
+            }
+            String base = "requests." + teamIdStr + "." + playerIdStr;
+            String teamName = stateConfig.getString(base + ".teamName", "");
+            String playerName = stateConfig.getString(base + ".playerName", "");
+            long createdAt = stateConfig.getLong(base + ".createdAt", now);
+            Long expiresAt =
+                stateConfig.contains(base + ".expiresAt")
+                    ? stateConfig.getLong(base + ".expiresAt")
+                    : null;
+            if (expiresAt != null && expiresAt <= now) {
+              updated = true;
+              continue;
+            }
+            result.add(
+                PendingRequest.restored(
+                    teamId, playerId, teamName, playerName, createdAt, expiresAt));
+          }
+        }
+      }
+    }
+    return new PendingData<>(result, updated);
   }
 
   private record PendingData<T>(List<T> values, boolean updated) {}
-
-  private static final class PendingTeamLoad {
-    private final UUID teamId;
-    private final String teamIdString;
-    private final String name;
-    private final String leaderRaw;
-    private final String prefix;
-    private final String color;
-    private final List<String> rawMembers;
-    private final long deadline;
-
-    private PendingTeamLoad(
-        UUID teamId,
-        String teamIdString,
-        String name,
-        String leaderRaw,
-        String prefix,
-        String color,
-        List<String> rawMembers,
-        long deadline) {
-      this.teamId = teamId;
-      this.teamIdString = teamIdString;
-      this.name = name;
-      this.leaderRaw = leaderRaw != null ? leaderRaw.trim() : null;
-      this.prefix = prefix;
-      this.color = color;
-      this.rawMembers = new ArrayList<>(rawMembers);
-      this.deadline = deadline;
-    }
-  }
-
-  private record TeamLoadResult(Team team, boolean convertedFromName) {}
 }
