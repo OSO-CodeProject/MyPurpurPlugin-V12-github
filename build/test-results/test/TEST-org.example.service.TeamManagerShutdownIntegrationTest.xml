@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="org.example.service.TeamManagerShutdownIntegrationTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-08-21T17:04:59" hostname="c-6a8879ec-0167ce52-632a481312a1" time="0.011">
+<testsuite name="org.example.service.TeamManagerShutdownIntegrationTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-08-21T17:21:51" hostname="c-6a8879ec-0167ce52-632a481312a1" time="0.011">
   <properties/>
   <testcase name="shutdownResetsPlayerListNames()" classname="org.example.service.TeamManagerShutdownIntegrationTest" time="0.011"/>
   <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[[17:04:59 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-890860946317713271144872117/MyPurpurPlugin-1.0/database.db
-[17:04:59 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-890860946317713271144872117/MyPurpurPlugin-1.0/database.db
-[17:04:59 INFO]: Плагин MyPurpurPlugin успешно загружен!
+  <system-err><![CDATA[[17:21:51 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-5797797435400899712766250658/MyPurpurPlugin-1.0/database.db
+[17:21:51 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-5797797435400899712766250658/MyPurpurPlugin-1.0/database.db
+[17:21:51 INFO]: Плагин MyPurpurPlugin успешно загружен!
 ]]></system-err>
 </testsuite>

@@ -1,3 +1,15 @@
-```java
+```
+# Gradle
+.gradle/
+build/
 
+# Compiled Java classes
+*.class
+
+# Test reports and results
+build/reports/
+build/test-results/
+
+# Temporary compilation files
+build/tmp/
 ```

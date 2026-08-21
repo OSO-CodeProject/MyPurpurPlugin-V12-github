@@ -41,7 +41,7 @@
 </td>
 <td>
 <div class="infoBox" id="duration">
-<div class="counter">1.579s</div>
+<div class="counter">1.600s</div>
 <p>duration</p>
 </div>
 </td>
@@ -79,92 +79,92 @@
 </thead>
 <tr>
 <td class="success">adminKickCommandClearsMembershipAndTabPrefix()</td>
-<td class="success">0.102s</td>
+<td class="success">0.033s</td>
 <td class="success">passed</td>
 </tr>
 <tr>
 <td class="success">adminKickCommandMatchesMemberIgnoringCase()</td>
-<td class="success">0.022s</td>
+<td class="success">0.042s</td>
 <td class="success">passed</td>
 </tr>
 <tr>
 <td class="success">adminRenameRejectsInvalidTeamNameLength()</td>
-<td class="success">0.087s</td>
+<td class="success">0.083s</td>
 <td class="success">passed</td>
 </tr>
 <tr>
 <td class="success">adminTransferCommandMatchesMemberIgnoringCase()</td>
-<td class="success">0.080s</td>
+<td class="success">0.166s</td>
 <td class="success">passed</td>
 </tr>
 <tr>
 <td class="success">asyncChatEventAddsTeamPrefix()</td>
-<td class="success">0.115s</td>
-<td class="success">passed</td>
-</tr>
-<tr>
-<td class="success">asyncChatEventUsesDisplayNameWithPrefix()</td>
-<td class="success">0.093s</td>
-<td class="success">passed</td>
-</tr>
-<tr>
-<td class="success">deniesCommandWithoutPermission()</td>
-<td class="success">0.091s</td>
-<td class="success">passed</td>
-</tr>
-<tr>
-<td class="success">dispatchesCreateJoinAndListCommands()</td>
 <td class="success">0.105s</td>
 <td class="success">passed</td>
 </tr>
 <tr>
-<td class="success">enforceTeamSizesRemovesOverdueTeamImmediately()</td>
-<td class="success">0.106s</td>
+<td class="success">asyncChatEventUsesDisplayNameWithPrefix()</td>
+<td class="success">0.101s</td>
 <td class="success">passed</td>
 </tr>
 <tr>
-<td class="success">enforceTeamSizesReusesExistingDeadline()</td>
-<td class="success">0.080s</td>
-<td class="success">passed</td>
-</tr>
-<tr>
-<td class="success">joinCommandMatchesNameWhenTeamCreatedWithTrailingWhitespace()</td>
-<td class="success">0.028s</td>
-<td class="success">passed</td>
-</tr>
-<tr>
-<td class="success">joinCommandMatchesTeamNameIgnoringCase()</td>
-<td class="success">0.022s</td>
-<td class="success">passed</td>
-</tr>
-<tr>
-<td class="success">keepsBlockingJoinsAfterReloadWhenEnforcementDisabled()</td>
+<td class="success">deniesCommandWithoutPermission()</td>
 <td class="success">0.092s</td>
 <td class="success">passed</td>
 </tr>
 <tr>
-<td class="success">leaderCanRevokeInviteAndSendItAgain()</td>
-<td class="success">0.115s</td>
-<td class="success">passed</td>
-</tr>
-<tr>
-<td class="success">leaderReceivesConfirmationAndTabPrefixAfterCreate()</td>
+<td class="success">dispatchesCreateJoinAndListCommands()</td>
 <td class="success">0.087s</td>
 <td class="success">passed</td>
 </tr>
 <tr>
+<td class="success">enforceTeamSizesRemovesOverdueTeamImmediately()</td>
+<td class="success">0.114s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">enforceTeamSizesReusesExistingDeadline()</td>
+<td class="success">0.082s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">joinCommandMatchesNameWhenTeamCreatedWithTrailingWhitespace()</td>
+<td class="success">0.075s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">joinCommandMatchesTeamNameIgnoringCase()</td>
+<td class="success">0.083s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">keepsBlockingJoinsAfterReloadWhenEnforcementDisabled()</td>
+<td class="success">0.091s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">leaderCanRevokeInviteAndSendItAgain()</td>
+<td class="success">0.137s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">leaderReceivesConfirmationAndTabPrefixAfterCreate()</td>
+<td class="success">0.043s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
 <td class="success">playerQuitRemovesDeadlineAfterLeaving()</td>
-<td class="success">0.096s</td>
+<td class="success">0.026s</td>
 <td class="success">passed</td>
 </tr>
 <tr>
 <td class="success">preventsJoinWhenTeamFull()</td>
-<td class="success">0.078s</td>
+<td class="success">0.039s</td>
 <td class="success">passed</td>
 </tr>
 <tr>
 <td class="success">rejectsInvalidTeamName()</td>
-<td class="success">0.085s</td>
+<td class="success">0.032s</td>
 <td class="success">passed</td>
 </tr>
 <tr>
@@ -182,89 +182,90 @@
 <div id="tab1" class="tab">
 <h2>Standard error</h2>
 <span class="code">
-<pre>[17:04:53 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:53 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:53 INFO]: Плагин MyPurpurPlugin успешно загружен!
-[17:04:53 WARNING]: Команда Beta превышает лимит: 3 из 1.
-[17:04:53 WARNING]: Команда Beta превышает лимит: 3 из 1.
-[17:04:53 INFO]: Льготный период команды Beta истёк, удалено 2 игрок(ов).
-[17:04:53 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:53 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:53 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:53 INFO]: Плагин MyPurpurPlugin успешно загружен!
-[17:04:53 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:53 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:53 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:53 INFO]: Плагин MyPurpurPlugin успешно загружен!
-[17:04:53 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:53 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:53 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:53 INFO]: Плагин MyPurpurPlugin успешно загружен!
-[17:04:53 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:54 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:54 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:54 INFO]: Плагин MyPurpurPlugin успешно загружен!
-[17:04:54 WARNING]: Команда Beta превышает лимит: 2 из 1.
-[17:04:54 WARNING]: Команда Beta превышает лимит: 2 из 1.
-[17:04:54 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:54 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:54 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:54 INFO]: Плагин MyPurpurPlugin успешно загружен!
-[17:04:54 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:54 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:54 INFO]: Плагин MyPurpurPlugin успешно загружен!
-[17:04:54 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:54 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:54 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:54 INFO]: Плагин MyPurpurPlugin успешно загружен!
-[17:04:54 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:54 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:54 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:54 INFO]: Плагин MyPurpurPlugin успешно загружен!
-[17:04:54 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:54 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:54 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:54 INFO]: Плагин MyPurpurPlugin успешно загружен!
-[17:04:54 WARNING]: Команда Reloaded превышает лимит: 3 из 1.
-[17:04:54 WARNING]: Команда Reloaded превышает лимит: 2 из 1.
-[17:04:54 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:54 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:54 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:54 INFO]: Плагин MyPurpurPlugin успешно загружен!
-[17:04:54 WARNING]: Команда Beta превышает лимит: 2 из 1.
-[17:04:54 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:54 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:54 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:54 INFO]: Плагин MyPurpurPlugin успешно загружен!
-[17:04:54 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:54 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:54 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:54 INFO]: Плагин MyPurpurPlugin успешно загружен!
-[17:04:54 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:54 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:54 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:54 INFO]: Плагин MyPurpurPlugin успешно загружен!
-[17:04:54 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:54 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:54 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:54 INFO]: Плагин MyPurpurPlugin успешно загружен!
-[17:04:54 WARNING]: Команда Omega превышает лимит: 2 из 1.
-[17:04:54 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:54 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:54 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:54 INFO]: Плагин MyPurpurPlugin успешно загружен!
-[17:04:54 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:55 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:55 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:55 INFO]: Плагин MyPurpurPlugin успешно загружен!
-[17:04:55 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:55 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:55 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:55 INFO]: Плагин MyPurpurPlugin успешно загружен!
-[17:04:55 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:55 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:55 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-20966317613617029984289676341/MyPurpurPlugin-1.0/database.db
-[17:04:55 INFO]: Плагин MyPurpurPlugin успешно загружен!
+<pre>[17:21:45 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:45 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:45 INFO]: Плагин MyPurpurPlugin успешно загружен!
+[17:21:46 WARNING]: Команда Beta превышает лимит: 3 из 1.
+[17:21:46 WARNING]: Команда Beta превышает лимит: 3 из 1.
+[17:21:46 INFO]: Льготный период команды Beta истёк, удалено 2 игрок(ов).
+[17:21:46 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:46 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:46 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:46 INFO]: Плагин MyPurpurPlugin успешно загружен!
+[17:21:46 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:46 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:46 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:46 INFO]: Плагин MyPurpurPlugin успешно загружен!
+[17:21:46 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:46 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:46 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:46 INFO]: Плагин MyPurpurPlugin успешно загружен!
+[17:21:46 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:46 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:46 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:46 INFO]: Плагин MyPurpurPlugin успешно загружен!
+[17:21:46 WARNING]: Команда Beta превышает лимит: 2 из 1.
+[17:21:46 WARNING]: Команда Beta превышает лимит: 2 из 1.
+[17:21:46 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:46 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:46 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:46 INFO]: Плагин MyPurpurPlugin успешно загружен!
+[17:21:46 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:46 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:46 INFO]: Плагин MyPurpurPlugin успешно загружен!
+[17:21:46 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:46 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:46 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:46 INFO]: Плагин MyPurpurPlugin успешно загружен!
+[17:21:46 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:46 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:46 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:46 INFO]: Плагин MyPurpurPlugin успешно загружен!
+[17:21:46 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:46 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:46 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:46 INFO]: Плагин MyPurpurPlugin успешно загружен!
+[17:21:46 WARNING]: Команда Reloaded превышает лимит: 3 из 1.
+[17:21:46 WARNING]: Команда Reloaded превышает лимит: 2 из 1.
+[17:21:46 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:46 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:46 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:46 INFO]: Плагин MyPurpurPlugin успешно загружен!
+[17:21:46 WARNING]: Команда Beta превышает лимит: 2 из 1.
+[17:21:46 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:46 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:46 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:46 INFO]: Плагин MyPurpurPlugin успешно загружен!
+[17:21:46 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:46 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:46 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:46 INFO]: Плагин MyPurpurPlugin успешно загружен!
+[17:21:47 WARNING]: sendInvite took 79 ms
+[17:21:47 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:47 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:47 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:47 INFO]: Плагин MyPurpurPlugin успешно загружен!
+[17:21:47 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:47 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:47 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:47 INFO]: Плагин MyPurpurPlugin успешно загружен!
+[17:21:47 WARNING]: Команда Omega превышает лимит: 2 из 1.
+[17:21:47 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:47 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:47 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:47 INFO]: Плагин MyPurpurPlugin успешно загружен!
+[17:21:47 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:47 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:47 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:47 INFO]: Плагин MyPurpurPlugin успешно загружен!
+[17:21:47 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:47 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:47 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:47 INFO]: Плагин MyPurpurPlugin успешно загружен!
+[17:21:47 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:47 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:47 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-7315209935446677412748990085/MyPurpurPlugin-1.0/database.db
+[17:21:47 INFO]: Плагин MyPurpurPlugin успешно загружен!
 </pre>
 </span>
 </div>
@@ -276,7 +277,7 @@
 <input id="line-wrapping-toggle" type="checkbox" autocomplete="off"/>
 </label>
 </div>Generated by 
-<a href="http://www.gradle.org">Gradle 8.5</a> at Aug 21, 2026, 5:05:00 PM</p>
+<a href="http://www.gradle.org">Gradle 8.5</a> at Aug 21, 2026, 5:21:53 PM</p>
 </div>
 </div>
 </body>
