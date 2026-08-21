@@ -119,7 +119,8 @@ public class MembershipService {
     }
     // Учитываем ограничение на максимальное количество участников.
     int max = pluginConfig.getMaxMembers();
-    if (max > 0 && team.getMembers().size() >= max) {
+    int currentSize = team.getMembers().size();
+    if (max > 0 && currentSize >= max) {
       TeamMessageUtils.sendTeamMessage(
           player, Component.text("❌ Команда полная", NamedTextColor.RED));
       return;
@@ -128,7 +129,7 @@ public class MembershipService {
     team.addMember(player.getUniqueId());
     storage.assignPlayerToTeam(player.getUniqueId(), team);
     clearInvitesForPlayer(player.getUniqueId());
-    clearJoinRequestsForPlayer(player.getUniqueId(), team.getLeaderId());
+    // Удаляем запрос на вступление только один раз
     removeJoinRequest(
         team.getId(),
         player.getUniqueId(),
@@ -157,7 +158,8 @@ public class MembershipService {
       return;
     }
     int max = pluginConfig.getMaxMembers();
-    if (max > 0 && team.getMembers().size() >= max) {
+    int currentSize = team.getMembers().size();
+    if (max > 0 && currentSize >= max) {
       TeamMessageUtils.sendTeamMessage(player, TeamMessageUtils.teamIsFullMessage(team.getName()));
       return;
     }
@@ -230,7 +232,8 @@ public class MembershipService {
       return;
     }
     int max = pluginConfig.getMaxMembers();
-    if (max > 0 && team.getMembers().size() >= max) {
+    int currentSize = team.getMembers().size();
+    if (max > 0 && currentSize >= max) {
       TeamMessageUtils.sendTeamMessage(leader, TeamMessageUtils.teamIsFullMessage(team.getName()));
       return;
     }
@@ -390,7 +393,8 @@ public class MembershipService {
       return;
     }
     int maxMembers = pluginConfig.getMaxMembers();
-    if (maxMembers > 0 && team.getMembers().size() >= maxMembers) {
+    int currentSize = team.getMembers().size();
+    if (maxMembers > 0 && currentSize >= maxMembers) {
       TeamMessageUtils.sendTeamMessage(leader, TeamMessageUtils.teamIsFullMessage(team.getName()));
       return;
     }
@@ -462,6 +466,7 @@ public class MembershipService {
     removeInvite(invite.getTeamId(), invite.getTargetPlayerId());
     TeamMessageUtils.sendTeamMessage(
         leader, TeamMessageUtils.inviteRevokedLeaderMessage(invite.getTargetName()));
+    // Отправляем уведомление целевому игроку только если он онлайн
     Player targetPlayer = plugin.getServer().getPlayer(invite.getTargetPlayerId());
     if (targetPlayer != null) {
       TeamMessageUtils.sendTeamMessage(
@@ -517,31 +522,35 @@ public class MembershipService {
       return;
     }
     UUID playerId = player.getUniqueId();
-    PendingInvite invite = peekInvite(team.getId(), playerId);
-    if (invite == null) {
-      TeamMessageUtils.sendTeamMessage(
-          player, TeamMessageUtils.inviteNotFoundForPlayerMessage(teamName));
-      return;
-    }
-    if (invite.isExpired()) {
-      removeInvite(invite.getTeamId(), invite.getTargetPlayerId());
-      TeamMessageUtils.sendTeamMessage(
-          player, TeamMessageUtils.inviteExpiredMessage(team.getName()));
-      return;
-    }
-    if (storage.getPlayerTeam(player) != null) {
-      TeamMessageUtils.sendTeamMessage(
-          player, Component.text("❌ Вы уже состоите в команде", NamedTextColor.RED));
-      removeInvite(invite.getTeamId(), invite.getTargetPlayerId());
-      return;
-    }
-    int maxMembers = pluginConfig.getMaxMembers();
-    if (maxMembers > 0 && team.getMembers().size() >= maxMembers) {
-      TeamMessageUtils.sendTeamMessage(player, TeamMessageUtils.teamIsFullMessage(team.getName()));
-      return;
-    }
+    PendingInvite invite;
+    synchronized (this) {
+      invite = peekInvite(team.getId(), playerId);
+      if (invite == null) {
+        TeamMessageUtils.sendTeamMessage(
+            player, TeamMessageUtils.inviteNotFoundForPlayerMessage(teamName));
+        return;
+      }
+      if (invite.isExpired()) {
+        removeInvite(invite.getTeamId(), invite.getTargetPlayerId());
+        TeamMessageUtils.sendTeamMessage(
+            player, TeamMessageUtils.inviteExpiredMessage(team.getName()));
+        return;
+      }
+      if (storage.getPlayerTeam(player) != null) {
+        TeamMessageUtils.sendTeamMessage(
+            player, Component.text("❌ Вы уже состоите в команде", NamedTextColor.RED));
+        removeInvite(invite.getTeamId(), invite.getTargetPlayerId());
+        return;
+      }
+      int maxMembers = pluginConfig.getMaxMembers();
+      int currentSize = team.getMembers().size();
+      if (maxMembers > 0 && currentSize >= maxMembers) {
+        TeamMessageUtils.sendTeamMessage(player, TeamMessageUtils.teamIsFullMessage(team.getName()));
+        return;
+      }
 
-    removeInvite(invite.getTeamId(), invite.getTargetPlayerId());
+      removeInvite(invite.getTeamId(), invite.getTargetPlayerId());
+    }
     addPlayerToTeam(team.getName(), player);
     TeamMessageUtils.sendTeamMessage(
         player, TeamMessageUtils.inviteAcceptedMessage(team.getName()));

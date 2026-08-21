@@ -75,6 +75,9 @@ public class Team {
   }
 
   public void setLeader(@Nullable UUID leader) {
+    if (leader == null) {
+      throw new IllegalArgumentException("Leader cannot be null");
+    }
     this.leader = leader;
     addMember(leader);
   }
