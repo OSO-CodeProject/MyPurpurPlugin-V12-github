@@ -639,7 +639,7 @@ public class DeadlineScheduler {
     }
   }
 
-  private void clearLeaderDisplay(UUID leaderId) {
+  public void clearLeaderDisplay(UUID leaderId) {
     if (leaderId == null) {
       return;
     }

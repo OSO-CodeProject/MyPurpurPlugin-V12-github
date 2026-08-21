@@ -1,22 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="org.example.service.TeamManagerTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-08-21T17:04:59" hostname="c-6a8879ec-0167ce52-632a481312a1" time="0.814">
+<testsuite name="org.example.service.TeamManagerTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-08-21T17:21:52" hostname="c-6a8879ec-0167ce52-632a481312a1" time="0.958">
   <properties/>
-  <testcase name="delegatesMembershipOperations()" classname="org.example.service.TeamManagerTest" time="0.614"/>
-  <testcase name="joinCommandCreatesPendingRequestInRequestMode()" classname="org.example.service.TeamManagerTest" time="0.09"/>
+  <testcase name="delegatesMembershipOperations()" classname="org.example.service.TeamManagerTest" time="0.752"/>
+  <testcase name="joinCommandCreatesPendingRequestInRequestMode()" classname="org.example.service.TeamManagerTest" time="0.103"/>
   <testcase name="joinCommandAllowsImmediateJoinInOpenMode()" classname="org.example.service.TeamManagerTest" time="0.03"/>
-  <testcase name="joinCommandBlocksJoinInInviteOnlyMode()" classname="org.example.service.TeamManagerTest" time="0.075"/>
+  <testcase name="joinCommandBlocksJoinInInviteOnlyMode()" classname="org.example.service.TeamManagerTest" time="0.069"/>
   <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[[17:04:59 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-18297869142181054311713762874/MyPurpurPlugin-1.0/database.db
-[17:04:59 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-18297869142181054311713762874/MyPurpurPlugin-1.0/database.db
-[17:04:59 INFO]: Плагин MyPurpurPlugin успешно загружен!
-[17:04:59 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-18297869142181054311713762874/MyPurpurPlugin-1.0/database.db
-[17:04:59 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-18297869142181054311713762874/MyPurpurPlugin-1.0/database.db
-[17:04:59 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-18297869142181054311713762874/MyPurpurPlugin-1.0/database.db
-[17:04:59 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-18297869142181054311713762874/MyPurpurPlugin-1.0/database.db
-[17:04:59 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-18297869142181054311713762874/MyPurpurPlugin-1.0/database.db
-[17:04:59 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-18297869142181054311713762874/MyPurpurPlugin-1.0/database.db
-[17:05:00 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-18297869142181054311713762874/MyPurpurPlugin-1.0/database.db
-[17:05:00 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-18297869142181054311713762874/MyPurpurPlugin-1.0/database.db
-[17:05:00 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-18297869142181054311713762874/MyPurpurPlugin-1.0/database.db
+  <system-err><![CDATA[[17:21:51 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-177593623514934075364356819205/MyPurpurPlugin-1.0/database.db
+[17:21:52 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-177593623514934075364356819205/MyPurpurPlugin-1.0/database.db
+[17:21:52 INFO]: Плагин MyPurpurPlugin успешно загружен!
+[17:21:52 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-177593623514934075364356819205/MyPurpurPlugin-1.0/database.db
+[17:21:52 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-177593623514934075364356819205/MyPurpurPlugin-1.0/database.db
+[17:21:52 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-177593623514934075364356819205/MyPurpurPlugin-1.0/database.db
+[17:21:52 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-177593623514934075364356819205/MyPurpurPlugin-1.0/database.db
+[17:21:52 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-177593623514934075364356819205/MyPurpurPlugin-1.0/database.db
+[17:21:52 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-177593623514934075364356819205/MyPurpurPlugin-1.0/database.db
+[17:21:52 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-177593623514934075364356819205/MyPurpurPlugin-1.0/database.db
+[17:21:52 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-177593623514934075364356819205/MyPurpurPlugin-1.0/database.db
+[17:21:52 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-177593623514934075364356819205/MyPurpurPlugin-1.0/database.db
 ]]></system-err>
 </testsuite>

@@ -78,8 +78,13 @@ public class Team {
     if (leader == null) {
       throw new IllegalArgumentException("Leader cannot be null");
     }
-    this.leader = leader;
-    addMember(leader);
+    // Не добавляем лидера повторно в список участников, если он уже там есть
+    if (!this.leader.equals(leader)) {
+      this.leader = leader;
+      addMember(leader);
+    } else {
+      this.leader = leader;
+    }
   }
 
   public void setPrefix(String prefix) {

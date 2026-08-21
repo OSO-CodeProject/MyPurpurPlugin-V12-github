@@ -1,22 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="org.example.listener.TeamChatListenerTest" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-08-21T17:04:55" hostname="c-6a8879ec-0167ce52-632a481312a1" time="1.685">
+<testsuite name="org.example.listener.TeamChatListenerTest" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-08-21T17:21:48" hostname="c-6a8879ec-0167ce52-632a481312a1" time="1.904">
   <properties/>
-  <testcase name="clearingPrefixRestoresCustomPlayerListName()" classname="org.example.listener.TeamChatListenerTest" time="1.228"/>
-  <testcase name="prefixUpdateEventAdjustsPlayerListName()" classname="org.example.listener.TeamChatListenerTest" time="0.063"/>
-  <testcase name="clearCachedPrefixesRestoresOriginalCustomListName()" classname="org.example.listener.TeamChatListenerTest" time="0.007"/>
-  <testcase name="chatEventAppliesPrefixAndForcesWhiteChat()" classname="org.example.listener.TeamChatListenerTest" time="0.027"/>
+  <testcase name="clearingPrefixRestoresCustomPlayerListName()" classname="org.example.listener.TeamChatListenerTest" time="1.401"/>
+  <testcase name="prefixUpdateEventAdjustsPlayerListName()" classname="org.example.listener.TeamChatListenerTest" time="0.024"/>
+  <testcase name="clearCachedPrefixesRestoresOriginalCustomListName()" classname="org.example.listener.TeamChatListenerTest" time="0.073"/>
+  <testcase name="chatEventAppliesPrefixAndForcesWhiteChat()" classname="org.example.listener.TeamChatListenerTest" time="0.025"/>
   <testcase name="playerJoinUpdatesPrefix()" classname="org.example.listener.TeamChatListenerTest" time="0.068"/>
-  <testcase name="chatRendererUsesSanitizedDisplayNameWithSinglePrefix()" classname="org.example.listener.TeamChatListenerTest" time="0.016"/>
-  <testcase name="customDisplayNameRestoredAfterPrefixUpdates()" classname="org.example.listener.TeamChatListenerTest" time="0.073"/>
-  <testcase name="chatEventUsesLatestCachedPrefixImmediately()" classname="org.example.listener.TeamChatListenerTest" time="0.02"/>
-  <testcase name="playerQuitClearsCachedPrefix()" classname="org.example.listener.TeamChatListenerTest" time="0.064"/>
-  <testcase name="warmCachePreservesExistingCustomTabNames()" classname="org.example.listener.TeamChatListenerTest" time="0.011"/>
-  <testcase name="warmCacheAppliesPrefixForOnlinePlayersOnPluginEnable()" classname="org.example.listener.TeamChatListenerTest" time="0.016"/>
-  <testcase name="customListNameRestoredAfterMultiplePrefixUpdates()" classname="org.example.listener.TeamChatListenerTest" time="0.065"/>
+  <testcase name="chatRendererUsesSanitizedDisplayNameWithSinglePrefix()" classname="org.example.listener.TeamChatListenerTest" time="0.021"/>
+  <testcase name="customDisplayNameRestoredAfterPrefixUpdates()" classname="org.example.listener.TeamChatListenerTest" time="0.011"/>
+  <testcase name="chatEventUsesLatestCachedPrefixImmediately()" classname="org.example.listener.TeamChatListenerTest" time="0.067"/>
+  <testcase name="playerQuitClearsCachedPrefix()" classname="org.example.listener.TeamChatListenerTest" time="0.018"/>
+  <testcase name="warmCachePreservesExistingCustomTabNames()" classname="org.example.listener.TeamChatListenerTest" time="0.062"/>
+  <testcase name="warmCacheAppliesPrefixForOnlinePlayersOnPluginEnable()" classname="org.example.listener.TeamChatListenerTest" time="0.018"/>
+  <testcase name="customListNameRestoredAfterMultiplePrefixUpdates()" classname="org.example.listener.TeamChatListenerTest" time="0.015"/>
   <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[[17:04:55 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-14611377007999057551071431945/MyPurpurPlugin-1.0/database.db
-[17:04:55 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-14611377007999057551071431945/MyPurpurPlugin-1.0/database.db
-[17:04:55 INFO]: Плагин MyPurpurPlugin успешно загружен!
+  <system-err><![CDATA[[17:21:48 SEVERE]: Could not connect to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-11631953918502549691348032519/MyPurpurPlugin-1.0/database.db
+[17:21:48 SEVERE]: Lost connection to SQLite database: No suitable driver found for jdbc:sqlite:/tmp/MockBukkit-11631953918502549691348032519/MyPurpurPlugin-1.0/database.db
+[17:21:48 INFO]: Плагин MyPurpurPlugin успешно загружен!
 WARNING: A Java agent has been loaded dynamically (/root/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.14.15/b4cc9d88d5de562bf75b3a54ab436ad01b3f72d/byte-buddy-agent-1.14.15.jar)
 WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
 WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
