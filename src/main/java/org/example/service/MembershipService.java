@@ -129,14 +129,8 @@ public class MembershipService {
     team.addMember(player.getUniqueId());
     storage.assignPlayerToTeam(player.getUniqueId(), team);
     clearInvitesForPlayer(player.getUniqueId());
-    // Удаляем запрос на вступление только один раз
-    removeJoinRequest(
-        team.getId(),
-        player.getUniqueId(),
-        JoinRequestRemovalCause.JOINED,
-        player.getName(),
-        player.getUniqueId(),
-        team);
+    // Очищаем все заявки игрока (и в эту команду, и в другие)
+    clearJoinRequestsForPlayer(player.getUniqueId(), player.getUniqueId());
     storage.markTeamDirty(team);
     TeamMessageUtils.sendTeamMessage(
         player, Component.text("✅ Вы вступили в команду", NamedTextColor.GREEN));
