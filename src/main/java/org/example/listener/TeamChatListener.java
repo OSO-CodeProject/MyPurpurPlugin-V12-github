@@ -15,6 +15,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.example.MyPurpurPlugin;
+import org.example.service.DeadlineScheduler;
 import org.example.service.TeamService;
 import org.example.util.TeamMessageUtils;
 import org.example.util.TeamUtils;
@@ -25,14 +26,16 @@ import org.jetbrains.annotations.Nullable;
 public class TeamChatListener implements Listener {
 
   private final TeamService teamManager;
+  private final DeadlineScheduler deadlineScheduler;
   private final Map<UUID, Component> lastPlayerPrefixes = new ConcurrentHashMap<>();
   private final Map<UUID, Component> originalPlayerListNames = new ConcurrentHashMap<>();
   private final Map<UUID, Component> originalPlayerDisplayNames = new ConcurrentHashMap<>();
   private final Map<UUID, Component> cachedTeamPrefixes = new ConcurrentHashMap<>();
   private final Map<UUID, UUID> playerTeamIds = new ConcurrentHashMap<>();
 
-  public TeamChatListener(@NotNull TeamService teamManager) {
+  public TeamChatListener(@NotNull TeamService teamManager, @NotNull DeadlineScheduler deadlineScheduler) {
     this.teamManager = teamManager;
+    this.deadlineScheduler = deadlineScheduler;
     Bukkit.getOnlinePlayers()
         .forEach(
             player -> {
@@ -76,6 +79,8 @@ public class TeamChatListener implements Listener {
     originalPlayerListNames.remove(playerId);
     originalPlayerDisplayNames.remove(playerId);
     removeCachedTeamFor(playerId);
+    // Очищаем scoreboard дедлайна при выходе игрока чтобы избежать утечки памяти
+    deadlineScheduler.clearLeaderDisplay(playerId);
     ((MyPurpurPlugin) teamManager.getPlugin())
         .debugTeamAction("Игрок вышел", player.getName(), null);
   }
