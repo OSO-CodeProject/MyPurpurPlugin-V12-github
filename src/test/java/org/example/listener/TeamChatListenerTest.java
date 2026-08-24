@@ -151,6 +151,7 @@ class TeamChatListenerTest extends MockBukkitTestBase {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   void playerQuitClearsCachedPrefix() {
     PlayerMock player = server.addPlayer("Quitter");
     teamService.assignPlayer(player, "Omega", "O", NamedTextColor.GRAY);

@@ -24,7 +24,6 @@ import org.jetbrains.annotations.Nullable;
 public class TeamStorage {
 
   private final JavaPlugin plugin;
-  private final PluginConfig pluginConfig;
 
   private final Map<UUID, Team> teams = new ConcurrentHashMap<>();
   private final Map<String, UUID> teamIdsByName = new ConcurrentHashMap<>();
@@ -51,7 +50,6 @@ public class TeamStorage {
 
   public TeamStorage(@NotNull JavaPlugin plugin, @NotNull PluginConfig pluginConfig) {
     this.plugin = plugin;
-    this.pluginConfig = pluginConfig;
     this.dbManager = new DatabaseManager(plugin);
     this.dbManager.connect();
     this.repository = new TeamRepository(this.dbManager, plugin);
@@ -338,7 +336,7 @@ public class TeamStorage {
   }
 
   public @NotNull List<String> getTeamNames() {
-    return teams.values().stream().map(Team::getName).collect(Collectors.toList());
+    return teams.values().stream().map(team -> team.getName()).collect(Collectors.toList());
   }
 
   public String getTeamPrefix(String teamName) {
@@ -396,7 +394,7 @@ public class TeamStorage {
   }
 
   private String normalizeTeamKey(String name) {
-    return name == null ? null : name.toLowerCase(Locale.ROOT);
+    return name == null ? null : name.trim().toLowerCase(Locale.ROOT);
   }
 
   private List<PendingInvite> filterActiveInvites(Collection<PendingInvite> invites) {

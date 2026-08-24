@@ -532,6 +532,7 @@ class TeamCommandTest {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   void playerQuitRemovesDeadlineAfterLeaving() {
     // Allow two players initially
     config.set(MAX_MEMBERS_PATH, 2);

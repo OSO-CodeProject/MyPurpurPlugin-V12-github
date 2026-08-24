@@ -152,7 +152,7 @@ public class ServerIntegrationTest {
         long remaining = deadline - System.nanoTime();
         if (remaining <= 0) {
           String capturedLogs =
-              logEvents.stream().map(LogEvent::rawLine).collect(Collectors.joining("\n"));
+              logEvents.stream().map(event -> event.rawLine()).collect(Collectors.joining("\n"));
           throw new IllegalStateException(
               "Timed out waiting for log message. Captured logs:\n" + capturedLogs);
         }

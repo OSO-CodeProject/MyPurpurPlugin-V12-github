@@ -274,6 +274,11 @@ public class TeamManager implements TeamService {
   }
 
   @Override
+  public @NotNull DeadlineScheduler getScheduler() {
+    return scheduler;
+  }
+
+  @Override
   public void shutdown() {
     plugin
         .getServer()

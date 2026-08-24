@@ -51,7 +51,7 @@ public class MyPurpurPlugin extends JavaPlugin {
     registerCommand("debugtoggle", new DebugToggleCommand(this));
 
     // Регистрация слушателей чата
-    teamChatListener = new TeamChatListener(teamManager);
+    teamChatListener = new TeamChatListener(teamManager, teamManager.getScheduler());
     localChatListener = new LocalChatListener(pluginConfig);
     getServer().getPluginManager().registerEvents(teamChatListener, this);
     getServer().getPluginManager().registerEvents(localChatListener, this);

@@ -54,7 +54,7 @@ public class CreateSubCommand implements SubCommand {
           suggestions.add(key.toUpperCase(Locale.ROOT));
         }
       }
-      suggestions.sort(String::compareTo);
+      suggestions.sort(java.util.Comparator.naturalOrder());
     }
     return suggestions;
   }

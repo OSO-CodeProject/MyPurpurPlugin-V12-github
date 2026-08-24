@@ -33,7 +33,11 @@ public class TeamChatListener implements Listener {
   private final Map<UUID, Component> cachedTeamPrefixes = new ConcurrentHashMap<>();
   private final Map<UUID, UUID> playerTeamIds = new ConcurrentHashMap<>();
 
-  public TeamChatListener(@NotNull TeamService teamManager, @NotNull DeadlineScheduler deadlineScheduler) {
+  public TeamChatListener(@NotNull TeamService teamManager) {
+    this(teamManager, teamManager.getScheduler());
+  }
+
+  public TeamChatListener(@NotNull TeamService teamManager, @Nullable DeadlineScheduler deadlineScheduler) {
     this.teamManager = teamManager;
     this.deadlineScheduler = deadlineScheduler;
     Bukkit.getOnlinePlayers()
@@ -80,7 +84,9 @@ public class TeamChatListener implements Listener {
     originalPlayerDisplayNames.remove(playerId);
     removeCachedTeamFor(playerId);
     // Очищаем scoreboard дедлайна при выходе игрока чтобы избежать утечки памяти
-    deadlineScheduler.clearLeaderDisplay(playerId);
+    if (deadlineScheduler != null) {
+      deadlineScheduler.clearLeaderDisplay(playerId);
+    }
     ((MyPurpurPlugin) teamManager.getPlugin())
         .debugTeamAction("Игрок вышел", player.getName(), null);
   }
@@ -192,7 +198,6 @@ public class TeamChatListener implements Listener {
         playerTeamIds.put(playerId, teamId);
       }
       Component prefixComponent = resolveTeamPrefix(teamName, teamId);
-      Component cachedPrefix = lastPlayerPrefixes.get(playerId);
       Component originalName = cacheOriginalPlayerListName(player, prefixComponent);
       Component originalDisplayName = getOrStoreOriginalPlayerDisplayName(player, prefixComponent);
       lastPlayerPrefixes.put(playerId, prefixComponent);

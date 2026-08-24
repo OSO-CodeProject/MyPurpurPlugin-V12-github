@@ -792,6 +792,7 @@ class MembershipServiceTest extends MockBukkitTestBase {
   }
 
   private static class TestDeadlineScheduler extends DeadlineScheduler {
+    @SuppressWarnings("unused")
     int enforceCalls;
     int evaluateCalls;
     final Set<String> cancelledTeams = new HashSet<>();

@@ -3,6 +3,7 @@ package org.example.model;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -74,16 +75,14 @@ public class Team {
     this.name = normalizeName(name);
   }
 
-  public void setLeader(@Nullable UUID leader) {
+  public void setLeader(@NotNull UUID leader) {
     if (leader == null) {
       throw new IllegalArgumentException("Leader cannot be null");
     }
     // Не добавляем лидера повторно в список участников, если он уже там есть
-    if (!this.leader.equals(leader)) {
+    if (!Objects.equals(this.leader, leader)) {
       this.leader = leader;
       addMember(leader);
-    } else {
-      this.leader = leader;
     }
   }
 

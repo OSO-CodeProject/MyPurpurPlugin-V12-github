@@ -77,12 +77,18 @@ public class LocalChatListener implements Listener {
       Audience audience = iterator.next();
       if (audience instanceof Player viewer) {
         if (!viewer.getWorld().equals(sender.getWorld())) {
-          iterator.remove();
+          try {
+            iterator.remove();
+          } catch (UnsupportedOperationException ignored) {
+          }
           continue;
         }
         double distance = sender.getLocation().distance(viewer.getLocation());
         if (distance >= finalRadius + finalFalloff) {
-          iterator.remove();
+          try {
+            iterator.remove();
+          } catch (UnsupportedOperationException ignored) {
+          }
         }
       }
     }
@@ -93,10 +99,15 @@ public class LocalChatListener implements Listener {
         (source, sourceDisplayName, message, viewer) -> {
           Component finalMessageComp = message;
 
-          if (viewer instanceof Player playerViewer
-              && pluginConfig.isLocalChatObfuscationEnabled()) {
+          if (viewer instanceof Player playerViewer) {
+            if (!playerViewer.getWorld().equals(sender.getWorld())) {
+              return Component.empty();
+            }
             double distance = sender.getLocation().distance(playerViewer.getLocation());
-            if (distance > finalRadius) {
+            if (distance >= finalRadius + finalFalloff) {
+              return Component.empty();
+            }
+            if (pluginConfig.isLocalChatObfuscationEnabled() && distance > finalRadius) {
               String obf =
                   ObfuscationUtils.obfuscate(
                       finalPlainMessage,
@@ -105,7 +116,7 @@ public class LocalChatListener implements Listener {
                       finalFalloff,
                       pluginConfig.getLocalChatObfuscationChars());
               if (obf == null) {
-                obf = ""; // Теоретически сюда не дойдет из-за фильтрации viewers
+                obf = "";
               }
               finalMessageComp = Component.text(obf);
             }

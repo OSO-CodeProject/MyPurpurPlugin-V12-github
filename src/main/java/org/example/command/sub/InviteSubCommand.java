@@ -75,7 +75,7 @@ public class InviteSubCommand implements SubCommand {
       String partial = args[1].toLowerCase(Locale.ROOT);
       teamService.getPlugin().getServer().getOnlinePlayers().stream()
           .filter(online -> !online.getUniqueId().equals(player.getUniqueId()))
-          .map(Player::getName)
+          .map(online -> online.getName())
           .filter(name -> name != null && name.toLowerCase(Locale.ROOT).startsWith(partial))
           .forEach(suggestions::add);
     } else if (args.length == 3) {

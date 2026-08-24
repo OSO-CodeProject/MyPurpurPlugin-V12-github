@@ -319,6 +319,11 @@ public interface TeamService {
    */
   Long getTeamDeadline(String teamName);
 
+  /** Возвращает планировщик дедлайнов. */
+  default @Nullable DeadlineScheduler getScheduler() {
+    return null;
+  }
+
   /** Выполняет очистку ресурсов сервиса команд. */
   default void shutdown() {}
 }
