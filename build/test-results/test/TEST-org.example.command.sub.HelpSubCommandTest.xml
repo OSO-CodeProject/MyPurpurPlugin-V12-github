@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="org.example.command.sub.HelpSubCommandTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-08-21T17:21:47" hostname="c-6a8879ec-0167ce52-632a481312a1" time="0.069">
-  <properties/>
-  <testcase name="executeSendsFormattedHelpMessage()" classname="org.example.command.sub.HelpSubCommandTest" time="0.069"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>
